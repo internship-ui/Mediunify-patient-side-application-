@@ -70,46 +70,14 @@ export default function PromotionalAdsSection({ onNavigate }) {
         <View style={styles.headerLeft}>
           <View style={styles.badgeWrap}>
             <Ionicons name="sparkles" size={13} color="#059669" style={{ marginRight: 6 }} />
-            <Text style={styles.badgeText}>{t('special_deals_badge', 'SPECIAL OFFERS & DEALS')}</Text>
+            <Text style={styles.badgeText}>{t('special_deals_badge', 'OFFERS & DEALS')}</Text>
           </View>
           <Text style={[styles.sectionTitle, isIndic && { lineHeight: 32 }]}>
-            {t('special_deals_title', 'Exclusive Healthcare Deals & Savings')}
-          </Text>
-          <Text style={[styles.sectionSubtitle, isIndic && { lineHeight: 22 }]}>
-            {t('special_deals_sub', 'Limited-time discounts on full body checkups, certified medicines, diagnostic imaging & doctor consultations.')}
+            {t('special_deals_title', 'Healthcare Deals & Savings')}
           </Text>
         </View>
 
-        {/* TOP RIGHT SLIDE COUNTER & MANUAL CONTROLS */}
-        {isDesktop && (
-          <View style={styles.headerControlsRight}>
-            <View style={styles.slideCounterPill}>
-              <Text style={styles.slideCounterText}>
-                {t('offer_pill', 'Offer')} <Text style={{ fontWeight: '800', color: '#0C3B6B' }}>{currentIndex + 1}</Text> {t('of_word', 'of')} {totalOffers}
-              </Text>
-            </View>
-            <View style={styles.miniArrowsWrap}>
-              <TouchableOpacity
-                style={styles.miniArrowBtn}
-                onPress={handlePrev}
-                activeOpacity={0.75}
-                accessibilityRole="button"
-                accessibilityLabel="Previous Offer"
-              >
-                <Ionicons name="chevron-back" size={16} color="#0C3B6B" />
-              </TouchableOpacity>
-              <TouchableOpacity
-                style={styles.miniArrowBtn}
-                onPress={handleNext}
-                activeOpacity={0.75}
-                accessibilityRole="button"
-                accessibilityLabel="Next Offer"
-              >
-                <Ionicons name="chevron-forward" size={16} color="#0C3B6B" />
-              </TouchableOpacity>
-            </View>
-          </View>
-        )}
+
       </View>
 
       {/* ============================================================
@@ -189,13 +157,9 @@ export default function PromotionalAdsSection({ onNavigate }) {
                 >
                   {/* TOP BADGE ROW */}
                   <View style={styles.showcaseTopRow}>
-                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                       <View style={[styles.categoryBadge, { backgroundColor: '#FFFFFF', borderColor: ad.borderColor }]}>
-                        <Text style={[styles.categoryBadgeText, { color: ad.tagColor }]}>{ad.badge}</Text>
-                      </View>
-                      <View style={[styles.taglineBadge, { backgroundColor: '#FFFFFF', borderColor: '#FFD7C7' }]}>
-                        <Ionicons name="flame" size={12} color="#FF7F50" style={{ marginRight: 4 }} />
-                        <Text style={styles.taglineText}>{ad.tagline}</Text>
+                        <Text style={[styles.categoryBadgeText, { color: ad.tagColor }]}>{ad.discount || ad.badge}</Text>
                       </View>
                     </View>
 
@@ -208,28 +172,14 @@ export default function PromotionalAdsSection({ onNavigate }) {
 
                   {/* MAIN BODY: 2-COLUMN SPLIT (DETAILS + PHOTO) */}
                   <View style={[styles.showcaseBody, isMobile && { flexDirection: 'column-reverse' }]}>
-                    {/* Left Column: Headlines, Description, Features, Price, Coupon, CTA */}
+                    {/* Left Column: Title, Single Short Benefit, Pricing, CTA */}
                     <View style={styles.showcaseLeftCol}>
-                      <View style={styles.titleWrap}>
-                        <Text style={styles.showcaseTitle}>{ad.title}</Text>
-                        <View style={[styles.subtitleBadge, { backgroundColor: '#FFFFFF', borderColor: ad.borderColor }]}>
-                          <Ionicons name="sparkles" size={12} color={ad.accentColor} style={{ marginRight: 5 }} />
-                          <Text style={[styles.showcaseSubtitle, { color: ad.accentColor }]}>{ad.subtitle}</Text>
-                        </View>
-                      </View>
+                      <Text style={styles.showcaseTitle}>{ad.title}</Text>
 
-                      <Text style={styles.showcaseDesc} numberOfLines={isMobile ? 2 : 3}>
-                        {ad.description}
-                      </Text>
-
-                      {/* 3 Key Feature Checkmark Pills (clean white pills with icons) */}
-                      <View style={[styles.featuresRow, isMobile && { flexDirection: 'column', gap: 6 }]}>
-                        {ad.features.map((feat, fIdx) => (
-                          <View key={fIdx} style={[styles.featureItemPill, { borderColor: ad.borderColor }]}>
-                            <Ionicons name={feat.icon} size={14} color={ad.accentColor} style={{ marginRight: 6 }} />
-                            <Text style={styles.featureText}>{feat.text}</Text>
-                          </View>
-                        ))}
+                      {/* One short benefit */}
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, marginBottom: 16 }}>
+                        <Ionicons name="checkmark-circle" size={16} color={ad.accentColor} style={{ marginRight: 6 }} />
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: '#334155' }}>{ad.subtitle}</Text>
                       </View>
 
                       {/* Bottom Pricing & Action Bar */}
@@ -238,34 +188,35 @@ export default function PromotionalAdsSection({ onNavigate }) {
                         <View style={styles.priceBlock}>
                           <View style={styles.priceRow}>
                             <Text style={[styles.offerPrice, { color: ad.accentColor }]}>{ad.offerPrice}</Text>
-                            <Text style={styles.originalPrice}>{ad.originalPrice}</Text>
-                          </View>
-                          <View style={[styles.savePill, { backgroundColor: '#FFFFFF', borderColor: ad.borderColor }]}>
-                            <Text style={[styles.savePillText, { color: ad.tagColor }]}>{ad.priceSaveText}</Text>
+                            {ad.originalPrice && (
+                              <Text style={styles.originalPrice}>{ad.originalPrice}</Text>
+                            )}
                           </View>
                         </View>
 
-                        {/* Coupon Code Chip with Instant Copy */}
-                        <TouchableOpacity
-                          style={[styles.couponBox, { borderColor: ad.borderColor }, isCopied && styles.couponBoxActive]}
-                          onPress={(e) => handleCopyCoupon(ad.id, ad.couponCode, e)}
-                          activeOpacity={0.8}
-                          accessibilityRole="button"
-                          accessibilityLabel={`Coupon code ${ad.couponCode}. Click to copy`}
-                        >
-                          <Ionicons
-                            name={isCopied ? 'checkmark-circle' : 'copy-outline'}
-                            size={14}
-                            color={isCopied ? '#059669' : '#0C3B6B'}
-                            style={{ marginRight: 6 }}
-                          />
-                          <View>
-                            <Text style={styles.couponLabelText}>{t('coupon_code', 'COUPON CODE')}</Text>
-                            <Text style={[styles.couponCodeText, isCopied && styles.couponCodeTextActive]}>
-                              {isCopied ? t('coupon_copied', 'COPIED!') : ad.couponCode}
-                            </Text>
-                          </View>
-                        </TouchableOpacity>
+                        {/* Coupon Code Chip */}
+                        {ad.couponCode && (
+                          <TouchableOpacity
+                            style={[styles.couponBox, { borderColor: ad.borderColor }, isCopied && styles.couponBoxActive]}
+                            onPress={(e) => handleCopyCoupon(ad.id, ad.couponCode, e)}
+                            activeOpacity={0.8}
+                            accessibilityRole="button"
+                            accessibilityLabel={`Coupon code ${ad.couponCode}. Click to copy`}
+                          >
+                            <Ionicons
+                              name={isCopied ? 'checkmark-circle' : 'copy-outline'}
+                              size={14}
+                              color={isCopied ? '#059669' : '#0C3B6B'}
+                              style={{ marginRight: 6 }}
+                            />
+                            <View>
+                              <Text style={styles.couponLabelText}>{t('coupon_code', 'COUPON CODE')}</Text>
+                              <Text style={[styles.couponCodeText, isCopied && styles.couponCodeTextActive]}>
+                                {isCopied ? t('coupon_copied', 'COPIED!') : ad.couponCode}
+                              </Text>
+                            </View>
+                          </TouchableOpacity>
+                        )}
 
                         {/* Primary CTA Button */}
                         <TouchableOpacity

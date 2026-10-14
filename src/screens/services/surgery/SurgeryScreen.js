@@ -311,7 +311,7 @@ const SurgeryScreen = ({ navigation }) => {
                 <View style={[styles.quickFormCard, !isDesktopWeb && styles.quickFormCardMobile]}>
                   <Text style={styles.quickFormTitle}>{t('Book a Free Callback')}</Text>
                   <Text style={styles.quickFormSubtitle}>
-                    {t('Free hospital & price advice in 15 mins.')}
+                    {t('Free hospital guidance & price estimate.')}
                   </Text>
 
                   {/* Form Fields Grid with Clean Gaps */}
@@ -446,12 +446,12 @@ const SurgeryScreen = ({ navigation }) => {
                 >
                   <Ionicons name="arrow-back" size={18} color="#0D9488" />
                   <Text style={{ fontSize: 13, fontWeight: '700', color: '#0D9488', marginLeft: 4 }}>
-                    {t('Back to Surgery Care')}
+                    {t('Back to Surgeries')}
                   </Text>
                 </TouchableOpacity>
                 <Text style={styles.sectionMainTitle}>{t('My Quotes')}</Text>
                 <Text style={styles.sectionSubtitle}>
-                  {t('Track your surgery cost estimates')}
+                  {t('Your surgery cost estimates')}
                 </Text>
               </View>
 
@@ -460,7 +460,7 @@ const SurgeryScreen = ({ navigation }) => {
                   <Ionicons name="clipboard-outline" size={44} color="#94A3B8" />
                   <Text style={styles.emptyQuotesTitle}>{t('No Quotes Yet')}</Text>
                   <Text style={styles.emptyQuotesSubtitle}>
-                    {t('Request a free price quote with no obligations.')}
+                    {t('Request a free price estimate anytime.')}
                   </Text>
                   <TouchableOpacity
                     style={styles.exploreNowBtn}

@@ -30,7 +30,7 @@ const QUICK_CATEGORIES = [
   { id: 'fever',     icon: 'thermometer', label: 'Fever & Cold',       prompt: 'I have fever and body pain',              color: '#FF7F50', bg: '#FFF2ED' },
   { id: 'doctor',    icon: 'person',      label: 'Find a Doctor',      prompt: 'Find best doctor for consultation',       color: '#007D69', bg: '#E6F4F1' },
   { id: 'lab',       icon: 'flask',       label: 'Book Lab Test',      prompt: 'Book a Lab Test at home',                 color: '#00C2CB', bg: '#E0F7FA' },
-  { id: 'scans',     icon: 'scan',        label: 'Scans & X-Ray',      prompt: 'View Scans & X-Ray diagnostics',          color: '#1E3A8A', bg: '#EBF4FF' },
+  { id: 'scans',     icon: 'scan',        label: 'Scan & X-Ray',      prompt: 'View Scan & X-Ray diagnostics',          color: '#1E3A8A', bg: '#EBF4FF' },
   { id: 'meds',      icon: 'medkit',      label: 'Order Medicines',    prompt: 'Order medicines from pharmacy',          color: '#8B5CF6', bg: '#F3E8FF' },
   { id: 'cardio',    icon: 'heart',       label: 'Heart & Chest',      prompt: 'Best Cardiologist for Chest Pain',        color: '#FF7F50', bg: '#FFF2ED' },
   { id: 'nurse',     icon: 'heart',       label: 'Home Nursing',       prompt: 'Book home nursing and care',              color: '#EC4899', bg: '#FCE7F3' },
@@ -73,7 +73,7 @@ const INITIAL_MESSAGES = [
       { icon: 'flask-outline',    color: '#00C2CB', bg: '#E0F7FA', text: 'Book a Lab Test' },
       { icon: 'person-outline',   color: '#007D69', bg: '#E6F4F1', text: 'Find a Doctor' },
       { icon: 'medkit-outline',   color: '#8B5CF6', bg: '#F3E8FF', text: 'Order Medicine' },
-      { icon: 'scan-outline',     color: '#1E3A8A', bg: '#EBF4FF', text: 'View Scans & X-Ray' },
+      { icon: 'scan-outline',     color: '#1E3A8A', bg: '#EBF4FF', text: 'View Scan & X-Ray' },
       { icon: 'fitness-outline',  color: '#FF7F50', bg: '#FFF2ED', text: 'I have fever and body pain' },
       { icon: 'heart-outline',    color: '#EC4899', bg: '#FCE7F3', text: 'Book Home Nursing' },
     ],
@@ -209,7 +209,7 @@ const ChatbotScreenWeb = ({ navigation }) => {
         null,
         lab,
         [
-          { title: 'View Scans & X-Ray', icon: 'scan', action: () => navigation?.navigate('Imaging') },
+          { title: 'View Scan & X-Ray', icon: 'scan', action: () => navigation?.navigate('Imaging') },
           { title: 'Book MRI Scan', icon: 'radio', action: () => navigation?.navigate('Imaging', { searchTest: 'MRI Scan' }) },
           { title: 'Diagnostic Centres', icon: 'business', action: () => navigation?.navigate('Imaging') },
         ]
@@ -482,7 +482,7 @@ const ChatbotScreenWeb = ({ navigation }) => {
         { title: 'Find a Doctor', icon: 'people', action: () => navigation?.navigate('DoctorList') },
         { title: 'Book a Lab Test', icon: 'flask', action: () => navigation?.navigate('LabTests') },
         { title: 'Order Medicine', icon: 'cart', action: () => navigation?.navigate('Pharmacy') },
-        { title: 'View Scans & X-Ray', icon: 'scan', action: () => navigation?.navigate('Imaging') },
+        { title: 'View Scan & X-Ray', icon: 'scan', action: () => navigation?.navigate('Imaging') },
         { title: 'Book Home Nursing', icon: 'heart', action: () => navigation?.navigate('NurseBooking') },
         { title: 'Rent Medical Equipment', icon: 'bed', action: () => navigation?.navigate('EquipmentRental') },
       ]

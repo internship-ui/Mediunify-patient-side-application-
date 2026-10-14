@@ -51,7 +51,7 @@ const ALL_SERVICES = [
   },
   {
     id: 'radiology',
-    title: 'Scans & X-Ray',
+    title: 'Scan & X-Ray',
     iconFamily: 'Ionicons',
     icon: 'scan-outline',
     iconColor: '#007D69',

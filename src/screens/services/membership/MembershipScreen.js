@@ -509,7 +509,7 @@ const MembershipScreen = ({ navigation }) => {
                     <Text style={styles.serviceDiscountVal}>{selectedPlanForDetails.serviceDiscounts.lab}</Text>
                   </View>
                   <View style={styles.serviceDiscountItem}>
-                    <Text style={styles.serviceDiscountLabel}>Scans & X-Ray</Text>
+                    <Text style={styles.serviceDiscountLabel}>Scan & X-Ray</Text>
                     <Text style={styles.serviceDiscountVal}>{selectedPlanForDetails.serviceDiscounts.scans}</Text>
                   </View>
                   <View style={styles.serviceDiscountItem}>

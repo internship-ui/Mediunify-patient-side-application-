@@ -909,9 +909,23 @@ export const ALL_CITY_DIAGNOSTIC_CENTRES = [
   },
 ];
 
-// Helper to filter centres by current city (supporting name aliases)
+// Normalize city name to standard MediUnify canonical cities
+export const normalizeLabCity = (cityName) => {
+  if (!cityName || typeof cityName !== 'string') return '';
+  const clean = cityName.trim().toLowerCase();
+  if (clean.includes('mys')) return 'Mysuru';
+  if (clean.includes('bengal') || clean.includes('bangal')) return 'Bengaluru';
+  if (clean.includes('hassan')) return 'Hassan';
+  if (clean.includes('mandya')) return 'Mandya';
+  if (clean.includes('mangal')) return 'Mangaluru';
+  if (clean.includes('hubli') || clean.includes('hubballi')) return 'Hubballi';
+  if (clean.includes('belgaum') || clean.includes('belagavi')) return 'Belagavi';
+  return cityName.trim().charAt(0).toUpperCase() + cityName.trim().slice(1);
+};
+
+// Helper to filter centres by current city (STRICT - NO FALLBACK TO ANOTHER CITY)
 export const getCentresByCity = (cityName) => {
-  if (!cityName) return DIAGNOSTIC_CENTRES;
+  if (!cityName) return [];
   const lower = cityName.toLowerCase();
   const matched = ALL_CITY_DIAGNOSTIC_CENTRES.filter((c) => {
     const cCity = (c.city || '').toLowerCase();
@@ -924,7 +938,106 @@ export const getCentresByCity = (cityName) => {
     if ((lower.includes('belgaum') || lower.includes('belagavi')) && (cCity.includes('belgaum') || cCity.includes('belagavi'))) return true;
     return cCity === lower;
   });
-  return matched.length > 0 ? matched : DIAGNOSTIC_CENTRES;
+  return matched;
+};
+
+// Verified City-level Catalog Availability Configuration
+export const CITY_LAB_CATALOG_CONFIG = {
+  Mysuru: {
+    supportedPackages: [
+      'POP-FB-01', 'POP-FB-02', 'POP-FB-03', 'POP-FB-04',
+      'POP-DIA-01', 'POP-DIA-02', 'POP-DIA-03',
+      'POP-HRT-01', 'POP-HRT-02', 'POP-HRT-03',
+      'POP-EXE-01', 'POP-EXE-02', 'POP-EXE-03',
+    ],
+    supportedAllTests: true,
+  },
+  Bengaluru: {
+    supportedPackages: [
+      'POP-FB-01', 'POP-FB-02', 'POP-FB-03', 'POP-FB-04',
+      'POP-DIA-01', 'POP-DIA-02', 'POP-DIA-03',
+      'POP-HRT-01', 'POP-HRT-02', 'POP-HRT-03',
+      'POP-EXE-01', 'POP-EXE-02', 'POP-EXE-03',
+    ],
+    supportedAllTests: true,
+  },
+  Hassan: {
+    supportedPackages: [
+      'POP-FB-01', 'POP-FB-02',
+      'POP-DIA-01', 'POP-DIA-02',
+      'POP-HRT-01',
+      'POP-EXE-01',
+    ],
+    supportedAllTests: true,
+  },
+  Mandya: {
+    supportedPackages: [
+      'POP-FB-01',
+      'POP-DIA-01',
+      'POP-HRT-01',
+    ],
+    supportedTests: [
+      'test-cbc', 'test-fbs', 'test-hba1c', 'test-lipid', 'test-lft', 'test-kft',
+      'test-thyroid', 'test-urine-routine', 'test-crp',
+    ],
+  },
+  Mangaluru: {
+    supportedPackages: [
+      'POP-FB-01', 'POP-FB-02', 'POP-FB-03',
+      'POP-DIA-01', 'POP-DIA-02',
+      'POP-HRT-01',
+      'POP-EXE-01',
+    ],
+    supportedAllTests: true,
+  },
+  Hubballi: {
+    supportedPackages: [
+      'POP-FB-01', 'POP-FB-02',
+      'POP-DIA-01', 'POP-DIA-02',
+      'POP-HRT-01',
+      'POP-EXE-01',
+    ],
+    supportedAllTests: true,
+  },
+  Belagavi: {
+    supportedPackages: [
+      'POP-FB-01', 'POP-FB-02',
+      'POP-DIA-01',
+      'POP-HRT-01',
+    ],
+    supportedAllTests: true,
+  },
+};
+
+// Check if a specific test is available in the given city
+export const isTestAvailableInCity = (testId, cityName) => {
+  if (!cityName || !testId) return false;
+  const canonical = normalizeLabCity(cityName);
+  const centres = getCentresByCity(canonical);
+  if (!centres || centres.length === 0) return false;
+
+  const config = CITY_LAB_CATALOG_CONFIG[canonical];
+  if (!config) return false;
+  if (config.supportedAllTests) return true;
+  if (Array.isArray(config.supportedTests)) {
+    return config.supportedTests.includes(testId);
+  }
+  return false;
+};
+
+// Check if a specific package is available in the given city
+export const isPackageAvailableInCity = (packageId, cityName) => {
+  if (!cityName || !packageId) return false;
+  const canonical = normalizeLabCity(cityName);
+  const centres = getCentresByCity(canonical);
+  if (!centres || centres.length === 0) return false;
+
+  const config = CITY_LAB_CATALOG_CONFIG[canonical];
+  if (!config) return false;
+  if (Array.isArray(config.supportedPackages)) {
+    return config.supportedPackages.includes(packageId);
+  }
+  return false;
 };
 
 // Helper to construct Google Maps Directions URL

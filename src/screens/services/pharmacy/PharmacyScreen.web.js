@@ -39,17 +39,17 @@ const PHARMACY_HERO_SLIDES = [
     pillColor: '#FF7F50',
     certText: 'Flat 20% OFF',
     certIcon: 'flash',
-    title: 'Doorstep Medicines & Jan Aushadhi Store',
+    title: 'Genuine Medicines & Jan Aushadhi',
     priceText: 'Flat 20% OFF',
-    priceSub: 'Use Code: MEDI20',
+    priceSub: 'Code: MEDI20',
     priceColor: '#FF7F50',
-    subTitle: '100% Genuine branded drugs & affordable Jan Aushadhi generic medicines delivered in 60 mins.',
+    subTitle: 'Branded and affordable generic medicines delivered in 60 minutes.',
     bullets: [
-      'Superfast 60-min delivery to your doorstep across Mysuru',
-      'Order effortlessly by uploading your doctor prescription',
-      'Temperature-controlled cold-chain transit for insulin & vaccines',
+      'Express 60-min delivery to your doorstep',
+      'Upload prescription for fast checkout',
+      'Cold-chain delivery for insulin & vaccines',
     ],
-    ctaText: 'Order Medicines Now',
+    ctaText: 'Order Medicines',
     ctaBg: '#00B894',
     bgColor: '#FFF5F0',
     borderColor: '#FED7AA',
@@ -64,17 +64,17 @@ const PHARMACY_HERO_SLIDES = [
     pillColor: '#00B894',
     certText: 'Verified Pharmacists',
     certIcon: 'shield-checkmark',
-    title: 'Upload Doctor Prescription for Instant Order',
+    title: 'Upload Prescription for Instant Order',
     priceText: 'Zero Extra Fee',
-    priceSub: 'Free Dosage Review',
+    priceSub: 'Free Review',
     priceColor: '#00B894',
-    subTitle: 'Just upload your prescription. Our licensed registered pharmacist will verify and confirm your order within minutes.',
+    subTitle: 'Upload your prescription. Our licensed pharmacist will verify and confirm your order.',
     bullets: [
-      'Automatic prescription reading & digital medicine mapping',
-      'Licensed pharmacist calls to confirm exact brand & dosage',
-      'Easy refills for monthly chronic diabetes & BP medications',
+      'Fast digital prescription verification',
+      'Pharmacist confirms brand and dosage',
+      'Easy refills for monthly medications',
     ],
-    ctaText: 'Upload Prescription Now',
+    ctaText: 'Upload Prescription',
     ctaBg: '#1E3A8A',
     bgColor: '#ECFDF5',
     borderColor: '#A7F3D0',
@@ -89,17 +89,17 @@ const PHARMACY_HERO_SLIDES = [
     pillColor: '#1E3A8A',
     certText: 'Up to 35% OFF',
     certIcon: 'pulse',
-    title: 'Diabetes, BP & Vital Healthcare Devices',
+    title: 'Diabetes, BP & Vital Health Devices',
     priceText: 'Save up to 35%',
     priceSub: 'Certified Devices',
     priceColor: '#00C2CB',
-    subTitle: 'Accu-Chek glucometers, Omron blood pressure monitors, digital thermometers & test strips with full warranty.',
+    subTitle: 'Glucometers, BP monitors, and test strips with warranty.',
     bullets: [
-      'Clinical-grade precision certified by ISO & CE standards',
-      'Instant slot delivery with doorstep demo & calibration',
-      'Discounted combo strips & lancet refill packs',
+      'Clinical-grade precision ISO standards',
+      'Fast doorstep delivery & setup guide',
+      'Discounted combo strips & refill packs',
     ],
-    ctaText: 'Explore Health Devices',
+    ctaText: 'View Devices',
     ctaBg: '#00B894',
     bgColor: '#EEF2FF',
     borderColor: '#BFDBFE',
@@ -449,7 +449,7 @@ const HEALTH_CONDITIONS = [
 // ==================================================
 // 5. HIGH-RESOLUTION PRODUCT IMAGES DICTIONARY
 // ==================================================
-const PRODUCT_IMAGES = {
+export const PRODUCT_IMAGES = {
   '1': 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400', // Dolo Paracetamol
   '2': 'https://images.unsplash.com/photo-1577401239170-897942555fb3?w=400', // Vitamin C Limcee
   '3': 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?w=400', // Multivitamin Becadexamin
@@ -473,7 +473,8 @@ const PRODUCT_IMAGES = {
   'ext-5': 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400', // Vicks VapoRub
 };
 
-const getProductImage = (prod) => {
+export const getProductImage = (prod) => {
+  if (!prod) return 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400';
   if (prod.image) return prod.image;
   if (PRODUCT_IMAGES[prod.id]) return PRODUCT_IMAGES[prod.id];
   if (prod.category === 'Healthcare Devices') return 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=400';
@@ -488,7 +489,7 @@ const getProductImage = (prod) => {
 // ==================================================
 // 6. EXTENDED PRODUCTS LIST
 // ==================================================
-const EXTENDED_PRODUCTS = [
+export const EXTENDED_PRODUCTS = [
   ...pharmacyProducts,
   {
     id: 'ext-1',
@@ -576,11 +577,70 @@ const EXTENDED_PRODUCTS = [
 
 import PharmacyScreenMobile from './PharmacyScreenMobile';
 
+// Helper: Format category names to short, concise tags
+const getShortCategory = (category) => {
+  if (!category) return 'Medicines';
+  const c = String(category).trim().toLowerCase();
+  if (c.includes('vitamin') || c.includes('mineral')) return 'Vitamins';
+  if (c.includes('device') || c.includes('monitor') || c.includes('thermometer') || c.includes('glucometer')) return 'Devices';
+  if (c.includes('first aid')) return 'First Aid';
+  if (c.includes('covid') || c.includes('sanitizer')) return 'Covid Care';
+  if (c.includes('pain')) return 'Pain Relief';
+  if (c.includes('stomach') || c.includes('antacid') || c.includes('digestion')) return 'Stomach';
+  if (c.includes('skin') || c.includes('derma')) return 'Skin Care';
+  if (c.includes('ayurved') || c.includes('herbal')) return 'Ayurveda';
+  if (c.includes('baby')) return 'Baby Care';
+  if (c.includes('oral') || c.includes('dental')) return 'Oral Care';
+  if (c.includes('cardiac') || c.includes('heart')) return 'Cardiac';
+  if (c.includes('diabet')) return 'Diabetes';
+  return 'Medicines';
+};
+
+// Helper: Shorten ratings and review count to compact format: e.g. 4.8 (1.2k)
+const formatReviewCount = (count) => {
+  const num = Number(count) || 850;
+  if (num >= 1000) {
+    const formatted = (num / 1000).toFixed(1).replace(/\.0$/, '');
+    return `(${formatted}k)`;
+  }
+  return `(${num})`;
+};
+
+// Helper: Format clean discount text
+const formatDiscountText = (discount, mrp, price) => {
+  if (discount && typeof discount === 'string' && discount.trim()) {
+    const d = discount.trim().toUpperCase();
+    if (d.includes('OFF')) return d;
+    return `${d} OFF`;
+  }
+  if (mrp && price && Number(mrp) > Number(price)) {
+    const pct = Math.round(((Number(mrp) - Number(price)) / Number(mrp)) * 100);
+    if (pct > 0) return `${pct}% OFF`;
+  }
+  return 'FLAT 20% OFF';
+};
+
 const PharmacyScreenWeb = ({ navigation, route }) => {
   const { width } = useWindowDimensions();
   const desktopSiteMode = isDesktopSiteRequested();
   const isDesktop = desktopSiteMode || width >= 1024;
   const isTablet = !desktopSiteMode && (width >= 768 && width < 1024);
+
+  // Responsive card width: 5 cols on desktop (>=1200), 4 on laptop (>=992), 3 on tablet (>=640), 2 on mobile
+  const cardWidth = useMemo(() => {
+    const horizontalPad = width < 768 ? 32 : 48;
+    const containerWidth = Math.min(width - horizontalPad, 1320);
+    if (width >= 1200) {
+      return Math.floor((containerWidth - 56) / 5);
+    }
+    if (width >= 992) {
+      return Math.floor((containerWidth - 42) / 4);
+    }
+    if (width >= 640) {
+      return Math.floor((containerWidth - 24) / 3);
+    }
+    return Math.floor((containerWidth - 10) / 2);
+  }, [width]);
 
   const {
     pharmacyCart,
@@ -1035,7 +1095,7 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
               </View>
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search 50,000+ medicines, vitamins, health devices, or brands..."
+                placeholder="Search medicines, vitamins, wellness products..."
                 placeholderTextColor="#64748B"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -1066,7 +1126,7 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
         <View style={styles.browseSectionWrap}>
           <View style={styles.browseSectionInner}>
             <View style={styles.browseHeaderBadgeRow}>
-              <Text style={styles.browseMainHeading}>Browse medicines & health products</Text>
+              <Text style={styles.browseMainHeading}>Browse by Need & Category</Text>
               <View style={styles.browseHeaderPill}>
                 <Ionicons name="sparkles" size={13} color="#00B894" />
                 <Text style={styles.browseHeaderPillText}>100% Genuine & Verified</Text>
@@ -1077,8 +1137,8 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
             <View style={styles.browseSubSection}>
               <View style={styles.subSectionHeaderRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={styles.browseSubHeading}>Health condition</Text>
-                  <Text style={styles.subSectionCountText}>{BROWSE_HEALTH_CONDITIONS.length} specialized therapies</Text>
+                  <Text style={styles.browseSubHeading}>Health Conditions</Text>
+                  <Text style={styles.subSectionCountText}>{BROWSE_HEALTH_CONDITIONS.length} conditions</Text>
                 </View>
                 {Boolean(selectedCondition) ? (
                   <TouchableOpacity
@@ -1188,8 +1248,8 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
             <View style={styles.browseSubSection}>
               <View style={styles.subSectionHeaderRow}>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Text style={styles.browseSubHeading}>Categories</Text>
-                  <Text style={styles.subSectionCountText}>{BROWSE_CATEGORIES.length} curated everyday categories</Text>
+                  <Text style={styles.browseSubHeading}>Popular Categories</Text>
+                  <Text style={styles.subSectionCountText}>{BROWSE_CATEGORIES.length} categories</Text>
                 </View>
                 {Boolean(selectedCategory !== 'all' && !selectedCondition) ? (
                   <TouchableOpacity
@@ -1298,13 +1358,14 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
         ============================================================ */}
         <View style={styles.guaranteeSectionWrap}>
           <View style={styles.guaranteeCard}>
+            <View style={styles.cardGradientBarMulticolor} />
             <View style={styles.guaranteeItem}>
               <View style={[styles.guaranteeIconCircle, { backgroundColor: '#ECFDF5' }]}>
                 <Ionicons name="shield-checkmark" size={20} color="#00B894" />
               </View>
               <View>
                 <Text style={styles.guaranteeTitle}>100% Genuine Medicines</Text>
-                <Text style={styles.guaranteeSub}>Directly sourced from verified manufacturers</Text>
+                <Text style={styles.guaranteeSub}>Verified manufacturers & labs</Text>
               </View>
             </View>
 
@@ -1316,7 +1377,7 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
               </View>
               <View>
                 <Text style={styles.guaranteeTitle}>60-Min Express Delivery</Text>
-                <Text style={styles.guaranteeSub}>Guaranteed swift delivery in Mysuru</Text>
+                <Text style={styles.guaranteeSub}>Express doorstep delivery</Text>
               </View>
             </View>
 
@@ -1328,7 +1389,7 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
               </View>
               <View>
                 <Text style={styles.guaranteeTitle}>Pharmacist Review 24/7</Text>
-                <Text style={styles.guaranteeSub}>Free dosage & interaction verification</Text>
+                <Text style={styles.guaranteeSub}>24/7 dosage verification</Text>
               </View>
             </View>
           </View>
@@ -1360,7 +1421,7 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
                   : 'Popular Products'}
               </Text>
               <Text style={styles.sectionSubHeading}>
-                Showing {filteredProducts.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredProducts.length)} of {filteredProducts.length} items (15 per page)
+                Showing {filteredProducts.length > 0 ? (currentPage - 1) * ITEMS_PER_PAGE + 1 : 0} - {Math.min(currentPage * ITEMS_PER_PAGE, filteredProducts.length)} of {filteredProducts.length} products
               </Text>
             </View>
 
@@ -1405,13 +1466,19 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
                   const cartItem = (pharmacyCart || []).find((ci) => ci.id === prod.id);
                   const quantity = cartItem?.quantity || 0;
                   const prodImg = getProductImage(prod);
+                  const shortCat = getShortCategory(prod.category);
+                  const reviewsStr = formatReviewCount(prod.reviewsCount);
+                  const discountStr = formatDiscountText(prod.discount, prod.mrp || prod.oldPrice, prod.price);
 
                 return (
-                  <View key={prod.id} style={styles.pharmacyCard}>
+                  <View key={prod.id} style={[styles.pharmacyCard, { width: cardWidth }]}>
+                    {/* Top Multi-Color Gradient Bar */}
+                    <View style={styles.cardGradientBarMulticolor} />
+
                     {/* Badge */}
                     <View style={styles.pharmacyBadge}>
                       <Text style={styles.pharmacyBadgeText}>
-                        {prod.discount ? prod.discount.toUpperCase() : 'FLAT 20% OFF'}
+                        {discountStr}
                       </Text>
                     </View>
 
@@ -1438,65 +1505,64 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
 
                     {/* Card Content */}
                     <View style={styles.pharmacyCardBody}>
-                      <Text style={styles.pharmacyCat}>{prod.category || 'MEDICINES'}</Text>
-                      <TouchableOpacity
-                        onPress={() => navigation?.navigate('ProductDetails', { product: prod, productId: prod.id })}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.pharmacyName} numberOfLines={1}>
-                          {prod.name}
-                        </Text>
-                      </TouchableOpacity>
-                      <Text style={styles.pharmacyBrand} numberOfLines={1}>
-                        {prod.brand} • {prod.packSize || '1 Unit'}
-                      </Text>
-
-                      {/* Rating */}
-                      <View style={styles.pharmacyRatingRow}>
-                        <View style={styles.ratingTag}>
-                          <Ionicons name="star" size={11} color="#FF7F50" />
-                          <Text style={styles.ratingTagText}>{prod.rating || 4.8}</Text>
-                        </View>
-                        <Text style={styles.reviewsCountText}>({prod.reviewsCount || 850}+)</Text>
-                      </View>
-
-                      {/* Price Row */}
-                      <View style={styles.pharmacyPriceRow}>
-                        <Text style={styles.pharmacyPrice}>₹{prod.price}</Text>
-                        {Boolean(prod.mrp || prod.oldPrice) ? (
-                          <Text style={styles.pharmacyMrp}>MRP ₹{prod.mrp || prod.oldPrice}</Text>
-                        ) : null}
-                      </View>
-
-                      {/* Add to Cart or Stepper */}
-                      {quantity > 0 ? (
-                        <View style={styles.quantityStepper}>
-                          <TouchableOpacity
-                            style={styles.stepperBtn}
-                            onPress={() => decreaseQuantity(prod.id, 'pharmacy')}
-                            activeOpacity={0.7}
-                          >
-                            <Ionicons name="remove" size={14} color="#00B894" />
-                          </TouchableOpacity>
-                          <Text style={styles.stepperQuantity}>{quantity}</Text>
-                          <TouchableOpacity
-                            style={styles.stepperBtn}
-                            onPress={() => increaseQuantity(prod.id, 'pharmacy')}
-                            activeOpacity={0.7}
-                          >
-                            <Ionicons name="add" size={14} color="#00B894" />
-                          </TouchableOpacity>
-                        </View>
-                      ) : (
+                      <View style={styles.pharmacyCardContent}>
+                        <Text style={styles.pharmacyCat}>{shortCat}</Text>
                         <TouchableOpacity
-                          style={styles.addToCartButton}
-                          onPress={() => addToCart(prod, 1, 'pharmacy')}
-                          activeOpacity={0.85}
+                          onPress={() => navigation?.navigate('ProductDetails', { product: prod, productId: prod.id })}
+                          activeOpacity={0.8}
                         >
-                          <Ionicons name="cart-outline" size={15} color="#FFFFFF" />
-                          <Text style={styles.addToCartButtonText}>Add to Cart</Text>
+                          <Text style={styles.pharmacyName} numberOfLines={2} ellipsizeMode="tail">
+                            {prod.name}
+                          </Text>
                         </TouchableOpacity>
-                      )}
+
+                        {/* Compact Rating: 4.8 (1.2k) */}
+                        <View style={styles.pharmacyRatingRow}>
+                          <Ionicons name="star" size={12} color="#FF9F43" />
+                          <Text style={styles.ratingNumberText}>{prod.rating || 4.8}</Text>
+                          <Text style={styles.reviewsCountText}>{reviewsStr}</Text>
+                        </View>
+                      </View>
+
+                      {/* Bottom Footer: Price & Add to Cart Action */}
+                      <View style={styles.pharmacyCardFooter}>
+                        <View style={styles.pharmacyPriceRow}>
+                          <Text style={styles.pharmacyPrice}>₹{prod.price}</Text>
+                          {Boolean(prod.mrp || prod.oldPrice) ? (
+                            <Text style={styles.pharmacyMrp}>MRP ₹{prod.mrp || prod.oldPrice}</Text>
+                          ) : null}
+                        </View>
+
+                        {/* Add to Cart or Stepper */}
+                        {quantity > 0 ? (
+                          <View style={styles.quantityStepper}>
+                            <TouchableOpacity
+                              style={styles.stepperBtn}
+                              onPress={() => decreaseQuantity(prod.id, 'pharmacy')}
+                              activeOpacity={0.7}
+                            >
+                              <Ionicons name="remove" size={14} color="#00B894" />
+                            </TouchableOpacity>
+                            <Text style={styles.stepperQuantity}>{quantity}</Text>
+                            <TouchableOpacity
+                              style={styles.stepperBtn}
+                              onPress={() => increaseQuantity(prod.id, 'pharmacy')}
+                              activeOpacity={0.7}
+                            >
+                              <Ionicons name="add" size={14} color="#00B894" />
+                            </TouchableOpacity>
+                          </View>
+                        ) : (
+                          <TouchableOpacity
+                            style={styles.addToCartButton}
+                            onPress={() => addToCart(prod, 1, 'pharmacy')}
+                            activeOpacity={0.85}
+                          >
+                            <Ionicons name="cart-outline" size={15} color="#FFFFFF" />
+                            <Text style={styles.addToCartButtonText}>Add to Cart</Text>
+                          </TouchableOpacity>
+                        )}
+                      </View>
                     </View>
                   </View>
                 );
@@ -2398,14 +2464,18 @@ const styles = StyleSheet.create({
     flex: 1,
     minWidth: 240,
     backgroundColor: '#FFFFFF',
+    backgroundImage: 'linear-gradient(145deg, #FFFFFF 0%, #F8FAFC 60%, #F0FDF9 100%)',
     borderRadius: 16,
     padding: 18,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 1.5,
+    borderColor: '#D1FAE5',
+    borderTopWidth: 3.5,
+    borderTopColor: '#00B894',
     shadowColor: '#1E3A8A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    boxShadow: '0 6px 20px -2px rgba(0, 184, 148, 0.07)',
     justifyContent: 'space-between',
     minHeight: 160,
   },
@@ -2565,19 +2635,23 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
     backgroundColor: '#FFFFFF',
+    backgroundImage: 'linear-gradient(135deg, #FFFFFF 0%, #F0FDF9 50%, #EFF6FF 100%)',
     borderRadius: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    paddingVertical: 18,
+    borderWidth: 1.5,
+    borderColor: '#CCFBF1',
+    paddingVertical: 20,
     paddingHorizontal: 24,
     flexDirection: 'row',
     flexWrap: 'wrap',
     alignItems: 'center',
     justifyContent: 'space-between',
+    position: 'relative',
+    overflow: 'hidden',
     shadowColor: '#1E3A8A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.03,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    boxShadow: '0 8px 24px -2px rgba(0, 184, 148, 0.08)',
   },
   guaranteeItem: {
     flexDirection: 'row',
@@ -2654,43 +2728,58 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: 14,
+  },
+  cardGradientBarMulticolor: {
+    height: 4,
+    width: '100%',
+    backgroundImage: 'linear-gradient(90deg, #00B894 0%, #00C2CB 50%, #1E3A8A 100%)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 3,
   },
   pharmacyCard: {
-    flex: 1,
-    minWidth: 240,
-    maxWidth: 310,
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0FDF9',
+    backgroundImage: 'linear-gradient(180deg, #F4FDF9 0%, #E6F8F3 50%, #EFF6FF 100%)',
     borderRadius: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 16,
+    borderWidth: 1.5,
+    borderColor: '#A7F3D0',
+    padding: 12,
+    paddingTop: 14,
     position: 'relative',
-    shadowColor: '#1E3A8A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
+    overflow: 'hidden',
+    shadowColor: '#00B894',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
+    elevation: 3,
+    boxShadow: '0 8px 24px -3px rgba(0, 184, 148, 0.10)',
     justifyContent: 'space-between',
+    minHeight: 310,
+    cursor: 'pointer',
   },
   pharmacyBadge: {
     position: 'absolute',
-    top: 10,
-    left: 10,
+    top: 8,
+    left: 8,
     backgroundColor: '#FFF5F0',
-    paddingHorizontal: 7,
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
     zIndex: 2,
   },
   pharmacyBadgeText: {
-    fontSize: 9,
-    fontWeight: '900',
+    fontSize: 9.5,
+    fontWeight: '800',
     color: '#FF7F50',
+    letterSpacing: 0.2,
   },
   pharmacyRxBadge: {
     position: 'absolute',
-    top: 10,
-    right: 10,
+    top: 8,
+    right: 8,
     backgroundColor: '#EFF6FF',
     paddingHorizontal: 6,
     paddingVertical: 2,
@@ -2700,42 +2789,50 @@ const styles = StyleSheet.create({
     zIndex: 2,
   },
   pharmacyRxBadgeText: {
-    fontSize: 9,
+    fontSize: 9.5,
     fontWeight: '800',
     color: '#1E3A8A',
   },
   pharmacyCardImgWrap: {
     width: '100%',
-    height: 140,
+    height: 130,
     backgroundColor: '#F8FAFC',
+    backgroundImage: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 50%, #ECFDF5 100%)',
     borderRadius: 10,
-    marginTop: 18,
-    marginBottom: 10,
+    borderWidth: 1,
+    borderColor: '#EDF2F7',
+    marginTop: 14,
+    marginBottom: 8,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
   pharmacyCardImg: {
-    width: '85%',
-    height: '85%',
+    width: '88%',
+    height: '88%',
   },
   pharmacyCardBody: {
     flex: 1,
     justifyContent: 'space-between',
+  },
+  pharmacyCardContent: {
+    flex: 1,
   },
   pharmacyCat: {
     fontSize: 10,
     fontWeight: '700',
     color: '#00B894',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.4,
+    marginBottom: 3,
   },
   pharmacyName: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '700',
     color: '#1E3A8A',
-    marginTop: 4,
     lineHeight: 18,
+    height: 36,
+    overflow: 'hidden',
   },
   pharmacyBrand: {
     fontSize: 11,
@@ -2745,40 +2842,34 @@ const styles = StyleSheet.create({
   pharmacyRatingRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginTop: 6,
+    gap: 4,
+    marginTop: 5,
   },
-  ratingTag: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-    backgroundColor: '#FFF5F0',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
-  },
-  ratingTagText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#FF7F50',
+  ratingNumberText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#334155',
   },
   reviewsCountText: {
     fontSize: 11,
     color: '#94A3B8',
   },
+  pharmacyCardFooter: {
+    marginTop: 8,
+  },
   pharmacyPriceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 8,
-    marginVertical: 10,
+    gap: 6,
+    marginBottom: 8,
   },
   pharmacyPrice: {
-    fontSize: 18,
-    fontWeight: '900',
+    fontSize: 17,
+    fontWeight: '800',
     color: '#1E3A8A',
   },
   pharmacyMrp: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: '#94A3B8',
     textDecorationLine: 'line-through',
   },
@@ -2788,9 +2879,15 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     gap: 6,
     backgroundColor: '#00B894',
-    paddingVertical: 9,
+    backgroundImage: 'linear-gradient(135deg, #00B894 0%, #009B7B 100%)',
     borderRadius: 8,
-    height: 38,
+    height: 36,
+    cursor: 'pointer',
+    shadowColor: '#00B894',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 2,
   },
   addToCartButtonText: {
     fontSize: 13,
@@ -2805,7 +2902,7 @@ const styles = StyleSheet.create({
     borderColor: '#00B894',
     borderRadius: 8,
     backgroundColor: '#ECFDF5',
-    height: 38,
+    height: 36,
     paddingHorizontal: 8,
   },
   stepperBtn: {
@@ -2815,7 +2912,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   stepperQuantity: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '800',
     color: '#00B894',
   },

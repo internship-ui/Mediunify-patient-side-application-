@@ -1,6 +1,7 @@
 export const POPULAR_CITIES = [
-  'Bangalore',
+  'Mysuru',
   'Mysore',
+  'Bangalore',
   'Hassan',
   'Hubli - Dharwad',
   'Mangalore',
@@ -19,8 +20,9 @@ export const POPULAR_CITIES = [
 
 export const ALL_LOCATIONS = [
   // Major Cities
-  { id: 'c-1', name: 'Bangalore', type: 'city', full: 'Bangalore (Bengaluru)', state: 'Karnataka' },
+  { id: 'c-2-mysuru', name: 'Mysuru', type: 'city', full: 'Mysuru (Mysore)', state: 'Karnataka' },
   { id: 'c-2', name: 'Mysore', type: 'city', full: 'Mysore (Mysuru)', state: 'Karnataka' },
+  { id: 'c-1', name: 'Bangalore', type: 'city', full: 'Bangalore (Bengaluru)', state: 'Karnataka' },
   { id: 'c-hassan', name: 'Hassan', type: 'city', full: 'Hassan', state: 'Karnataka' },
   { id: 'c-3', name: 'Hubli - Dharwad', type: 'city', full: 'Hubli - Dharwad', state: 'Karnataka' },
   { id: 'c-4', name: 'Mangalore', type: 'city', full: 'Mangalore (Mangaluru)', state: 'Karnataka' },

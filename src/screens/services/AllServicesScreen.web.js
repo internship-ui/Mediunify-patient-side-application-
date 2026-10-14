@@ -37,8 +37,8 @@ const PALETTE = {
 const ALL_SERVICES = [
   {
     id: 'videocall',
-    title: 'Video Call Consultation',
-    subtitle: 'Instant HD video consult with verified doctors',
+    title: 'Video Consultation',
+    subtitle: 'Online video with certified doctors',
     iconFamily: 'Ionicons',
     icon: 'videocam-outline',
     iconColor: '#1170CF',
@@ -51,7 +51,7 @@ const ALL_SERVICES = [
   {
     id: 'pharmacy',
     title: 'Order Medicine',
-    subtitle: 'Prescription & OTC medicines delivered fast',
+    subtitle: 'Medicines delivered to your door',
     iconFamily: 'MaterialCommunityIcons',
     icon: 'pill',
     iconColor: '#6B46C1',
@@ -64,7 +64,7 @@ const ALL_SERVICES = [
   {
     id: 'lab',
     title: 'Lab Tests',
-    subtitle: 'Book diagnostic tests with free home pickup',
+    subtitle: 'Certified tests with home sample pickup',
     iconFamily: 'Ionicons',
     icon: 'flask-outline',
     iconColor: '#00A878',
@@ -76,21 +76,21 @@ const ALL_SERVICES = [
   },
   {
     id: 'radiology',
-    title: 'Scans & X-Ray',
-    subtitle: 'MRI, CT Scan, X-Ray at certified radiology labs',
+    title: 'Scan & X-Ray',
+    subtitle: 'MRI, CT & X-Ray at certified centres',
     iconFamily: 'Ionicons',
     icon: 'scan-outline',
     iconColor: '#1E3A8A',
     iconBg: '#EEF2FF',
     accentColor: '#1E3A8A',
-    route: 'RadiologyLabs',
+    route: 'Imaging',
     badge: 'Same Day',
     keywords: 'scans scan x-ray radiology mri ct scan ultrasound 2d echo ecg',
   },
   {
     id: 'doctors',
     title: 'In-Clinic Visit',
-    subtitle: 'Book in-clinic appointments with specialist doctors',
+    subtitle: 'In-clinic doctor consultations',
     iconFamily: 'MaterialCommunityIcons',
     icon: 'hospital-building',
     iconColor: '#007D69',
@@ -102,8 +102,8 @@ const ALL_SERVICES = [
   },
   {
     id: 'nurse',
-    title: 'Home Nursing & Caregiver',
-    subtitle: 'Trained nurses & caregivers at your doorstep',
+    title: 'Home Nurse & Caregiver',
+    subtitle: 'Certified nurses and caregivers at home',
     iconFamily: 'MaterialCommunityIcons',
     icon: 'home-heart',
     iconColor: '#DB2777',
@@ -285,7 +285,7 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
           />
 
           <View style={styles.headerTitleBlock}>
-            <Text style={styles.pageTitle}>{t('all_services', 'All Healthcare Services')}</Text>
+            <Text style={styles.pageTitle}>{t('all_services', 'All Services')}</Text>
             <View style={styles.locationRow}>
               <Ionicons name="location" size={13} color={PALETTE.tealDark} />
               <Text style={styles.locationText}>{activeCity}</Text>
@@ -296,7 +296,7 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
             <Ionicons name="search" size={17} color={PALETTE.slate} style={{ marginRight: 8 }} />
             <TextInput
               style={styles.searchInput}
-              placeholder={t('search_services', 'Search services… Lab Test, Nursing, Surgery…')}
+              placeholder={t('search_services', 'Search all services...')}
               placeholderTextColor="#94A3B8"
               value={searchQuery}
               onChangeText={setSearchQuery}

@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -18,11 +18,19 @@ import HomeScreenMobile from './HomeScreenMobile';
 import { filterLocations } from '../../data/locations';
 import { FEATURED_SPECIALTIES } from '../../data/featuredSpecialties';
 import SpecialtyIcon from '../../components/common/SpecialtyIcon';
-import { detectAutoLocation } from '../../utils/locationHelper';
+import { reverseGeocodeWebSafe, normalizeCityName } from '../../utils/locationHelper';
+import { doctors } from '../../data/doctors';
+import videoDoctors from '../../data/videoDoctors';
+import { LAB_TESTS_MASTER, LAB_PACKAGES, ALL_CITY_DIAGNOSTIC_CENTRES } from '../../data/labTestData';
+import pharmacyProducts from '../../data/pharmacyProducts';
+import { RADIOLOGY_TESTS } from '../../data/radiologyCatalogData';
 import { showAlert } from '../../utils/alert';
 import PromotionalAdsSection from '../../components/web/PromotionalAdsSection';
 import { useTheme } from '../../context/ThemeContext';
 import { isDesktopLayout, isDesktopSiteRequested } from '../../utils/responsiveLayoutHelper';
+import GuestLeadModal from '../../components/common/GuestLeadModal';
+import { shouldShowGuestLeadPopup } from '../../services/guestLeadService';
+import WebFooter from '../../components/web/WebFooter';
 
 // ==================================================
 // OFFICIAL MEDIUNIFY LOGO & BRAND PALETTE:
@@ -49,88 +57,61 @@ const PALETTE = {
   pastelSoftPink: '#FDEFF3',
 };
 
-// 7 Service Cards — with accent colors, badges, creative design
+// 4 Service Cards — exact organic cards matching user reference design
 const HERO_PRACTO_CARDS = [
   {
     id: 'video-consult',
+    stepNumber: '01',
     titleKey: 'card_video_consult',
     title: 'Video Consultation',
     subtitleKey: 'card_video_desc',
-    subtitle: 'Connect with expert doctors from the comfort of your home.',
-    bgColor: '#E8F4FD',
-    gradientTop: 'linear-gradient(135deg, #C9E8F8 0%, #E0F3FD 100%)',
-    accentColor: '#1170CF',
-    accentBg: '#E8F4FD',
-    availabilityKey: 'service_video_avail',
-    availability: "Qualified Doctor's",
-    iconFamily: 'MaterialCommunityIcons',
-    iconName: 'stethoscope',
+    subtitle: 'Consult doctors from home.',
+    accentColor: '#0284C7',
     route: 'VideoConsultation',
-    image: require('../../../assets/services/service_video_consult.jpg'),
+    image: require('../../../assets/icons/service_3d_video.jpg'),
   },
   {
     id: 'lab-tests',
+    stepNumber: '02',
     titleKey: 'card_lab_tests',
     title: 'Lab Tests',
     subtitleKey: 'card_lab_desc',
-    subtitle: 'Get accurate results with trusted labs. Home sample pickup.',
-    bgColor: '#E6F8F2',
-    gradientTop: 'linear-gradient(135deg, #C2EEE2 0%, #DCF5EE 100%)',
-    accentColor: '#00A878',
-    accentBg: '#E6F8F2',
-    availabilityKey: 'service_lab_avail',
-    availability: 'Free Home Pickup',
-    iconFamily: 'Ionicons',
-    iconName: 'home',
+    subtitle: 'Book tests with convenient collection.',
+    accentColor: '#00B894',
     route: 'LabTests',
-    image: require('../../../assets/services/service_lab_tests.jpg'),
+    image: require('../../../assets/icons/service_3d_lab.jpg'),
   },
   {
     id: 'pharmacy',
+    stepNumber: '03',
     titleKey: 'card_order_medicines',
-    title: 'Pharmacy',
+    title: 'Order Medicines',
     subtitleKey: 'card_medicine_desc',
-    subtitle: 'Order medicines and healthcare essentials, delivered fast.',
-    bgColor: '#F0EBFF',
-    gradientTop: 'linear-gradient(135deg, #DDD4FF 0%, #EDE6FF 100%)',
-    accentColor: '#6B46C1',
-    accentBg: '#F0EBFF',
-    availabilityKey: 'service_pharmacy_avail',
-    availability: 'Fast Delivery',
-    iconFamily: 'MaterialCommunityIcons',
-    iconName: 'truck-fast',
+    subtitle: 'Get medicines delivered to your door.',
+    accentColor: '#7C3AED',
     route: 'Pharmacy',
-    image: require('../../../assets/services/service_pharmacy.jpg'),
+    image: require('../../../assets/icons/service_3d_medicine.jpg'),
   },
   {
     id: 'radiology',
+    stepNumber: '04',
     titleKey: 'card_scans_xray',
-    title: 'Scans & X-Ray',
+    title: 'Scan & X-Ray',
     subtitleKey: 'card_scans_desc',
-    subtitle: 'Advanced imaging diagnostics with certified radiologists.',
-    bgColor: '#E8F4FD',
-    gradientTop: 'linear-gradient(135deg, #BFD8F0 0%, #D8ECFA 100%)',
-    accentColor: '#1E3A8A',
-    accentBg: '#E8F4FD',
-    availabilityKey: 'service_scans_avail',
-    availability: 'Same Day Reports',
-    iconFamily: 'Ionicons',
-    iconName: 'document-text',
+    subtitle: 'Book diagnostic scans near you.',
+    accentColor: '#EA580C',
     route: 'Imaging',
-    image: require('../../../assets/services/service_radiology.jpg'),
+    image: require('../../../assets/icons/service_3d_scan.jpg'),
   },
 ];
 
-// Popular search tags matching reference design
+// Popular search tags — trimmed to 5 most useful options
 const POPULAR_SEARCH_TAGS = [
   { key: 'tag_fever', label: 'Fever', query: 'Fever' },
-  { key: 'tag_general_physician', label: 'General Physician', specialty: 'general-primary' },
+  { key: 'tag_general_physician', label: 'Doctor', specialty: 'general-primary' },
   { key: 'tag_blood_test', label: 'Blood Test', route: 'LabTests' },
-  { key: 'tag_home_nurse', label: 'Home Nursing', route: 'NurseBooking' },
   { key: 'tag_mri_scan', label: 'MRI Scan', route: 'Imaging' },
-  { key: 'tag_cardiologist', label: 'Cardiologist', specialty: 'cardiology-heart' },
   { key: 'tag_pharmacy', label: 'Pharmacy', route: 'Pharmacy' },
-  { key: 'tag_hospital', label: 'Hospital', route: 'HospitalCare' },
 ];
 
 const SPECIALTY_TRANSLATIONS = {
@@ -148,28 +129,28 @@ const SPECIALTY_TRANSLATIONS = {
   'gastroenterology-group': { title: 'spec_gastro_title', sub: 'spec_gastro_sub' },
 };
 
-// Trust Matrix Pillars matching Login Screen design
+// Trust Matrix Pillars matching reference design
 const TRUST_PILLARS = [
   {
     icon: 'shield-checkmark',
     title: '100% Verified Specialists',
-    desc: 'Rigorous 4-step credential checks & active state medical council verification for every doctor.',
+    desc: 'Council-verified doctors with rigorous credential checks.',
     badge: '3,200+ DOCTORS',
     color: '#00B894',
     bg: '#ECF9F5',
   },
   {
     icon: 'lock-closed',
-    title: 'Military-Grade 256-Bit SSL',
-    desc: 'ABDM-integrated electronic health records with end-to-end data encryption and strict HIPAA standards.',
+    title: '256-Bit SSL Security',
+    desc: 'ABDM integrated with end-to-end data encryption.',
     badge: 'ISO 27001 SECURE',
     color: '#1E3A8A',
     bg: '#EEF7FC',
   },
   {
     icon: 'home',
-    title: 'Doorstep Sample Collection',
-    desc: 'Trained phlebotomists, temperature-controlled cold chain logistics, and same-day certified reports.',
+    title: 'Home Sample Pickup',
+    desc: 'Trained phlebotomists with same-day certified reports.',
     badge: 'NABL PARTNERS',
     color: '#00B894',
     bg: '#E9F4F9',
@@ -177,7 +158,7 @@ const TRUST_PILLARS = [
   {
     icon: 'medal',
     title: 'NABH Accredited Centers',
-    desc: 'Zero hidden surgery costs, transparent second opinions, and dedicated care buddy for hospital stays.',
+    desc: 'Transparent pricing with dedicated care support.',
     badge: '4.9/5 RATING',
     color: '#00B894',
     bg: '#ECFDF5',
@@ -194,13 +175,20 @@ const HomeScreenWeb = ({ navigation }) => {
   const [showCityPicker, setShowCityPicker] = useState(false);
   const [locationSearchText, setLocationSearchText] = useState('');
   const [searchQuery, setSearchQuery] = useState('');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const [selectedSearchCategory, setSelectedSearchCategory] = useState('All');
+  const searchInputRef = useRef(null);
   const [isDetectingLocation, setIsDetectingLocation] = useState(false);
   const [isLoggedIn, setIsLoggedIn] = useState(false);
+  const [showLeadModal, setShowLeadModal] = useState(false);
+  const [pendingSearchQuery, setPendingSearchQuery] = useState('');
+  const [pendingAction, setPendingAction] = useState(null);
 
   const desktopSiteMode = isDesktopSiteRequested();
   const isDesktop = desktopSiteMode || width >= 992;
   const isTablet = !desktopSiteMode && (width >= 640 && width < 992);
   const isMobile = !desktopSiteMode && (width < 640);
+  const isWideDesktop = isDesktop && width >= 1200;
 
   const filteredLocations = filterLocations(locationSearchText);
 
@@ -242,7 +230,7 @@ const HomeScreenWeb = ({ navigation }) => {
     setCanScrollRight(currentX < maxScroll - 15);
   };
 
-  // Auth guard: If user is logged in or browsing as Guest, allow browsing; otherwise redirect to Login page
+  // Auth state check: allow guests to browse freely, identify logged-in users
   useEffect(() => {
     let isMounted = true;
     (async () => {
@@ -252,30 +240,10 @@ const HomeScreenWeb = ({ navigation }) => {
         if (isMounted) {
           if (stored === 'true' && isGuestStored !== 'true') {
             setIsLoggedIn(true);
-          } else if (isGuestStored === 'true') {
-            setIsLoggedIn(false);
           } else {
-            const parent = navigation?.getParent?.();
-            if (parent?.reset) {
-              parent.reset({
-                index: 0,
-                routes: [{ name: 'Auth', state: { routes: [{ name: 'Login' }] } }],
-              });
-              return;
-            }
-            if (navigation?.reset) {
-              navigation.reset({
-                index: 0,
-                routes: [{ name: 'Auth', state: { routes: [{ name: 'Login' }] } }],
-              });
-              return;
-            }
-            if (parent?.navigate) {
-              parent.navigate('Auth', { screen: 'Login' });
-              return;
-            }
-            if (navigation?.navigate) {
-              navigation.navigate('Auth', { screen: 'Login' });
+            setIsLoggedIn(false);
+            if (isGuestStored !== 'true') {
+              AsyncStorage.setItem('@unnathi_is_guest', 'true').catch(() => {});
             }
           }
         }
@@ -286,7 +254,7 @@ const HomeScreenWeb = ({ navigation }) => {
     };
   }, []);
 
-  // Load saved city on mount or automatically detect location where user is
+  // Load saved city on mount (preserve user's selection, default to Mysore if first visit)
   useEffect(() => {
     (async () => {
       try {
@@ -294,14 +262,13 @@ const HomeScreenWeb = ({ navigation }) => {
         if (saved) {
           setSelectedCity(saved);
         } else {
-          // Automatic GPS / network location detection
-          const res = await detectAutoLocation();
-          if (res && res.city) {
-            setSelectedCity(res.city);
-          }
+          const defaultCity = 'Mysore';
+          setSelectedCity(defaultCity);
+          await AsyncStorage.setItem('@mediunify_selected_city', defaultCity);
+          await AsyncStorage.setItem('@unnathi_user_location', defaultCity);
         }
       } catch (e) {
-        console.warn('[Location] Auto-detect error on mount:', e);
+        console.warn('[Location] Saved city load error on mount:', e);
       }
     })();
   }, []);
@@ -319,56 +286,408 @@ const HomeScreenWeb = ({ navigation }) => {
     } catch (e) {}
   };
 
-  const handleDetectLocation = async () => {
+  const handleDetectLocation = () => {
+    if (typeof window === 'undefined' || typeof navigator === 'undefined' || !navigator.geolocation) {
+      showAlert('Geolocation Unsupported', 'Your browser does not support GPS location. Please select your city manually from the list.');
+      return;
+    }
+
     setIsDetectingLocation(true);
-    try {
-      const res = await detectAutoLocation();
-      if (res && res.city) {
-        setSelectedCity(res.city);
-        setShowCityPicker(false);
-        setLocationSearchText('');
+
+    const geoOptions = {
+      enableHighAccuracy: true,
+      timeout: 10000,
+      maximumAge: 0,
+    };
+
+    navigator.geolocation.getCurrentPosition(
+      async (pos) => {
         try {
-          await AsyncStorage.setItem('@mediunify_selected_city', res.city);
-          await AsyncStorage.setItem('@unnathi_user_location', res.city);
-          if (Platform.OS === 'web' && typeof window !== 'undefined') {
-            window.dispatchEvent(new Event('storage'));
+          const lat = pos?.coords?.latitude;
+          const lon = pos?.coords?.longitude;
+          if (!lat || !lon) {
+            showAlert('Location Notice', 'Could not obtain coordinates from GPS. Please choose your city manually.');
+            setIsDetectingLocation(false);
+            return;
           }
-        } catch (e) {}
-        showAlert('Location Detected', `Your location has been set to ${res.city} (${res.source === 'gps' ? 'GPS' : 'Network'}).`);
-      } else {
-        showAlert('Location Notice', 'Could not detect GPS location. Defaulted to Bangalore.');
-      }
-    } catch (e) {
-      console.warn('[Location] GPS detect error:', e);
-    } finally {
-      setIsDetectingLocation(false);
+
+          // Reverse geocode to get true city name
+          const addresses = await reverseGeocodeWebSafe({ latitude: lat, longitude: lon });
+          const first = addresses?.[0];
+          const rawCity = first?.city || first?.district || first?.subregion;
+
+          if (rawCity) {
+            const detectedCity = normalizeCityName(rawCity);
+            setSelectedCity(detectedCity);
+            setShowCityPicker(false);
+            setLocationSearchText('');
+
+            await AsyncStorage.setItem('@mediunify_selected_city', detectedCity);
+            await AsyncStorage.setItem('@unnathi_user_location', first.formattedAddress || detectedCity);
+            await AsyncStorage.setItem('@unnathi_user_coords', JSON.stringify({ latitude: lat, longitude: lon }));
+
+            if (Platform.OS === 'web' && typeof window !== 'undefined') {
+              window.dispatchEvent(new Event('storage'));
+            }
+
+            showAlert('Location Detected', `Your location has been set to ${detectedCity} via browser GPS.`);
+          } else {
+            showAlert('Location Notice', 'Could not determine your city from GPS coordinates. Please select your city manually from the list.');
+          }
+        } catch (err) {
+          console.warn('[Location] Reverse geocode error:', err);
+          showAlert('Location Error', 'Unable to resolve your location address. Please select your city manually from the list.');
+        } finally {
+          setIsDetectingLocation(false);
+        }
+      },
+      (error) => {
+        setIsDetectingLocation(false);
+        if (error.code === 1) { // PERMISSION_DENIED
+          showAlert(
+            'Location Permission Denied',
+            'Browser location access was denied. Please allow location permissions in your browser address bar/settings, or choose your city manually from the list below.'
+          );
+        } else if (error.code === 2) { // POSITION_UNAVAILABLE
+          showAlert(
+            'Location Unavailable',
+            'GPS position could not be determined. Please ensure your device location is turned on or select your city manually.'
+          );
+        } else if (error.code === 3) { // TIMEOUT
+          showAlert(
+            'Location Request Timed Out',
+            'GPS location detection timed out. Please select your city manually from the list.'
+          );
+        } else {
+          showAlert(
+            'GPS Location Error',
+            error.message || 'Could not detect your location. Please select your city manually.'
+          );
+        }
+      },
+      geoOptions
+    );
+  };
+
+  // Real Multi-Service Search Engine
+  const allSearchResults = useMemo(() => {
+    const rawQuery = searchQuery.trim().toLowerCase();
+    if (!rawQuery) return [];
+
+    const cityLower = (selectedCity || '').toLowerCase();
+    const isMysore = cityLower.includes('mys') || cityLower.includes('mysuru') || cityLower.includes('mysore');
+    const isBangalore = cityLower.includes('bengaluru') || cityLower.includes('bangalore') || cityLower.includes('bangal');
+
+    const results = [];
+
+    const match = (str) => {
+      if (!str || typeof str !== 'string') return false;
+      return str.toLowerCase().includes(rawQuery);
+    };
+
+    const matchesCity = (locationStr) => {
+      if (!locationStr || typeof locationStr !== 'string') return true;
+      const l = locationStr.toLowerCase();
+      if (l.includes(cityLower)) return true;
+      if (isMysore && (l.includes('mys') || l.includes('mysuru') || l.includes('mysore'))) return true;
+      if (isBangalore && (l.includes('bengaluru') || l.includes('bangalore') || l.includes('bangal'))) return true;
+      return false;
+    };
+
+    // 1. DOCTORS (In-Clinic)
+    if (Array.isArray(doctors)) {
+      const isDocWord = ['doctor', 'doc', 'physician', 'specialist', 'dr', 'clinic'].some((w) => rawQuery.includes(w) || w.includes(rawQuery));
+      doctors.forEach((doc) => {
+        if (!matchesCity(doc.clinicArea) && !matchesCity(doc.clinicAddress)) return;
+
+        if (
+          match(doc.name) ||
+          match(doc.specialty) ||
+          match(doc.specialtyKey) ||
+          match(doc.clinicName) ||
+          (isDocWord && rawQuery.length >= 3)
+        ) {
+          results.push({
+            id: `doc-${doc.id}`,
+            name: doc.name,
+            category: 'Doctors',
+            subtitle: `${doc.specialty}${doc.clinicArea ? ` • ${doc.clinicArea.split(',')[0]}` : ''}`,
+            badge: doc.fee ? `₹${doc.fee}` : '',
+            icon: 'person',
+            iconType: 'ionicons',
+            iconBg: '#E0F2FE',
+            iconColor: '#0284C7',
+            priority: match(doc.name) ? 1 : 2,
+            onPress: () => {
+              setIsSearchFocused(false);
+              navigation?.navigate('DoctorBooking', { doctor: doc });
+            },
+          });
+        }
+      });
+    }
+
+    // 2. VIDEO CONSULTATION DOCTORS
+    if (Array.isArray(videoDoctors)) {
+      const isVideoWord = ['video', 'online', 'teleconsultation', 'call'].some((w) => rawQuery.includes(w) || w.includes(rawQuery));
+      videoDoctors.forEach((doc) => {
+        if (
+          match(doc.name) ||
+          match(doc.specialty) ||
+          (isVideoWord && rawQuery.length >= 3)
+        ) {
+          results.push({
+            id: `vdoc-${doc.id}`,
+            name: doc.name,
+            category: 'Video Consultation',
+            subtitle: `${doc.specialty} • Video Call`,
+            badge: doc.fee ? `₹${doc.fee}` : '',
+            icon: 'videocam',
+            iconType: 'ionicons',
+            iconBg: '#E0F7FA',
+            iconColor: '#00C2CB',
+            priority: match(doc.name) ? 1 : 3,
+            onPress: () => {
+              setIsSearchFocused(false);
+              navigation?.navigate('VideoBooking', { doctor: doc });
+            },
+          });
+        }
+      });
+    }
+
+    // 3. LAB TESTS & PACKAGES
+    if (Array.isArray(LAB_TESTS_MASTER)) {
+      const isLabWord = ['lab', 'test', 'blood', 'pathology', 'diagnostics', 'cbc', 'sugar', 'lipid', 'thyroid'].some((w) => rawQuery.includes(w) || w.includes(rawQuery));
+      LAB_TESTS_MASTER.forEach((test) => {
+        if (
+          match(test.name) ||
+          match(test.category) ||
+          match(test.department) ||
+          (isLabWord && rawQuery.length >= 3)
+        ) {
+          results.push({
+            id: `lab-${test.id}`,
+            name: test.name,
+            category: 'Lab Tests',
+            subtitle: `Lab Test${test.department ? ` • ${test.department}` : ''}`,
+            badge: test.price ? `₹${test.price}` : (test.mrp ? `₹${test.mrp}` : 'Home Pickup'),
+            icon: 'flask',
+            iconType: 'ionicons',
+            iconBg: '#F0FDFA',
+            iconColor: '#0D9488',
+            priority: match(test.name) ? 1 : 2,
+            onPress: () => {
+              setIsSearchFocused(false);
+              navigation?.navigate('LabTests', { searchTest: test.name, city: selectedCity });
+            },
+          });
+        }
+      });
+    }
+
+    if (Array.isArray(LAB_PACKAGES)) {
+      LAB_PACKAGES.forEach((pkg) => {
+        if (match(pkg.name) || match(pkg.description) || rawQuery.includes('package') || rawQuery.includes('checkup')) {
+          results.push({
+            id: `pkg-${pkg.id}`,
+            name: pkg.name,
+            category: 'Lab Packages',
+            subtitle: `Health Package • ${pkg.testsCount || 'Comprehensive'}`,
+            badge: pkg.price ? `₹${pkg.price}` : '',
+            icon: 'fitness',
+            iconType: 'ionicons',
+            iconBg: '#FEF3C7',
+            iconColor: '#D97706',
+            priority: match(pkg.name) ? 1 : 2,
+            onPress: () => {
+              setIsSearchFocused(false);
+              navigation?.navigate('LabTests', { category: 'packages', city: selectedCity });
+            },
+          });
+        }
+      });
+    }
+
+    // 4. SCANS & X-RAY (RADIOLOGY)
+    if (Array.isArray(RADIOLOGY_TESTS)) {
+      const isScanWord = ['scan', 'xray', 'x-ray', 'mri', 'ct', 'ultrasound', 'echo', 'ecg', 'radiology'].some((w) => rawQuery.includes(w) || w.includes(rawQuery));
+      RADIOLOGY_TESTS.forEach((scan) => {
+        if (
+          match(scan.name) ||
+          match(scan.categoryName) ||
+          match(scan.shortName) ||
+          match(scan.modality) ||
+          (isScanWord && rawQuery.length >= 3)
+        ) {
+          results.push({
+            id: `rad-${scan.id}`,
+            name: scan.name,
+            category: 'Scan & X-Ray',
+            subtitle: `Scan & X-Ray • ${scan.modality || scan.categoryName || 'Radiology'}`,
+            badge: scan.price ? `₹${scan.price}` : (scan.mrp ? `₹${scan.mrp}` : ''),
+            icon: 'scan-outline',
+            iconType: 'ionicons',
+            iconBg: '#EEF2FF',
+            iconColor: '#4F46E5',
+            priority: match(scan.name) ? 1 : 2,
+            onPress: () => {
+              setIsSearchFocused(false);
+              navigation?.navigate('RadiologyLabs', { searchTest: scan.name, testId: scan.id, city: selectedCity });
+            },
+          });
+        }
+      });
+    }
+
+    // 5. MEDICINES & PHARMACY
+    if (Array.isArray(pharmacyProducts)) {
+      const isMedWord = ['medicine', 'pharmacy', 'tablet', 'syrup', 'capsule', 'drug', 'med', 'paracetamol', 'dolo'].some((w) => rawQuery.includes(w) || w.includes(rawQuery));
+      pharmacyProducts.forEach((med) => {
+        if (
+          match(med.name) ||
+          match(med.brand) ||
+          match(med.activeIngredients) ||
+          match(med.uses) ||
+          (isMedWord && rawQuery.length >= 3)
+        ) {
+          results.push({
+            id: `med-${med.id}`,
+            name: med.name,
+            category: 'Medicines',
+            subtitle: `Medicine • ${med.brand || 'Pharmacy'}`,
+            badge: med.price ? `₹${med.price}` : '',
+            icon: 'pill',
+            iconType: 'material',
+            iconBg: '#ECFDF5',
+            iconColor: '#059669',
+            priority: match(med.name) ? 1 : 2,
+            onPress: () => {
+              setIsSearchFocused(false);
+              navigation?.navigate('ProductDetails', { product: med });
+            },
+          });
+        }
+      });
+    }
+
+    // 6. CLINICS & DIAGNOSTIC CENTRES
+    if (Array.isArray(ALL_CITY_DIAGNOSTIC_CENTRES)) {
+      const isClinicWord = ['clinic', 'centre', 'center', 'lab', 'hospital'].some((w) => rawQuery.includes(w) || w.includes(rawQuery));
+      ALL_CITY_DIAGNOSTIC_CENTRES.forEach((centre) => {
+        if (!matchesCity(centre.city) && !matchesCity(centre.address)) return;
+        if (
+          match(centre.name) ||
+          match(centre.area) ||
+          (isClinicWord && rawQuery.length >= 3)
+        ) {
+          results.push({
+            id: `clinic-${centre.id}`,
+            name: centre.name,
+            category: 'Clinics',
+            subtitle: `Clinic & Lab • ${centre.area || selectedCity}`,
+            badge: centre.rating ? `★ ${centre.rating}` : 'Verified',
+            icon: 'business',
+            iconType: 'ionicons',
+            iconBg: '#F8FAFC',
+            iconColor: '#475569',
+            priority: match(centre.name) ? 1 : 2,
+            onPress: () => {
+              setIsSearchFocused(false);
+              navigation?.navigate('LabTests', { city: selectedCity });
+            },
+          });
+        }
+      });
+    }
+
+    results.sort((a, b) => {
+      if (a.priority !== b.priority) return a.priority - b.priority;
+      return a.name.localeCompare(b.name);
+    });
+
+    return results;
+  }, [searchQuery, selectedCity, navigation]);
+
+  const matchingCategories = useMemo(() => {
+    if (allSearchResults.length === 0) return [];
+    const catCounts = {};
+    allSearchResults.forEach((r) => {
+      catCounts[r.category] = (catCounts[r.category] || 0) + 1;
+    });
+    const categories = Object.keys(catCounts).map((cat) => ({
+      name: cat,
+      count: catCounts[cat],
+    }));
+    return [{ name: 'All', count: allSearchResults.length }, ...categories];
+  }, [allSearchResults]);
+
+  const displayedSearchResults = useMemo(() => {
+    if (selectedSearchCategory === 'All') return allSearchResults.slice(0, 30);
+    return allSearchResults
+      .filter((r) => r.category === selectedSearchCategory)
+      .slice(0, 30);
+  }, [allSearchResults, selectedSearchCategory]);
+
+  const executeSearch = (query, city) => {
+    const targetCity = city || selectedCity;
+    const q = (query || '').trim();
+    if (q) {
+      setIsSearchFocused(false);
+      navigation?.navigate('GlobalSearch', { query: q, city: targetCity });
     }
   };
 
-  const handleSearchSubmit = () => {
-    if (searchQuery.trim()) {
-      navigation?.navigate('DoctorList', { searchQuery: searchQuery.trim(), city: selectedCity });
-    } else {
-      navigation?.navigate('DoctorList', { city: selectedCity });
+  const handleSearchSubmit = async () => {
+    const q = searchQuery.trim();
+    if (!q) {
+      // Prevent empty searches from navigating to invalid pages
+      return;
     }
+
+    const shouldShow = await shouldShowGuestLeadPopup();
+    if (shouldShow) {
+      setPendingSearchQuery(q);
+      setPendingAction(() => () => {
+        executeSearch(q, selectedCity);
+      });
+      setShowLeadModal(true);
+      return;
+    }
+
+    executeSearch(q, selectedCity);
   };
 
   const handleConsultNow = (specialty) => {
     navigation?.navigate('DoctorList', { specialty });
   };
 
-  const handlePopularTagClick = (tag) => {
-    if (tag.specialty) {
-      handleConsultNow(tag.specialty);
-    } else if (tag.route) {
-      handleNavigateToService(tag.route);
-    } else if (tag.query) {
-      setSearchQuery(tag.query);
-      handleNavigateToService('DoctorList', { searchQuery: tag.query, city: selectedCity });
-    } else {
-      setSearchQuery(tag.label);
-      handleNavigateToService('DoctorList', { searchQuery: tag.label, city: selectedCity });
+  const handlePopularTagClick = async (tag) => {
+    const q = tag.query || tag.label || tag.specialty || 'Healthcare';
+    const action = () => {
+      if (tag.specialty) {
+        handleConsultNow(tag.specialty);
+      } else if (tag.route) {
+        handleNavigateToService(tag.route);
+      } else if (tag.query) {
+        setSearchQuery(tag.query);
+        handleNavigateToService('DoctorList', { searchQuery: tag.query, city: selectedCity });
+      } else {
+        const label = tag.label || '';
+        setSearchQuery(label);
+        handleNavigateToService('DoctorList', { searchQuery: label, city: selectedCity });
+      }
+    };
+
+    const shouldShow = await shouldShowGuestLeadPopup();
+    if (shouldShow) {
+      setPendingSearchQuery(q);
+      setPendingAction(() => action);
+      setShowLeadModal(true);
+      return;
     }
+
+    action();
   };
 
   const handleNavigateToService = (route, params) => {
@@ -603,7 +922,7 @@ const HomeScreenWeb = ({ navigation }) => {
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
                 <View style={styles.trustedBadge}>
                   <Ionicons name="shield-checkmark" size={13} color="#059669" style={{ marginRight: 6 }} />
-                  <Text style={styles.trustedBadgeText}>{t('hero_badge', 'TRUSTED BY PATIENTS ACROSS INDIA')}</Text>
+                  <Text style={styles.trustedBadgeText}>{t('hero_badge', 'Trusted Healthcare')}</Text>
                 </View>
                 {isLoggedIn && (
                   <TouchableOpacity
@@ -619,22 +938,26 @@ const HomeScreenWeb = ({ navigation }) => {
 
               {/* 2. Main Title */}
               <View style={styles.heroTitleWrap}>
-                <Text style={styles.heroTitleNavy}>{t('hero_title_navy', 'Your Healthcare.')}</Text>
-                <Text style={styles.heroTitleTeal}>{t('hero_title_teal', 'One Intelligent Platform.')}</Text>
+                <Text style={styles.heroTitleNavy}>{t('hero_title_navy', 'Your Healthcare,')}</Text>
+                <Text style={styles.heroTitleTeal}>{t('hero_title_teal', 'Simplified.')}</Text>
               </View>
 
               {/* 3. Subtitle */}
               <Text style={[styles.heroSubtitle, isIndic && { lineHeight: 22 }]}>
-                {t('hero_subtitle', 'Find doctors, book lab tests, order medicines, access Scans & X-Ray and connect with trusted hospitals — all in one place.')}
+                {t('hero_subtitle', 'Doctors, tests, medicines and scans in one place.')}
               </Text>
 
               {/* 4. Unified Search Bar */}
               <View style={styles.unifiedSearchBar} nativeID="home-unified-search-box">
                 {/* Location selector wrapper */}
                 <View style={styles.citySelectorWrap} nativeID="home-city-picker-box">
+                  {/* City selector button */}
                   <TouchableOpacity
                     style={styles.citySelector}
-                    onPress={() => setShowCityPicker(!showCityPicker)}
+                    onPress={() => {
+                      setShowCityPicker(!showCityPicker);
+                      setIsSearchFocused(false);
+                    }}
                     activeOpacity={0.8}
                     accessibilityRole="button"
                     accessibilityLabel={`Selected location: ${selectedCity}`}
@@ -737,17 +1060,38 @@ const HomeScreenWeb = ({ navigation }) => {
                 <View style={styles.searchInputContainer}>
                   <Ionicons name="search-outline" size={18} color="#64748B" style={styles.searchIcon} />
                   <TextInput
+                    ref={searchInputRef}
                     style={styles.searchInput}
-                    placeholder={t('search_placeholder', 'Search doctors, clinics, hospitals, tests, medicines...')}
+                    placeholder={t('search_placeholder', 'Search doctors, clinics, tests, medicines...')}
                     placeholderTextColor="#94A3B8"
                     value={searchQuery}
-                    onChangeText={setSearchQuery}
+                    onChangeText={(text) => {
+                      setSearchQuery(text);
+                      if (selectedSearchCategory !== 'All') {
+                        setSelectedSearchCategory('All');
+                      }
+                      setIsSearchFocused(true);
+                      if (showCityPicker) setShowCityPicker(false);
+                    }}
+                    onFocus={() => {
+                      setIsSearchFocused(true);
+                      if (showCityPicker) setShowCityPicker(false);
+                    }}
                     onSubmitEditing={handleSearchSubmit}
                     returnKeyType="search"
+                    autoCorrect={false}
+                    autoCapitalize="none"
                   />
                   {searchQuery ? (
-                    <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
-                      <Ionicons name="close-circle" size={16} color="#94A3B8" />
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSearchQuery('');
+                        setIsSearchFocused(false);
+                      }}
+                      style={{ padding: 4 }}
+                      accessibilityLabel="Clear Search"
+                    >
+                      <Ionicons name="close-circle" size={17} color="#94A3B8" />
                     </TouchableOpacity>
                   ) : null}
                 </View>
@@ -765,6 +1109,129 @@ const HomeScreenWeb = ({ navigation }) => {
                   <Ionicons name="search" size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
                   <Text style={styles.searchSubmitBtnText}>{t('search_btn', 'Search')}</Text>
                 </TouchableOpacity>
+
+                {/* Floating Search Results Dropdown Panel */}
+                {searchQuery.trim().length > 0 && isSearchFocused && (
+                  <View style={styles.searchResultsDropdown} nativeID="home-search-results-overlay">
+                    {allSearchResults.length > 0 ? (
+                      <>
+                        {/* Results summary & category filter chips */}
+                        <View style={styles.searchResultsHeaderRow}>
+                          <Text style={styles.searchResultsHeaderText}>
+                            {allSearchResults.length} services found in <Text style={{ fontWeight: '800', color: '#1E3A8A' }}>{selectedCity}</Text>
+                          </Text>
+                          {matchingCategories.length > 2 && (
+                            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.searchCatChipsRow}>
+                              {matchingCategories.map((cat) => (
+                                <TouchableOpacity
+                                  key={cat.name}
+                                  style={[styles.searchCatChip, selectedSearchCategory === cat.name && styles.searchCatChipActive]}
+                                  onPress={() => setSelectedSearchCategory(cat.name)}
+                                >
+                                  <Text style={[styles.searchCatChipText, selectedSearchCategory === cat.name && styles.searchCatChipTextActive]}>
+                                    {cat.name} ({cat.count})
+                                  </Text>
+                                </TouchableOpacity>
+                              ))}
+                            </ScrollView>
+                          )}
+                        </View>
+
+                        {/* Scrollable matching items */}
+                        <ScrollView style={styles.searchResultsScroll} nestedScrollEnabled keyboardShouldPersistTaps="handled">
+                          {displayedSearchResults.map((item) => (
+                            <TouchableOpacity
+                              key={item.id}
+                              style={styles.searchResultItemRow}
+                              onPress={async () => {
+                                const shouldShow = await shouldShowGuestLeadPopup();
+                                if (shouldShow) {
+                                  setPendingSearchQuery(item.name || searchQuery);
+                                  setPendingAction(() => item.onPress);
+                                  setShowLeadModal(true);
+                                  return;
+                                }
+                                item.onPress();
+                              }}
+                              activeOpacity={0.7}
+                            >
+                              <View style={[styles.searchResultIconBox, { backgroundColor: item.iconBg || '#F0FDFA' }]}>
+                                {item.iconType === 'material' ? (
+                                  <MaterialCommunityIcons name={item.icon} size={18} color={item.iconColor || '#00B894'} />
+                                ) : (
+                                  <Ionicons name={item.icon} size={18} color={item.iconColor || '#00B894'} />
+                                )}
+                              </View>
+                              <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                  <Text style={styles.searchResultItemTitle} numberOfLines={1}>
+                                    {item.name}
+                                  </Text>
+                                  <View style={styles.searchResultCategoryBadge}>
+                                    <Text style={styles.searchResultCategoryBadgeText}>{item.category}</Text>
+                                  </View>
+                                </View>
+                                <Text style={styles.searchResultItemSubtitle} numberOfLines={1}>
+                                  {item.subtitle}
+                                </Text>
+                              </View>
+                              {item.badge ? (
+                                <View style={styles.searchResultPriceBadge}>
+                                  <Text style={styles.searchResultPriceBadgeText}>{item.badge}</Text>
+                                </View>
+                              ) : null}
+                              <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                            </TouchableOpacity>
+                          ))}
+                        </ScrollView>
+
+                        {/* Bottom CTA to view in GlobalSearch */}
+                        <TouchableOpacity
+                          style={styles.searchDropdownFooter}
+                          onPress={handleSearchSubmit}
+                        >
+                          <Text style={styles.searchDropdownFooterText}>
+                            Press Enter or click here to view all results in Global Search
+                          </Text>
+                          <Ionicons name="arrow-forward" size={14} color="#00B894" />
+                        </TouchableOpacity>
+                      </>
+                    ) : (
+                      <View style={styles.searchNoResultsBox}>
+                        <View style={styles.searchNoResultsIconCircle}>
+                          <Ionicons name="search-outline" size={26} color="#94A3B8" />
+                        </View>
+                        <Text style={styles.searchNoResultsTitle}>No results found for "{searchQuery}"</Text>
+                        <Text style={styles.searchNoResultsSubtitle}>
+                          No doctors, lab tests, medicines, clinics, or scans match in {selectedCity}. Try checking your spelling or searching for another term.
+                        </Text>
+                        <View style={styles.searchNoResultsSuggestions}>
+                          <Text style={styles.searchNoResultsSuggestionsLabel}>Popular searches:</Text>
+                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
+                            {POPULAR_SEARCH_TAGS.map((tag, idx) => (
+                              <TouchableOpacity
+                                key={idx}
+                                style={styles.searchSuggestionPill}
+                                onPress={() => setSearchQuery(tag.label || tag.query)}
+                              >
+                                <Text style={styles.searchSuggestionPillText}>{tag.label}</Text>
+                              </TouchableOpacity>
+                            ))}
+                          </View>
+                        </View>
+                        <TouchableOpacity
+                          style={styles.searchClearBtn}
+                          onPress={() => {
+                            setSearchQuery('');
+                            setIsSearchFocused(false);
+                          }}
+                        >
+                          <Text style={styles.searchClearBtnText}>Clear Search</Text>
+                        </TouchableOpacity>
+                      </View>
+                    )}
+                  </View>
+                )}
               </View>
 
               {/* Popular Searches Row */}
@@ -802,7 +1269,7 @@ const HomeScreenWeb = ({ navigation }) => {
                 </View>
 
                 {/* MediUnify AI Guide Card */}
-                <View style={[styles.mediAiCard, { width: width < 1280 ? 245 : 285, padding: width < 1280 ? 13 : 16 }]}>
+                <View style={[styles.mediAiCard, { width: width < 1280 ? 255 : 285 }]}>
                   <View style={styles.mediAiCardHeader}>
                     <View style={styles.mediAiHeaderLeft}>
                       <Image
@@ -810,18 +1277,20 @@ const HomeScreenWeb = ({ navigation }) => {
                         style={styles.mediAiAvatar}
                         resizeMode="contain"
                       />
-                      <Text style={styles.mediAiTitle}>{t('ai_guide_title', 'MediUnify AI')}</Text>
+                      <Text style={styles.mediAiTitle} numberOfLines={2}>
+                        {t('ai_guide_title', 'MediUnify AI Assistant')}
+                      </Text>
                     </View>
                     <View style={styles.mediAiBadge}>
-                      <Text style={styles.mediAiBadgeText}>{t('ai_guide_badge', 'Your Health Guide 24/7')}</Text>
+                      <Text style={styles.mediAiBadgeText}>{t('ai_guide_badge', '24/7 AI Guide')}</Text>
                     </View>
                   </View>
 
-                  <Text style={[styles.mediAiQuestion, isIndic && { lineHeight: 22 }]}>
-                    {t('ai_guide_question', 'Not sure where to start?')}
+                  <Text style={[styles.mediAiQuestion, isIndic && { lineHeight: 20 }]}>
+                    {t('ai_guide_question', 'Need help finding a service?')}
                   </Text>
                   <Text style={[styles.mediAiPrompt, isIndic && { lineHeight: 18 }]}>
-                    {t('ai_guide_prompt', "Tell us what you're experiencing and we'll help you find the right doctor, test or service.")}
+                    {t('ai_guide_prompt', 'Ask about symptoms, doctors, or tests.')}
                   </Text>
 
                   <TouchableOpacity
@@ -834,30 +1303,9 @@ const HomeScreenWeb = ({ navigation }) => {
                     accessibilityLabel="Chat with MediUnify AI"
                   >
                     <Text style={[styles.mediAiBtnText, isIndic && { lineHeight: 18 }]}>
-                      {t('chat_with_ai_btn', 'Chat with MediUnify AI →')}
+                      {t('chat_with_ai_btn', 'Chat with AI')}
                     </Text>
                   </TouchableOpacity>
-
-                  <View style={styles.mediAiFeaturesList}>
-                    <View style={styles.mediAiFeatureItem}>
-                      <Ionicons name="checkmark-circle" size={13} color="#00B894" style={{ marginRight: 6 }} />
-                      <Text style={[styles.mediAiFeatureText, isIndic && { lineHeight: 16 }]}>
-                        {t('ai_feat_symptom', 'Symptom guidance')}
-                      </Text>
-                    </View>
-                    <View style={styles.mediAiFeatureItem}>
-                      <Ionicons name="checkmark-circle" size={13} color="#00B894" style={{ marginRight: 6 }} />
-                      <Text style={[styles.mediAiFeatureText, isIndic && { lineHeight: 16 }]}>
-                        {t('ai_feat_recommend', 'Service recommendations')}
-                      </Text>
-                    </View>
-                    <View style={styles.mediAiFeatureItem}>
-                      <Ionicons name="checkmark-circle" size={13} color="#00B894" style={{ marginRight: 6 }} />
-                      <Text style={[styles.mediAiFeatureText, isIndic && { lineHeight: 16 }]}>
-                        {t('ai_feat_navigation', 'Care navigation (not a diagnosis)')}
-                      </Text>
-                    </View>
-                  </View>
                 </View>
               </View>
             ) : (
@@ -870,18 +1318,20 @@ const HomeScreenWeb = ({ navigation }) => {
                         style={styles.mediAiAvatar}
                         resizeMode="contain"
                       />
-                      <Text style={styles.mediAiTitle}>{t('ai_guide_title', 'MediUnify AI')}</Text>
+                      <Text style={styles.mediAiTitle} numberOfLines={2}>
+                        {t('ai_guide_title', 'MediUnify AI Assistant')}
+                      </Text>
                     </View>
                     <View style={styles.mediAiBadge}>
-                      <Text style={styles.mediAiBadgeText}>{t('ai_guide_badge', 'Your Health Guide 24/7')}</Text>
+                      <Text style={styles.mediAiBadgeText}>{t('ai_guide_badge', '24/7 AI Guide')}</Text>
                     </View>
                   </View>
 
-                  <Text style={[styles.mediAiQuestion, isIndic && { lineHeight: 22 }]}>
-                    {t('ai_guide_question', 'Not sure where to start?')}
+                  <Text style={[styles.mediAiQuestion, isIndic && { lineHeight: 20 }]}>
+                    {t('ai_guide_question', 'Need help finding a service?')}
                   </Text>
                   <Text style={[styles.mediAiPrompt, isIndic && { lineHeight: 18 }]}>
-                    {t('ai_guide_prompt', "Tell us what you're experiencing and we'll help you find the right doctor, test or service.")}
+                    {t('ai_guide_prompt', 'Ask about symptoms, doctors, or tests.')}
                   </Text>
 
                   <TouchableOpacity
@@ -890,30 +1340,9 @@ const HomeScreenWeb = ({ navigation }) => {
                     activeOpacity={0.88}
                   >
                     <Text style={[styles.mediAiBtnText, isIndic && { lineHeight: 18 }]}>
-                      {t('chat_with_ai_btn', 'Chat with MediUnify AI →')}
+                      {t('chat_with_ai_btn', 'Chat with AI')}
                     </Text>
                   </TouchableOpacity>
-
-                  <View style={styles.mediAiFeaturesList}>
-                    <View style={styles.mediAiFeatureItem}>
-                      <Ionicons name="checkmark-circle" size={13} color="#00B894" style={{ marginRight: 6 }} />
-                      <Text style={[styles.mediAiFeatureText, isIndic && { lineHeight: 16 }]}>
-                        {t('ai_feat_symptom', 'Symptom guidance')}
-                      </Text>
-                    </View>
-                    <View style={styles.mediAiFeatureItem}>
-                      <Ionicons name="checkmark-circle" size={13} color="#00B894" style={{ marginRight: 6 }} />
-                      <Text style={[styles.mediAiFeatureText, isIndic && { lineHeight: 16 }]}>
-                        {t('ai_feat_recommend', 'Service recommendations')}
-                      </Text>
-                    </View>
-                    <View style={styles.mediAiFeatureItem}>
-                      <Ionicons name="checkmark-circle" size={13} color="#00B894" style={{ marginRight: 6 }} />
-                      <Text style={[styles.mediAiFeatureText, isIndic && { lineHeight: 16 }]}>
-                        {t('ai_feat_navigation', 'Care navigation (not a diagnosis)')}
-                      </Text>
-                    </View>
-                  </View>
                 </View>
               </View>
             )}
@@ -922,129 +1351,211 @@ const HomeScreenWeb = ({ navigation }) => {
         </View>
 
         {/* ============================================================
-            2. SEVEN SERVICE CARDS — CREATIVE ILLUSTRATED DESIGN
+            2. HEALTHCARE SERVICES — EXACT REFERENCE DESIGN
         ============================================================ */}
         <View style={[styles.practoHeroCardsSection, { maxWidth: isDesktop ? 1340 : '96%' }]}>
-          {/* Section Header */}
-          <View style={styles.serviceCardsHeader}>
-            <View style={styles.sectionBadgeWrap}>
-              <Text style={styles.sectionBadge}>{t('our_services_badge', 'OUR SERVICES')}</Text>
-            </View>
-            <Text style={[styles.serviceCardsTitle, isIndic && { lineHeight: 32 }]}>
-              {t('services_section_title', 'Everything Healthcare,\nAll in One Place')}
-            </Text>
-            <Text style={[styles.serviceCardsSubtitle, isIndic && { lineHeight: 22 }]}>
-              {t('our_services_subtitle', 'From consultations to home care — seamlessly connected for your health journey.')}
-            </Text>
-          </View>
+          {isDesktop ? (
+            <View style={styles.servicesSectionDesktopLayout}>
+              {/* Left Column: Heading, Subtitle & Tagline */}
+              <View style={styles.servicesLeftColumn}>
+                <View style={styles.servicesHeaderBadgeRow}>
+                  <Text style={styles.servicesHeaderBadgeText}>{t('our_services_badge', 'OUR SERVICES')}</Text>
+                  <View style={styles.servicesHeaderBadgeLine} />
+                </View>
+                <Text style={[styles.servicesSectionMainTitle, isIndic && { lineHeight: 36 }]}>
+                  {'Healthcare\nServices'}
+                </Text>
+                <Text style={[styles.servicesSectionMainSubtitle, isIndic && { lineHeight: 20 }]}>
+                  {t('our_services_subtitle_modern', 'Simple. Trusted. All in one place.')}
+                </Text>
 
-          <View
-            style={[
-              styles.practoHeroGrid,
-              isDesktop
-                ? styles.practoHeroGridDesktop
-                : isTablet
-                ? styles.practoHeroGridTablet
-                : styles.practoHeroGridMobile,
-            ]}
-          >
-            {HERO_PRACTO_CARDS.map((card) => (
-              <TouchableOpacity
-                key={card.id}
-                style={[
-                  styles.practoHeroCard,
-                  isDesktop ? { flex: 1, minWidth: 0 } : isTablet ? { width: '48%' } : { width: '100%' },
-                ]}
-                // @ts-ignore
-                className="service-card"
-                activeOpacity={0.92}
-                onPress={() => handleNavigateToService(card.route)}
-              >
-                {/* Photo Top Container */}
-                <View style={styles.practoHeroCardTop}>
-                  {/* Availability Badge — top left */}
-                  <View
-                    style={styles.serviceAvailBadge}
-                    // @ts-ignore
-                    className="service-card-avail-badge"
-                  >
-                    {card.iconFamily === 'MaterialCommunityIcons' ? (
-                      <MaterialCommunityIcons name={card.iconName} size={13} color={card.accentColor} />
-                    ) : (
-                      <Ionicons name={card.iconName} size={13} color={card.accentColor} />
-                    )}
-                    <Text style={[styles.serviceAvailText, { color: card.accentColor }, isIndic && { lineHeight: 16 }]}>
-                      {card.availabilityKey ? t(card.availabilityKey, card.availability) : card.availability}
-                    </Text>
-                  </View>
-
-                  {/* Uniform Service Photo */}
-                  <View
-                    style={styles.serviceImgWrap}
-                    // @ts-ignore
-                    className="service-card-image"
-                  >
-                    <Image
-                      source={card.image}
-                      style={styles.practoHeroCardImage}
-                      resizeMode="cover"
-                    />
+                <View style={styles.betterCareRow}>
+                  <Ionicons name="apps" size={14} color="#00B894" style={{ marginRight: 6 }} />
+                  <View>
+                    <Text style={styles.betterCareText}>Better care.</Text>
+                    <Text style={styles.togetherText}>Together. ────────</Text>
                   </View>
                 </View>
+              </View>
 
-                {/* Card Content */}
-                <View style={styles.practoHeroCardBottom}>
-                  <Text style={[styles.practoHeroCardTitle, isIndic && { lineHeight: 22 }]}>
-                    {card.titleKey ? t(card.titleKey, card.title) : card.title}
-                  </Text>
-                  <Text style={[styles.practoHeroCardSubtitle, isIndic && { lineHeight: 19 }]}>
-                    {card.subtitleKey ? t(card.subtitleKey, card.subtitle) : card.subtitle}
-                  </Text>
+              {/* Center: 4 Organic Fluid Cards with Connecting Wave */}
+              <View style={styles.servicesCardsRowWrapper}>
+                {/* Journey Connecting Wave behind cards */}
+                {Platform.OS === 'web' && (
+                  <View style={styles.journeyWaveContainer} pointerEvents="none">
+                    <View style={styles.journeyStartDot} />
+                    {/* @ts-ignore */}
+                    <svg
+                      style={{
+                        position: 'absolute',
+                        top: 55,
+                        left: 0,
+                        width: '100%',
+                        height: 48,
+                        pointerEvents: 'none',
+                        zIndex: 0,
+                      }}
+                      viewBox="0 0 1000 48"
+                      fill="none"
+                      preserveAspectRatio="none"
+                    >
+                      <path
+                        d="M 10 24 Q 160 6 320 26 T 620 20 T 900 26 T 995 24"
+                        stroke="rgba(0, 184, 148, 0.22)"
+                        strokeWidth="2"
+                        strokeDasharray="4 4"
+                        fill="none"
+                      />
+                    </svg>
+                  </View>
+                )}
 
-                  {/* Book Now CTA Button */}
-                  <View
-                    style={[
-                      styles.serviceBookBtn,
-                      { backgroundColor: card.accentBg, borderColor: card.accentColor + '30' },
-                      isIndic && { paddingHorizontal: 16, minWidth: 96 },
-                    ]}
-                    // @ts-ignore
-                    className="service-card-btn"
-                  >
-                    <Text
+                <View style={styles.servicesCardsRow}>
+                  {HERO_PRACTO_CARDS.map((card) => (
+                    <TouchableOpacity
+                      key={card.id}
                       style={[
-                        styles.serviceBookBtnText,
-                        { color: card.accentColor },
-                        isIndic && { fontSize: 12, lineHeight: 17 },
+                        styles.organicServiceCard,
+                        {
+                          borderBottomColor: card.accentColor,
+                          borderLeftColor: card.accentColor,
+                          borderTopColor: 'transparent',
+                          borderRightColor: 'transparent',
+                        },
                       ]}
                       // @ts-ignore
-                      className="service-card-btn-text"
+                      className="service-card"
+                      activeOpacity={0.92}
+                      onPress={() => handleNavigateToService(card.route, card.route === 'Imaging' ? { city: selectedCity } : undefined)}
                     >
-                      {t('book_now_btn', 'Book Now')}
-                    </Text>
-                    <Ionicons name="arrow-forward" size={13} color={card.accentColor} style={{ marginLeft: 5 }} />
+                      {/* Organic Fluid 3D Card Illustration (Matching Reference Design) */}
+                      <View style={styles.organicIllustrationWrap}>
+                        <View style={[styles.stepNumberBadge, { backgroundColor: card.accentColor }]}>
+                          <Text style={styles.stepNumberText}>{card.stepNumber}</Text>
+                        </View>
+                        <Image
+                          source={card.image}
+                          style={styles.organicIllustrationImage}
+                          resizeMode="contain"
+                        />
+                      </View>
+
+                      {/* Card Content */}
+                      <View style={styles.organicCardContent}>
+                        <Text style={[styles.organicCardTitle, isIndic && { lineHeight: 20 }]} numberOfLines={1}>
+                          {card.titleKey ? t(card.titleKey, card.title) : card.title}
+                        </Text>
+                        <Text style={[styles.organicCardSubtitle, isIndic && { lineHeight: 16 }]} numberOfLines={2}>
+                          {card.subtitleKey ? t(card.subtitleKey, card.subtitle) : card.subtitle}
+                        </Text>
+
+                        {/* Circular Arrow & Book Now CTA */}
+                        <View style={styles.organicCtaRow}>
+                          <View style={[styles.organicArrowCircle, { borderColor: card.accentColor }]}>
+                            <Ionicons name="arrow-forward" size={11} color={card.accentColor} />
+                          </View>
+                          <Text style={[styles.organicCtaText, { color: card.accentColor }]}>
+                            {t('book_now_btn', 'Book Now')}
+                          </Text>
+                        </View>
+                      </View>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+              </View>
+
+              {/* Far Right Indicator */}
+              {isWideDesktop && (
+                <View style={styles.onePlatformBadgeWrap}>
+                  <View style={styles.onePlatformPill}>
+                    <Ionicons name="sparkles-outline" size={13} color="#00B894" style={{ marginRight: 6 }} />
+                    <View>
+                      <Text style={styles.onePlatformTitle}>One platform.</Text>
+                      <Text style={styles.onePlatformSubtitle}>Complete care.</Text>
+                    </View>
+                  </View>
+                  <View style={styles.onePlatformDotsCol}>
+                    <View style={styles.dotActive} />
+                    <View style={styles.dotInactive} />
+                    <View style={styles.dotInactive} />
                   </View>
                 </View>
-              </TouchableOpacity>
-            ))}
-          </View>
+              )}
+            </View>
+          ) : (
+            // Mobile & Tablet: Stacked layout with organic cards
+            <>
+              <View style={styles.serviceCardsHeader}>
+                <View style={styles.servicesHeaderBadgeRow}>
+                  <Text style={styles.servicesHeaderBadgeText}>{t('our_services_badge', 'OUR SERVICES')}</Text>
+                  <View style={styles.servicesHeaderBadgeLine} />
+                </View>
+                <Text style={[styles.servicesSectionMainTitle, isIndic && { lineHeight: 32 }]}>
+                  {t('services_section_title', 'Healthcare Services')}
+                </Text>
+                <Text style={[styles.servicesSectionMainSubtitle, isIndic && { lineHeight: 22 }]}>
+                  {t('our_services_subtitle_modern', 'Simple. Trusted. All in one place.')}
+                </Text>
+              </View>
 
-          {/* View All Services CTA */}
-          <View style={styles.viewAllServicesRow}>
-            <TouchableOpacity
-              style={styles.viewAllServicesBtn}
-              // @ts-ignore
-              className="view-all-services-btn"
-              onPress={() => handleNavigateToService('AllServices', { city: selectedCity, location: selectedCity })}
-              activeOpacity={0.85}
-              accessibilityRole="button"
-              accessibilityLabel="View all healthcare services"
-            >
-              <Ionicons name="grid-outline" size={16} color="#007D69" style={{ marginRight: 8 }} />
-              <Text style={styles.viewAllServicesBtnText}>{t('view_services', 'View All 12 Services')}</Text>
-              <Ionicons name="arrow-forward" size={14} color="#007D69" style={{ marginLeft: 8 }} />
-            </TouchableOpacity>
-          </View>
+              <View
+                style={[
+                  styles.practoHeroGrid,
+                  isTablet ? styles.practoHeroGridTablet : styles.practoHeroGridMobile,
+                ]}
+              >
+                {HERO_PRACTO_CARDS.map((card) => (
+                  <TouchableOpacity
+                    key={card.id}
+                    style={[
+                      styles.organicServiceCard,
+                      isTablet ? { width: '48%' } : { width: '100%' },
+                      {
+                        borderBottomColor: card.accentColor,
+                        borderLeftColor: card.accentColor,
+                        borderTopColor: 'transparent',
+                        borderRightColor: 'transparent',
+                      },
+                    ]}
+                    // @ts-ignore
+                    className="service-card"
+                    activeOpacity={0.92}
+                    onPress={() => handleNavigateToService(card.route, card.route === 'Imaging' ? { city: selectedCity } : undefined)}
+                  >
+                    {/* Organic Fluid 3D Card Illustration (Matching Reference Design) */}
+                    <View style={styles.organicIllustrationWrap}>
+                      <View style={[styles.stepNumberBadge, { backgroundColor: card.accentColor }]}>
+                        <Text style={styles.stepNumberText}>{card.stepNumber}</Text>
+                      </View>
+                      <Image
+                        source={card.image}
+                        style={styles.organicIllustrationImage}
+                        resizeMode="contain"
+                      />
+                    </View>
+
+                    <View style={styles.organicCardContent}>
+                      <Text style={[styles.organicCardTitle, isIndic && { lineHeight: 20 }]} numberOfLines={1}>
+                        {card.titleKey ? t(card.titleKey, card.title) : card.title}
+                      </Text>
+                      <Text style={[styles.organicCardSubtitle, isIndic && { lineHeight: 16 }]} numberOfLines={2}>
+                        {card.subtitleKey ? t(card.subtitleKey, card.subtitle) : card.subtitle}
+                      </Text>
+
+                      <View style={styles.organicCtaRow}>
+                        <View style={[styles.organicArrowCircle, { borderColor: card.accentColor }]}>
+                          <Ionicons name="arrow-forward" size={11} color={card.accentColor} />
+                        </View>
+                        <Text style={[styles.organicCtaText, { color: card.accentColor }]}>
+                          {t('book_now_btn', 'Book Now')}
+                        </Text>
+                      </View>
+                    </View>
+                  </TouchableOpacity>
+                ))}
+              </View>
+            </>
+          )}
         </View>
 
         {/* ============================================================
@@ -1060,13 +1571,10 @@ const HomeScreenWeb = ({ navigation }) => {
           <View style={styles.specialtiesHeaderRow}>
             <View style={{ flex: 1 }}>
               <View style={styles.sectionBadgeWrap}>
-                <Text style={styles.sectionBadge}>{t('specialties_badge', 'VERIFIED CLINICAL DEPARTMENTS')}</Text>
+                <Text style={styles.sectionBadge}>{t('specialties_badge', 'SPECIALIZATIONS')}</Text>
               </View>
               <Text style={[styles.specialtiesTitle, isIndic && { lineHeight: 32 }]}>
-                {t('specialties_title', 'Consult Top Doctors Online for Any Health Concern')}
-              </Text>
-              <Text style={[styles.specialtiesSubtitle, isIndic && { lineHeight: 22 }]}>
-                {t('specialties_subtitle', 'Private online & in-clinic consultations with certified doctors in all specialties')}
+                {t('specialties_title', 'Top Doctor Specializations')}
               </Text>
             </View>
 
@@ -1075,7 +1583,7 @@ const HomeScreenWeb = ({ navigation }) => {
               onPress={() => handleNavigateToService('DoctorList')}
               activeOpacity={0.8}
             >
-              <Text style={styles.viewAllBtnText}>{t('view_all_specialties', 'View All Specializations')}</Text>
+              <Text style={styles.viewAllBtnText}>{t('view_all_specialties', 'View All')}</Text>
               <Ionicons name="arrow-forward" size={14} color={PALETTE.teal} style={{ marginLeft: 6 }} />
             </TouchableOpacity>
           </View>
@@ -1124,8 +1632,6 @@ const HomeScreenWeb = ({ navigation }) => {
                       : isTablet
                       ? styles.specialtyItemTablet
                       : styles.specialtyItemMobile,
-                    spec.cardBg ? { backgroundColor: spec.cardBg } : null,
-                    spec.cardBorder ? { borderColor: spec.cardBorder } : null,
                   ]}
                   // @ts-ignore
                   className="practo-spec-card"
@@ -1199,103 +1705,37 @@ const HomeScreenWeb = ({ navigation }) => {
         </View>
 
         {/* ============================================================
-            4. RICH WEB FOOTER (EXACT SAME AS LOGIN SCREEN)
+            4. RICH WEB FOOTER
         ============================================================ */}
-        <footer style={webStyles.footerContainer}>
-          <View style={[styles.footerInner, { maxWidth: isDesktop ? 1340 : '96%' }]}>
-            <View style={styles.footerColBrand}>
-              <View style={styles.brandTitleRow}>
-                <Text style={[styles.brandTitle, { color: '#1E3A8A' }]}>Medi</Text>
-                <Text style={styles.brandTitleAccent}>Unify</Text>
-              </View>
-              <Text style={[styles.footerBrandDesc, isIndic && { lineHeight: 22 }]}>
-                {t('footer_brand_desc', "All your healthcare. One intelligent platform. Connecting millions of patients with India's best verified doctors, diagnostic laboratories, and NABH accredited hospitals.")}
-              </Text>
-              <View style={styles.complianceRow}>
-                <View style={styles.compliancePill}>
-                  <Ionicons name="shield-checkmark" size={12} color={PALETTE.freshGreen} />
-                  <Text style={styles.compliancePillText}>{t('compliance_nabh', 'NABH Compliant')}</Text>
-                </View>
-                <View style={styles.compliancePill}>
-                  <Ionicons name="lock-closed" size={12} color={PALETTE.aqua} />
-                  <Text style={styles.compliancePillText}>{t('compliance_ssl', '256-Bit SSL')}</Text>
-                </View>
-                <View style={styles.compliancePill}>
-                  <Ionicons name="ribbon" size={12} color={PALETTE.teal} />
-                  <Text style={styles.compliancePillText}>{t('compliance_iso', 'ISO 27001')}</Text>
-                </View>
-              </View>
-            </View>
-
-            <View style={styles.footerCol}>
-              <Text style={styles.footerColTitle}>{t('footer_patient_services', 'Patient Services')}</Text>
-              <TouchableOpacity onPress={() => handleNavigateToService('FindDoctors')}>
-                <Text style={styles.footerLink}>{t('card_find_doctors', 'Find Doctors Near You')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleNavigateToService('VideoConsultation')}>
-                <Text style={styles.footerLink}>{t('card_video_consult', 'Instant Video Consultation')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleNavigateToService('LabTests')}>
-                <Text style={styles.footerLink}>{t('card_lab_tests', 'Book Diagnostic Lab Tests')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleNavigateToService('HospitalCare')}>
-                <Text style={styles.footerLink}>{t('card_surgeries', 'Surgeries & Hospital Care')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleNavigateToService('NurseBooking')}>
-                <Text style={styles.footerLink}>{t('card_home_nurse', 'Home Nurse & Caregiver')}</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.footerCol}>
-              <Text style={styles.footerColTitle}>{t('footer_top_specialties', 'Top Specializations')}</Text>
-              <TouchableOpacity onPress={() => handleConsultNow('general-primary')}>
-                <Text style={styles.footerLink}>{t('spec_physician_title', 'General Physician')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleConsultNow('dermatology-skin')}>
-                <Text style={styles.footerLink}>{t('spec_derma_title', 'Dermatologist')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleConsultNow('pediatrics-child-health')}>
-                <Text style={styles.footerLink}>{t('spec_pedia_title', 'Pediatrician')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleConsultNow('womens-health-group')}>
-                <Text style={styles.footerLink}>{t('spec_women_title', "Women's Health")}</Text>
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.footerCol}>
-              <Text style={styles.footerColTitle}>{t('footer_support_trust', 'Support & Trust')}</Text>
-              <TouchableOpacity onPress={() => handleNavigateToService('HelpSupport')}>
-                <Text style={styles.footerLink}>{t('support_helpline', '24/7 Patient Helpline')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleNavigateToService('HelpSupport')}>
-                <Text style={styles.footerLink}>{t('support_corporates', 'Corporate Health Plans')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleNavigateToService('HelpSupport')}>
-                <Text style={styles.footerLink}>{t('support_providers', 'Join as Doctor or Lab')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleNavigateToService('HelpSupport')}>
-                <Text style={styles.footerLink}>{t('support_privacy', 'Privacy Policy & HIPAA')}</Text>
-              </TouchableOpacity>
-              <TouchableOpacity onPress={() => handleNavigateToService('HelpSupport')}>
-                <Text style={styles.footerLink}>{t('support_terms', 'Terms of Service')}</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-
-          <View style={[styles.footerBottomBar, { maxWidth: isDesktop ? 1340 : '96%' }]}>
-            <Text style={[styles.footerCopyright, isIndic && { lineHeight: 18 }]}>
-              {t('footer_rights', '© 2026 MediUnify Healthcare Technologies Pvt. Ltd. All rights reserved.')}
-            </Text>
-            <View style={styles.footerBottomLinks}>
-              <Text style={styles.footerBottomLinkText}>Karnataka, India</Text>
-              <Text style={styles.footerBottomLinkDot}>•</Text>
-              <Text style={styles.footerBottomLinkText}>ABDM Registered</Text>
-              <Text style={styles.footerBottomLinkDot}>•</Text>
-              <Text style={styles.footerBottomLinkText}>24/7 Support: 1800-425-0099</Text>
-            </View>
-          </View>
-        </footer>
+        <WebFooter navigation={navigation} />
       </ScrollView>
+
+      {/* Guest Lead-Generation Popup */}
+      <GuestLeadModal
+        visible={showLeadModal}
+        searchQuery={pendingSearchQuery}
+        selectedCity={selectedCity}
+        onSuccess={() => {
+          setShowLeadModal(false);
+          if (pendingAction) {
+            const act = pendingAction;
+            setPendingAction(null);
+            act();
+          } else {
+            executeSearch(pendingSearchQuery, selectedCity);
+          }
+        }}
+        onClose={() => {
+          setShowLeadModal(false);
+          if (pendingAction) {
+            const act = pendingAction;
+            setPendingAction(null);
+            act();
+          } else {
+            executeSearch(pendingSearchQuery, selectedCity);
+          }
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -1744,11 +2184,14 @@ const styles = StyleSheet.create({
   },
   mediAiCard: {
     width: 285,
+    maxWidth: '100%',
+    minWidth: 0,
+    overflow: 'hidden',
     backgroundColor: '#FFFFFF',
     borderRadius: 18,
     borderWidth: 1.5,
     borderColor: '#DCE7EC',
-    padding: 16,
+    padding: 15,
     shadowColor: '#1E3A8A',
     shadowOffset: { width: 0, height: 10 },
     shadowOpacity: 0.08,
@@ -1757,37 +2200,247 @@ const styles = StyleSheet.create({
   },
   mediAiCardHeader: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
     justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 6,
     marginBottom: 10,
+    width: '100%',
   },
   mediAiHeaderLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    flex: 1,
+    minWidth: 0,
+    flexShrink: 1,
   },
   mediAiAvatar: {
-    width: 30,
-    height: 30,
-    borderRadius: 15,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    flexShrink: 0,
   },
   mediAiTitle: {
-    fontSize: 15,
+    fontSize: 13.5,
     fontWeight: '800',
     color: '#1E3A8A',
+    flexShrink: 1,
+    minWidth: 0,
+    flexWrap: 'wrap',
+    lineHeight: 18,
   },
   mediAiBadge: {
     backgroundColor: '#DCFCE7',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: '#A7F3D0',
+    flexShrink: 0,
+    alignSelf: 'flex-start',
   },
   mediAiBadgeText: {
-    fontSize: 9.5,
+    fontSize: 9,
     fontWeight: '800',
     color: '#047857',
+    letterSpacing: 0.2,
+  },
+  // Floating Search Results Dropdown Styles
+  searchResultsDropdown: {
+    position: 'absolute',
+    top: 60,
+    left: 0,
+    right: 0,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    borderWidth: 1.5,
+    borderColor: '#DCE7EC',
+    shadowColor: '#1E3A8A',
+    shadowOffset: { width: 0, height: 12 },
+    shadowOpacity: 0.12,
+    shadowRadius: 24,
+    elevation: 10,
+    zIndex: 10002,
+    maxHeight: 400,
+    overflow: 'hidden',
+  },
+  searchResultsHeaderRow: {
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 8,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#FAFCFD',
+  },
+  searchResultsHeaderText: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 6,
+  },
+  searchCatChipsRow: {
+    flexDirection: 'row',
+    gap: 6,
+    paddingBottom: 4,
+  },
+  searchCatChip: {
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
+  },
+  searchCatChipActive: {
+    backgroundColor: '#ECFDF5',
+    borderColor: '#00B894',
+  },
+  searchCatChipText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  searchCatChipTextActive: {
+    color: '#00B894',
+    fontWeight: '700',
+  },
+  searchResultsScroll: {
+    maxHeight: 280,
+  },
+  searchResultItemRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 10,
+    paddingHorizontal: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
+  },
+  searchResultIconBox: {
+    width: 36,
+    height: 36,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginRight: 10,
+    flexShrink: 0,
+  },
+  searchResultItemTitle: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#1E3A8A',
+    flexShrink: 1,
+  },
+  searchResultCategoryBadge: {
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    backgroundColor: '#F1F5F9',
+  },
+  searchResultCategoryBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  searchResultItemSubtitle: {
+    fontSize: 11.5,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  searchResultPriceBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    backgroundColor: '#ECFDF5',
+    marginRight: 6,
+  },
+  searchResultPriceBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#00B894',
+  },
+  searchDropdownFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    backgroundColor: '#F8FAFC',
+    borderTopWidth: 1,
+    borderTopColor: '#E2E8F0',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
+  },
+  searchDropdownFooterText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#00B894',
+  },
+  searchNoResultsBox: {
+    padding: 24,
+    alignItems: 'center',
+  },
+  searchNoResultsIconCircle: {
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 10,
+  },
+  searchNoResultsTitle: {
+    fontSize: 14.5,
+    fontWeight: '800',
+    color: '#1E3A8A',
+    marginBottom: 4,
+    textAlign: 'center',
+  },
+  searchNoResultsSubtitle: {
+    fontSize: 12,
+    color: '#64748B',
+    textAlign: 'center',
+    lineHeight: 18,
+    maxWidth: 380,
+    marginBottom: 12,
+  },
+  searchNoResultsSuggestions: {
+    width: '100%',
+    alignItems: 'center',
+    marginBottom: 14,
+  },
+  searchNoResultsSuggestionsLabel: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  searchSuggestionPill: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 10,
+    paddingVertical: 4,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
+  },
+  searchSuggestionPillText: {
+    fontSize: 11.5,
+    color: '#1E3A8A',
+    fontWeight: '600',
+  },
+  searchClearBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 6,
+    borderRadius: 8,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
+  },
+  searchClearBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#00B894',
   },
   mediAiQuestion: {
     fontSize: 14.5,
@@ -1927,98 +2580,243 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 14,
   },
-  practoHeroCard: {
-    backgroundColor: '#FFFFFF',
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#E2EEF3',
-    overflow: 'hidden',
-    shadowColor: '#1E3A8A',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.07,
-    shadowRadius: 18,
-    elevation: 4,
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
-  },
-  practoHeroCardTop: {
-    height: 180,
-    width: '100%',
-    overflow: 'hidden',
-    position: 'relative',
-    backgroundColor: '#F1F5F9',
-  },
-  serviceAvailBadge: {
-    position: 'absolute',
-    top: 12,
-    left: 12,
+  // ORGANIC HEALTHCARE SERVICES SECTION (MATCHING EXACT REFERENCE DESIGN)
+  servicesSectionDesktopLayout: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 5,
-    borderRadius: 20,
-    gap: 5,
-    zIndex: 10,
-    backgroundColor: 'rgba(255, 255, 255, 0.94)',
+    justifyContent: 'space-between',
+    width: '100%',
+    gap: 16,
+    paddingVertical: 12,
+    position: 'relative',
+  },
+  servicesLeftColumn: {
+    width: 220,
+    paddingRight: 8,
+    justifyContent: 'center',
+  },
+  servicesHeaderBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  servicesHeaderBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#00B894',
+    letterSpacing: 0.8,
+  },
+  servicesHeaderBadgeLine: {
+    width: 28,
+    height: 2,
+    backgroundColor: '#A7F3D0',
+    marginLeft: 8,
+    borderRadius: 1,
+  },
+  servicesSectionMainTitle: {
+    fontSize: 32,
+    fontWeight: '800',
+    color: '#0F172A',
+    lineHeight: 38,
+    marginBottom: 8,
+    letterSpacing: -0.5,
+  },
+  servicesSectionMainSubtitle: {
+    fontSize: 12.5,
+    fontWeight: '400',
+    color: '#64748B',
+    lineHeight: 18,
+    marginBottom: 24,
+  },
+  betterCareRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    marginTop: 4,
+  },
+  betterCareText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
+    lineHeight: 16,
+  },
+  togetherText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#64748B',
+    lineHeight: 16,
+  },
+  servicesCardsRowWrapper: {
+    flex: 1,
+    position: 'relative',
+  },
+  journeyWaveContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+  },
+  journeyStartDot: {
+    position: 'absolute',
+    top: 60,
+    left: -8,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#0284C7',
+    zIndex: 1,
+  },
+  servicesCardsRow: {
+    flex: 1,
+    flexDirection: 'row',
+    gap: 14,
+    alignItems: 'stretch',
+    zIndex: 1,
+  },
+  onePlatformBadgeWrap: {
+    width: 125,
+    paddingLeft: 12,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
+    gap: 16,
+  },
+  onePlatformPill: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: 'rgba(248, 250, 252, 0.85)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.8)',
+    borderColor: '#E2E8F0',
+    borderRadius: 16,
+    padding: 10,
+    paddingHorizontal: 12,
+  },
+  onePlatformTitle: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#334155',
+    lineHeight: 14,
+  },
+  onePlatformSubtitle: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: '#64748B',
+    lineHeight: 14,
+  },
+  onePlatformDotsCol: {
+    flexDirection: 'column',
+    alignItems: 'center',
+    gap: 5,
+    marginLeft: 12,
+  },
+  dotActive: {
+    width: 4,
+    height: 16,
+    borderRadius: 2,
+    backgroundColor: '#00B894',
+  },
+  dotInactive: {
+    width: 4,
+    height: 4,
+    borderRadius: 2,
+    backgroundColor: '#CBD5E1',
+  },
+
+  // ORGANIC FLUID CARD
+  organicServiceCard: {
+    flex: 1,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 34,
+    borderWidth: 1.5,
+    borderColor: 'transparent',
+    padding: 8,
+    paddingBottom: 16,
+    overflow: 'hidden',
     shadowColor: '#1E3A8A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.14,
-    shadowRadius: 6,
-    elevation: 3,
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 18,
+    elevation: 4,
+    boxShadow: '0 12px 28px -6px rgba(15, 23, 42, 0.06), 0 2px 6px rgba(0, 0, 0, 0.02)',
+    minHeight: 285,
     ...(Platform.OS === 'web' ? {
-      backdropFilter: 'blur(8px)',
+      cursor: 'pointer',
+      transition: 'transform 0.22s ease, box-shadow 0.22s ease',
     } : {}),
   },
-  serviceAvailIcon: {
-    fontSize: 11,
-  },
-  serviceAvailText: {
-    fontSize: 11,
-    fontWeight: '700',
-    letterSpacing: 0.2,
-  },
-  serviceImgWrap: {
+  organicIllustrationWrap: {
     width: '100%',
-    height: '100%',
-    overflow: 'hidden',
-  },
-  practoHeroCardImage: {
-    width: '100%',
-    height: '100%',
-  },
-  practoHeroCardBottom: {
-    padding: 18,
-    paddingTop: 14,
+    height: 155,
+    alignItems: 'center',
+    justifyContent: 'center',
     backgroundColor: '#FFFFFF',
-    borderTopWidth: 1,
-    borderTopColor: '#F0F5F8',
+    borderTopLeftRadius: 28,
+    borderTopRightRadius: 28,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  stepNumberBadge: {
+    position: 'absolute',
+    top: 10,
+    left: 10,
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 5,
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.12)',
+  },
+  stepNumberText: {
+    color: '#FFFFFF',
+    fontSize: 10.5,
+    fontWeight: '800',
+  },
+  organicIllustrationImage: {
+    width: '100%',
+    height: '100%',
+    ...(Platform.OS === 'web' ? { mixBlendMode: 'multiply' } : {}),
+  },
+  organicCardContent: {
+    paddingHorizontal: 8,
+    paddingTop: 12,
     flex: 1,
     justifyContent: 'space-between',
   },
-  practoHeroCardTitle: {
-    fontSize: 15.5,
-    fontWeight: '700',
-    color: '#1E3A8A',
+  organicCardTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
     marginBottom: 5,
     letterSpacing: -0.2,
   },
-  practoHeroCardSubtitle: {
-    fontSize: 12,
+  organicCardSubtitle: {
+    fontSize: 11.5,
     fontWeight: '400',
-    color: '#7B8FA6',
-    lineHeight: 17,
+    color: '#64748B',
+    lineHeight: 16,
     marginBottom: 14,
+    minHeight: 32,
   },
-  serviceBookBtn: {
+  organicCtaRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    alignSelf: 'flex-start',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 22,
-    borderWidth: 1,
-    gap: 2,
+    gap: 8,
+    marginTop: 'auto',
+  },
+  organicArrowCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  organicCtaText: {
+    fontSize: 12,
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
   serviceBookBtnText: {
     fontSize: 12.5,
@@ -2183,21 +2981,25 @@ const styles = StyleSheet.create({
   },
   specialtyItem: {
     backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#DCE7EC',
-    borderRadius: 20,
+    borderWidth: 0,
+    borderRadius: 28,
     paddingTop: 18,
     paddingBottom: 16,
     paddingHorizontal: 12,
     alignItems: 'center',
     shadowColor: '#1E3A8A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.05,
-    shadowRadius: 10,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 3,
     marginBottom: 6,
     flexShrink: 0,
-    ...(Platform.OS === 'web' ? { cursor: 'pointer', boxSizing: 'border-box' } : {}),
+    boxShadow: '0 8px 24px -4px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(0, 0, 0, 0.02)',
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      boxSizing: 'border-box',
+      transition: 'transform 0.22s ease, box-shadow 0.22s ease',
+    } : {}),
   },
   specialtyItemDesktop: {
     width: 202,
@@ -2210,11 +3012,12 @@ const styles = StyleSheet.create({
     paddingHorizontal: 8,
   },
   specialtyIconWrap: {
-    width: 86,
-    height: 86,
+    width: 136,
+    height: 136,
+    maxWidth: '92%',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
     backgroundColor: 'transparent',
     overflow: 'hidden',
   },

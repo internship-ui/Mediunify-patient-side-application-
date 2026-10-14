@@ -18,6 +18,8 @@ import { useCart } from '../../context/CartContext';
 import { useTheme } from '../../context/ThemeContext';
 import { navigationRef } from '../../navigation/navigationRef';
 import { isDesktopSiteRequested } from '../../utils/responsiveLayoutHelper';
+import GuestLeadModal from '../common/GuestLeadModal';
+import { shouldShowGuestLeadPopup } from '../../services/guestLeadService';
 
 import { REMAINING_SERVICES } from '../../data/remainingServices';
 
@@ -36,7 +38,7 @@ const NAV_LINKS = [
   { id: 'lab-tests', label: 'Lab Tests', labelKey: 'nav_lab_tests', route: 'LabTests' },
   { id: 'pharmacy', label: 'Order Medicine', labelKey: 'nav_order_medicine', route: 'Pharmacy' },
   { id: 'hospitals', label: 'Surgeries', labelKey: 'nav_surgeries', route: 'HospitalCare' },
-  { id: 'radiology', label: 'Scans & X-Ray', labelKey: 'nav_scans_xray', route: 'Imaging' },
+  { id: 'radiology', label: 'Scan & X-Ray', labelKey: 'nav_scans_xray', route: 'Imaging' },
 ];
 
 const INITIAL_NOTIFICATIONS = [
@@ -169,7 +171,7 @@ const MY_SERVICES_TABLET = [
   },
   {
     id: 'radiology',
-    title: 'Scans & X-Ray',
+    title: 'Scan & X-Ray',
     desc: '3T MRI, CT Scan, Ultrasound & X-Ray labs',
     icon: 'radio-outline',
     iconColor: '#7E22CE',
@@ -256,6 +258,8 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
   const [openDropdown, setOpenDropdown] = useState(null); // 'more-services' | 'language' | 'notifications' | 'user-profile' | null
   const [showSearchModal, setShowSearchModal] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [showLeadModal, setShowLeadModal] = useState(false);
+  const [pendingSearchQuery, setPendingSearchQuery] = useState('');
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [isGuest, setIsGuest] = useState(false);
   const [userName, setUserName] = useState('');
@@ -302,9 +306,25 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
     };
     checkAuth();
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const handleAuthEvent = (e) => {
+        if (e && e.detail) {
+          if (typeof e.detail.isLoggedIn === 'boolean') {
+            setIsLoggedIn(e.detail.isLoggedIn);
+            setIsGuest(!e.detail.isLoggedIn);
+          }
+          if (e.detail.userName) setUserName(e.detail.userName);
+          if (e.detail.userPhone) setUserPhone(e.detail.userPhone);
+        }
+        checkAuth();
+      };
+
       window.addEventListener('storage', checkAuth);
+      window.addEventListener('auth-state-changed', handleAuthEvent);
+      window.addEventListener('user-login-success', handleAuthEvent);
       return () => {
         window.removeEventListener('storage', checkAuth);
+        window.removeEventListener('auth-state-changed', handleAuthEvent);
+        window.removeEventListener('user-login-success', handleAuthEvent);
       };
     }
   }, [currentRoute]);
@@ -1067,8 +1087,9 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                 onPress={() => {
                   if (Platform.OS === 'web' && typeof window !== 'undefined') {
                     window.dispatchEvent(new CustomEvent('open-auth-modal'));
+                  } else {
+                    handleNavigate('Login', { openAuthModal: true });
                   }
-                  handleNavigate('Login', { openAuthModal: true });
                 }}
                 activeOpacity={0.85}
               >
@@ -1284,18 +1305,35 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                 autoFocus
                 value={searchQuery}
                 onChangeText={setSearchQuery}
-                onSubmitEditing={() => {
-                  if (searchQuery.trim()) {
-                    handleNavigate('GlobalSearch', { query: searchQuery.trim() });
+                returnKeyType="search"
+                onSubmitEditing={async () => {
+                  const q = searchQuery.trim();
+                  if (!q) return;
+                  const shouldShow = await shouldShowGuestLeadPopup();
+                  if (shouldShow) {
+                    setPendingSearchQuery(q);
+                    setShowSearchModal(false);
+                    setShowLeadModal(true);
+                    return;
                   }
+                  setShowSearchModal(false);
+                  handleNavigate('GlobalSearch', { query: q });
                 }}
               />
               <TouchableOpacity
                 style={styles.searchModalSubmit}
-                onPress={() => {
-                  if (searchQuery.trim()) {
-                    handleNavigate('GlobalSearch', { query: searchQuery.trim() });
+                onPress={async () => {
+                  const q = searchQuery.trim();
+                  if (!q) return;
+                  const shouldShow = await shouldShowGuestLeadPopup();
+                  if (shouldShow) {
+                    setPendingSearchQuery(q);
+                    setShowSearchModal(false);
+                    setShowLeadModal(true);
+                    return;
                   }
+                  setShowSearchModal(false);
+                  handleNavigate('GlobalSearch', { query: q });
                 }}
               >
                 <Text style={styles.searchModalSubmitText}>Search</Text>
@@ -1310,7 +1348,17 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                   <TouchableOpacity
                     key={i}
                     style={styles.suggestionPill}
-                    onPress={() => handleNavigate('GlobalSearch', { query: s })}
+                    onPress={async () => {
+                      const shouldShow = await shouldShowGuestLeadPopup();
+                      if (shouldShow) {
+                        setPendingSearchQuery(s);
+                        setShowSearchModal(false);
+                        setShowLeadModal(true);
+                        return;
+                      }
+                      setShowSearchModal(false);
+                      handleNavigate('GlobalSearch', { query: s });
+                    }}
                   >
                     <Text style={styles.suggestionPillText}>{s}</Text>
                   </TouchableOpacity>
@@ -1401,6 +1449,21 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
           </View>
         </View>
       </Modal>
+
+      {/* Guest Lead-Generation Popup */}
+      <GuestLeadModal
+        visible={showLeadModal}
+        searchQuery={pendingSearchQuery}
+        selectedCity="Mysuru"
+        onSuccess={() => {
+          setShowLeadModal(false);
+          handleNavigate('GlobalSearch', { query: pendingSearchQuery });
+        }}
+        onClose={() => {
+          setShowLeadModal(false);
+          handleNavigate('GlobalSearch', { query: pendingSearchQuery });
+        }}
+      />
     </View>
   );
 };

@@ -1,4 +1,4 @@
-import React, { useState, useMemo, useRef, useEffect } from 'react';
+import React, { useState, useMemo, useRef, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -21,6 +21,9 @@ import {
   DIAGNOSTIC_CENTRES,
   ALL_CITY_DIAGNOSTIC_CENTRES,
   getCentresByCity,
+  normalizeLabCity,
+  isTestAvailableInCity,
+  isPackageAvailableInCity,
   getGoogleMapsDirectionsUrl,
   getAvailableDates,
   TIME_SLOTS,
@@ -41,6 +44,70 @@ import { useCart } from '../../../context/CartContext';
 import { useAuthGuard } from '../../../context/AuthGuardContext';
 import LabTestsScreenMobile from './LabTestsScreenMobile';
 import { isDesktopLayout, isDesktopSiteRequested } from '../../../utils/responsiveLayoutHelper';
+
+const WEB_LAB_CATEGORIES = [
+  { id: 'all', name: 'All Tests', icon: 'grid-outline' },
+  { id: 'popular', name: 'Popular Tests', icon: 'flame-outline' },
+  { id: 'full-body', name: 'Full Body', icon: 'body-outline' },
+  { id: 'diabetes', name: 'Diabetes', icon: 'water-outline' },
+  { id: 'heart', name: 'Heart Health', icon: 'pulse-outline' },
+  { id: 'executive', name: 'Executive Health', icon: 'briefcase-outline' },
+  { id: 'fever', name: 'Fever & Infection', icon: 'thermometer-outline' },
+  { id: 'women', name: "Women's Health", icon: 'woman-outline' },
+  { id: 'routine', name: 'Routine Tests', icon: 'flask-outline' },
+  { id: 'thyroid', name: 'Thyroid', icon: 'fitness-outline' },
+];
+
+const POPULAR_TESTS_MAP = {
+  'all': ['test-cbc', 'test-fbs', 'test-thyroid', 'test-lipid', 'POP-FB-01'],
+  'full-body': ['POP-FB-01', 'POP-FB-02', 'POP-FB-03'],
+  'diabetes': ['test-fbs', 'test-hba1c', 'POP-DIA-01', 'POP-DIA-02'],
+  'heart': ['test-lipid', 'POP-HRT-01', 'POP-HRT-02'],
+  'executive': ['POP-EXE-01', 'POP-EXE-02', 'POP-EXE-03'],
+  'fever': ['test-cbc', 'test-crp', 'test-throat-swab'],
+  'women': ['test-ca125', 'test-thyroid', 'test-vitamind', 'test-ferritin'],
+  'routine': ['test-cbc', 'test-urine-routine', 'test-fbs', 'test-lft'],
+  'thyroid': ['test-thyroid'],
+};
+
+const getShortFastingLabel = (item) => {
+  const req = (item.fastingRequirement || item.preparationSummary || item.preparation || '').toLowerCase();
+  if (req.includes('no fasting') || req.includes('not required') || req.includes('no special')) {
+    return 'No fasting required';
+  }
+  if (req.includes('fasting') || req.includes('8-10 h') || req.includes('10-12 h') || req.includes('12 h') || req.includes('overnight')) {
+    return 'Fasting required';
+  }
+  return 'No fasting required';
+};
+
+const getShortTATLabel = (tat) => {
+  if (!tat) return 'Reports in 24 hrs';
+  if (tat.includes('6–8') || tat.includes('6-8')) return 'Reports in 6–8 hrs';
+  if (tat.includes('12-24') || tat.includes('12–24')) return 'Reports in 24 hrs';
+  if (tat.includes('Same day') || tat.includes('Same Day')) return 'Same day reports';
+  if (tat.length > 20) return tat.split('(')[0].trim();
+  return tat;
+};
+
+const getShortCategoryLabel = (item) => {
+  if (item.isPackage) {
+    const cat = item.category || '';
+    if (cat.toLowerCase().includes('executive')) return 'Executive Health';
+    if (cat.toLowerCase().includes('body')) return 'Full Body';
+    if (cat.toLowerCase().includes('heart')) return 'Heart Health';
+    if (cat.toLowerCase().includes('diabet')) return 'Diabetes';
+    return 'Health Package';
+  }
+  const cat = item.category || '';
+  if (cat === 'diabetes') return 'Diabetes';
+  if (cat === 'heart') return 'Heart Health';
+  if (cat === 'women') return "Women's Health";
+  if (cat === 'fever' || cat === 'infection') return 'Fever & Infection';
+  if (cat === 'general') return 'Routine Test';
+  if (cat === 'thyroid') return 'Thyroid';
+  return 'Diagnostic Test';
+};
 
 const LabTestsScreenWeb = (props) => {
   const { navigation, route } = props;
@@ -72,6 +139,10 @@ const LabTestsScreenWeb = (props) => {
       removeFromCart(test.id, 'lab');
       showAlert('Removed from Cart', `${test.name} removed from your diagnostic cart.`);
     } else {
+      if (!isTestAvailableInCity(test.id, currentCity) || availableCentres.length === 0) {
+        showAlert('Service Unavailable', `${test.name} is not available in ${currentCity}.`);
+        return;
+      }
       const cartItem = {
         id: test.id,
         name: test.name,
@@ -79,7 +150,7 @@ const LabTestsScreenWeb = (props) => {
         itemType: 'lab',
         price: test.price,
         mrp: test.mrp || Math.round(test.price * 1.25),
-        centerName: 'Unnathi Certified Clinical Labs',
+        centerName: availableCentres[0]?.name || 'MediUnify Certified Diagnostic Center',
         reportTime: test.reportTAT || 'Within 24 Hours',
         sampleType: test.sampleType || 'Blood Sample',
         homeSample: Boolean(test.homeCollection),
@@ -91,20 +162,25 @@ const LabTestsScreenWeb = (props) => {
   };
 
   const handleToggleCartPackage = (pkg) => {
-    if (isTestInCart(pkg.id)) {
-      removeFromCart(pkg.id, 'lab');
+    const pkgId = pkg.id || pkg.code;
+    if (isTestInCart(pkgId)) {
+      removeFromCart(pkgId, 'lab');
       showAlert('Removed from Cart', `${pkg.name} removed from your diagnostic cart.`);
     } else {
+      if (!isPackageAvailableInCity(pkgId, currentCity) || availableCentres.length === 0) {
+        showAlert('Service Unavailable', `${pkg.name} is not available in ${currentCity}.`);
+        return;
+      }
       const cartItem = {
-        id: pkg.id,
+        id: pkgId,
         name: pkg.name,
         category: 'Lab Test',
         itemType: 'lab',
         price: pkg.price,
         mrp: pkg.mrp || Math.round(pkg.price * 1.3),
-        centerName: 'Unnathi Comprehensive Care Lab',
+        centerName: availableCentres[0]?.name || 'MediUnify Certified Diagnostic Center',
         reportTime: 'Within 24-48 Hours',
-        sampleType: `${pkg.includedCount || 'Multiple'} Tests Included`,
+        sampleType: `${pkg.includedCount || pkg.testsCount || 'Multiple'} Tests Included`,
         homeSample: true,
         isPackage: true,
       };
@@ -113,33 +189,25 @@ const LabTestsScreenWeb = (props) => {
     }
   };
 
+  // Back Navigation Helper (Go to previous screen, or fallback safely to Home)
+  const handleGoBack = () => {
+    if (navigation && typeof navigation.canGoBack === 'function' && navigation.canGoBack()) {
+      navigation.goBack();
+    } else if (navigation && typeof navigation.navigate === 'function') {
+      navigation.navigate('Home');
+    } else if (typeof window !== 'undefined' && window.history && window.history.length > 1) {
+      window.history.back();
+    }
+  };
+
   // Root Tabs: 'BROWSE' | 'BOOKINGS' | 'REPORTS'
   const [activeTab, setActiveTab] = useState(route?.params?.initialTab || 'BROWSE');
 
-  // Search & Filter States
+  // Search & Filter States (Simplified: Test Category & Search Tests only)
   const [searchQuery, setSearchQuery] = useState(route?.params?.query || route?.params?.search || '');
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedSubCategory, setSelectedSubCategory] = useState('all');
-  const [selectedGenderFilter, setSelectedGenderFilter] = useState('ALL');
-  const [selectedSampleFilter, setSelectedSampleFilter] = useState('ALL');
-  const [selectedCollectionFilter, setSelectedCollectionFilter] = useState('ALL');
-  const [selectedPriceFilter, setSelectedPriceFilter] = useState('ALL');
   const [currentPage, setCurrentPage] = useState(1);
-  const [selectedSort, setSelectedSort] = useState('RECOMMENDED'); // 'RECOMMENDED' | 'PRICE_LOW_HIGH' | 'PRICE_HIGH_LOW' | 'MOST_TESTS'
-  const [selectedInclusions, setSelectedInclusions] = useState([]); // ['VITAMINS', 'ECG_IMAGING', 'ECHO', 'IRON', 'HBA1C']
-
-  const toggleInclusion = (id) => {
-    setSelectedInclusions((prev) => {
-      if (prev.includes(id)) {
-        return prev.filter((item) => item !== id);
-      } else {
-        return [...prev, id];
-      }
-    });
-    setCurrentPage(1);
-  };
-  const ITEMS_PER_PAGE = 4;
-  const [packageSubView, setPackageSubView] = useState('ALL'); // 'ALL' | 'PACKAGES' | 'TESTS'
+  const ITEMS_PER_PAGE = 9;
   const [expandedTestIndex, setExpandedTestIndex] = useState(null);
   const DEFAULT_PATIENT_PROFILES = [
     { id: 'p-self', name: 'User Profile', relation: 'Self', age: 28, gender: 'Not specified', phone: '' },
@@ -152,51 +220,82 @@ const LabTestsScreenWeb = (props) => {
   const [selectedTest, setSelectedTest] = useState(null);
   const [selectedPackage, setSelectedPackage] = useState(null);
 
-  // Selected City & Location Filtering (Synchronized with Home Screen / Web Header)
+  // Selected City & Location Filtering (Synchronized with Home Screen Location as Single Source of Truth)
   const [currentCity, setCurrentCity] = useState('Mysuru');
 
-  useEffect(() => {
-    const loadCity = async () => {
-      try {
-        const saved =
-          (await AsyncStorage.getItem('@mediunify_selected_city')) ||
-          (await AsyncStorage.getItem('@unnathi_user_location'));
-        if (saved) {
-          const s = saved.toLowerCase();
-          const norm =
-            s.includes('bengal') || s.includes('bangal')
-              ? 'Bengaluru'
-              : s.includes('hassan')
-              ? 'Hassan'
-              : s.includes('mandya')
-              ? 'Mandya'
-              : s.includes('mangal')
-              ? 'Mangaluru'
-              : s.includes('hubli') || s.includes('hubballi')
-              ? 'Hubballi'
-              : s.includes('belgaum') || s.includes('belagavi')
-              ? 'Belagavi'
-              : 'Mysuru';
-          setCurrentCity(norm);
+  const syncLocation = useCallback(async () => {
+    try {
+      const saved =
+        (await AsyncStorage.getItem('@mediunify_selected_city')) ||
+        (await AsyncStorage.getItem('@unnathi_user_location'));
+      if (saved) {
+        const norm = normalizeLabCity(saved);
+        if (norm) {
+          setCurrentCity((prev) => (prev !== norm ? norm : prev));
         }
-      } catch (e) {}
-    };
-    loadCity();
+      }
+    } catch (e) {}
+  }, []);
 
+  useEffect(() => {
+    syncLocation();
+
+    // Listen to focus event
+    const unsubFocus = navigation?.addListener?.('focus', syncLocation);
+
+    // Cross-window and in-tab custom event listeners
+    let handleStorage;
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const handleStorage = (e) => {
+      handleStorage = (e) => {
         if (!e || e.key === '@mediunify_selected_city' || e.key === '@unnathi_user_location') {
-          loadCity();
+          syncLocation();
         }
       };
       window.addEventListener('storage', handleStorage);
-      return () => window.removeEventListener('storage', handleStorage);
+      window.addEventListener('mediunify_city_changed', syncLocation);
     }
-  }, []);
+
+    // Interval check to automatically catch Home Screen location changes in real-time
+    const interval = setInterval(syncLocation, 1000);
+
+    return () => {
+      unsubFocus?.();
+      clearInterval(interval);
+      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+        window.removeEventListener('storage', handleStorage);
+        window.removeEventListener('mediunify_city_changed', syncLocation);
+      }
+    };
+  }, [navigation, syncLocation]);
 
   const availableCentres = useMemo(() => {
     return getCentresByCity(currentCity);
   }, [currentCity]);
+
+  // Formatted city location label with state (e.g., "Mysuru, Karnataka")
+  const displayCityLocation = useMemo(() => {
+    if (!currentCity) return 'Mysuru, Karnataka';
+    return `${currentCity}, Karnataka`;
+  }, [currentCity]);
+
+  // Revalidate cart items when selected city changes
+  useEffect(() => {
+    if (!currentCity || !labCart || labCart.length === 0) return;
+    const invalidItems = labCart.filter((item) => {
+      const isPkg = Boolean(item.isPackage || item.testsCount);
+      const isAvail = isPkg
+        ? isPackageAvailableInCity(item.id, currentCity)
+        : isTestAvailableInCity(item.id, currentCity);
+      return !isAvail;
+    });
+    if (invalidItems.length > 0) {
+      invalidItems.forEach((inv) => removeFromCart(inv.id, 'lab'));
+      showAlert(
+        'Cart Updated',
+        `${invalidItems.map((i) => i.name).join(', ')} removed because it is unavailable in ${currentCity}.`
+      );
+    }
+  }, [currentCity, labCart]);
 
   // Booking Flow State
   const [bookingFlowStep, setBookingFlowStep] = useState(1);
@@ -395,114 +494,53 @@ const LabTestsScreenWeb = (props) => {
   // Scroll ref
   const mainScrollRef = useRef(null);
 
-  // ---------------------------------------------------------------------------
-  // FILTERING LOGIC
-  // ---------------------------------------------------------------------------
-  const filteredTests = useMemo(() => {
-    return LAB_TESTS_MASTER.filter((test) => {
-      if (selectedCategory !== 'all' && test.category !== selectedCategory) return false;
-      if (selectedSubCategory !== 'all' && test.subCategory !== selectedSubCategory) return false;
-
-      if (selectedGenderFilter !== 'ALL' && test.genderApplicability !== 'All') {
-        if (selectedGenderFilter === 'MALE' && test.genderApplicability !== 'Male') return false;
-        if (selectedGenderFilter === 'FEMALE' && test.genderApplicability !== 'Female') return false;
-      }
-
-      if (selectedSampleFilter !== 'ALL' && test.sampleType !== selectedSampleFilter) return false;
-      if (selectedCollectionFilter === 'HOME' && !test.homeCollection) return false;
-      if (selectedCollectionFilter === 'CENTRE' && !test.centreCollection) return false;
-
-      if (searchQuery.trim()) {
-        const q = searchQuery.toLowerCase().trim();
-        const matchesName = test.name.toLowerCase().includes(q);
-        const matchesDesc = test.description.toLowerCase().includes(q);
-        const matchesKeywords = test.keywords?.some((k) => k.toLowerCase().includes(q));
-        const matchesSynonyms = test.synonyms?.some((s) => s.toLowerCase().includes(q));
-        const matchesAlternate = test.alternateNames?.some((a) => a.toLowerCase().includes(q));
-        const matchesConsumer = test.consumerTerms?.some((c) => c.toLowerCase().includes(q));
-
-        if (!matchesName && !matchesDesc && !matchesKeywords && !matchesSynonyms && !matchesAlternate && !matchesConsumer) {
-          return false;
-        }
-      }
-      return true;
-    });
-  }, [
-    searchQuery,
-    selectedCategory,
-    selectedSubCategory,
-    selectedGenderFilter,
-    selectedSampleFilter,
-    selectedCollectionFilter,
-  ]);
-
-  const activeCategoryObj = useMemo(() => {
-    return LAB_CATEGORIES.find((c) => c.id === selectedCategory);
+  // Active category object
+  const activeCategoryItem = useMemo(() => {
+    return WEB_LAB_CATEGORIES.find((c) => c.id === selectedCategory);
   }, [selectedCategory]);
 
+  // ---------------------------------------------------------------------------
+  // FILTERING LOGIC (Standardized Categories & Search & City Availability)
+  // ---------------------------------------------------------------------------
   const filteredPackages = useMemo(() => {
-    const list = NOVUS_POPULAR_PACKAGES.filter((pkg) => {
-      // Category filter
+    // Strict city check: if city has no diagnostic centres, return empty
+    if (!availableCentres || availableCentres.length === 0) return [];
+
+    return NOVUS_POPULAR_PACKAGES.filter((pkg) => {
+      // 0. Strict City Availability
+      const pkgId = pkg.id || pkg.code;
+      if (!isPackageAvailableInCity(pkgId, currentCity)) {
+        return false;
+      }
+
+      // 1. Category filter
       if (selectedCategory !== 'all') {
-        if (selectedCategory === 'most-popular') {
-          return (
-            pkg.isMostPopularBooked ||
-            pkg.badge?.toLowerCase().includes('popular') ||
-            ['POP-FB-01', 'POP-EXE-01', 'POP-DIA-01', 'POP-HRT-01'].includes(pkg.id)
-          );
-        }
-        if (selectedCategory === 'curated') {
-          return pkg.type === 'curated';
-        }
-        if (pkg.categoryId !== selectedCategory) {
+        if (selectedCategory === 'popular') {
+          const isPop = pkg.type === 'popular' || pkg.tier === 'Popular Checkup' || pkg.badge?.toLowerCase().includes('popular') || POPULAR_TESTS_MAP['all']?.includes(pkg.id || pkg.code);
+          if (!isPop) return false;
+        } else if (selectedCategory === 'full-body') {
+          if (pkg.categoryId !== 'full-body' && !pkg.category?.toLowerCase().includes('body')) return false;
+        } else if (selectedCategory === 'diabetes') {
+          if (pkg.categoryId !== 'diabetes' && !pkg.category?.toLowerCase().includes('diabet')) return false;
+        } else if (selectedCategory === 'heart') {
+          if (pkg.categoryId !== 'heart' && !pkg.category?.toLowerCase().includes('heart')) return false;
+        } else if (selectedCategory === 'executive') {
+          if (pkg.categoryId !== 'executive' && !pkg.category?.toLowerCase().includes('executive')) return false;
+        } else if (selectedCategory === 'women') {
+          if (!pkg.category?.toLowerCase().includes('women')) return false;
+        } else if (selectedCategory === 'fever') {
+          if (!pkg.category?.toLowerCase().includes('fever')) return false;
+        } else if (selectedCategory === 'routine') {
+          if (!pkg.category?.toLowerCase().includes('routine') && !pkg.category?.toLowerCase().includes('general') && pkg.id !== 'POP-FB-01') return false;
+        } else if (selectedCategory === 'thyroid') {
+          const hasThy = pkg.tests?.some((t) => t.name.toLowerCase().includes('thyroid'));
+          if (!hasThy) return false;
+        } else if (pkg.categoryId !== selectedCategory) {
           return false;
         }
       }
 
-      // Price filter
-      if (selectedPriceFilter === 'UNDER_1000' && pkg.price >= 1000) return false;
-      if (selectedPriceFilter === '1000_2000' && (pkg.price < 1000 || pkg.price > 2000)) return false;
-      if (selectedPriceFilter === 'ABOVE_2000' && pkg.price <= 2000) return false;
-
-      // Key Inclusions Filter
-      if (selectedInclusions.includes('VITAMINS')) {
-        const hasVit = pkg.tests.some(
-          (t) =>
-            t.name.toLowerCase().includes('vitamin') ||
-            t.parameters.toLowerCase().includes('vitamin')
-        );
-        if (!hasVit) return false;
-      }
-
-      if (selectedInclusions.includes('ECG_IMAGING')) {
-        const hasEcgorUsg = pkg.tests.some(
-          (t) =>
-            t.name.toLowerCase().includes('ecg') ||
-            t.name.toLowerCase().includes('ultrasound')
-        );
-        if (!hasEcgorUsg) return false;
-      }
-
-      if (selectedInclusions.includes('ECHO')) {
-        const hasEcho = pkg.tests.some((t) => t.name.toLowerCase().includes('echo'));
-        if (!hasEcho) return false;
-      }
-
-      if (selectedInclusions.includes('IRON')) {
-        const hasIron = pkg.tests.some(
-          (t) =>
-            t.name.toLowerCase().includes('iron') ||
-            t.name.toLowerCase().includes('ferritin')
-        );
-        if (!hasIron) return false;
-      }
-
-      if (selectedInclusions.includes('HBA1C')) {
-        const hasHba1c = pkg.tests.some((t) => t.name.toLowerCase().includes('hba1c'));
-        if (!hasHba1c) return false;
-      }
-
-      // Search query across name, code, category, tests, parameters, notes
+      // 2. Search query
       if (searchQuery.trim()) {
         const q = searchQuery.toLowerCase().trim();
         const matchesName = pkg.name.toLowerCase().includes(q);
@@ -511,53 +549,154 @@ const LabTestsScreenWeb = (props) => {
         const matchesTests = pkg.tests.some(
           (t) =>
             t.name.toLowerCase().includes(q) ||
-            t.parameters.toLowerCase().includes(q) ||
-            t.sample.toLowerCase().includes(q) ||
-            t.preparation.toLowerCase().includes(q)
+            t.parameters.toLowerCase().includes(q)
         );
-        const matchesNote = pkg.clinicalNote?.toLowerCase().includes(q);
-        if (!matchesName && !matchesCode && !matchesCategory && !matchesTests && !matchesNote) {
+        if (!matchesName && !matchesCode && !matchesCategory && !matchesTests) {
           return false;
         }
       }
 
       return true;
     });
+  }, [availableCentres, currentCity, selectedCategory, searchQuery]);
 
-    // Sorting
-    const sorted = [...list];
-    if (selectedSort === 'PRICE_LOW_HIGH') {
-      sorted.sort((a, b) => a.price - b.price);
-    } else if (selectedSort === 'PRICE_HIGH_LOW') {
-      sorted.sort((a, b) => b.price - a.price);
-    } else if (selectedSort === 'MOST_TESTS') {
-      sorted.sort((a, b) => b.testsCount - a.testsCount);
+  const filteredTests = useMemo(() => {
+    // Strict city check: if city has no diagnostic centres, return empty
+    if (!availableCentres || availableCentres.length === 0) return [];
+
+    return LAB_TESTS_MASTER.filter((test) => {
+      // 0. Strict City Availability
+      if (!isTestAvailableInCity(test.id, currentCity)) {
+        return false;
+      }
+
+      // 1. Category filter
+      if (selectedCategory !== 'all') {
+        if (selectedCategory === 'popular') {
+          const isPop = test.popular === true || test.featured === true || POPULAR_TESTS_MAP['all']?.includes(test.id);
+          if (!isPop) return false;
+        } else if (selectedCategory === 'full-body') {
+          if (test.category !== 'preventive' && test.category !== 'full-body') return false;
+        } else if (selectedCategory === 'diabetes') {
+          if (test.category !== 'diabetes') return false;
+        } else if (selectedCategory === 'heart') {
+          if (test.category !== 'heart') return false;
+        } else if (selectedCategory === 'executive') {
+          return false;
+        } else if (selectedCategory === 'women') {
+          if (test.category !== 'women') return false;
+        } else if (selectedCategory === 'fever') {
+          if (test.category !== 'fever' && test.category !== 'infection' && test.id !== 'test-cbc' && test.id !== 'test-crp' && test.id !== 'test-throat-swab') return false;
+        } else if (selectedCategory === 'routine') {
+          if (test.category !== 'general' && test.id !== 'test-cbc' && test.id !== 'test-urine-routine' && test.id !== 'test-fbs' && test.id !== 'test-lft' && test.id !== 'test-kft') return false;
+        } else if (selectedCategory === 'thyroid') {
+          if (test.category !== 'thyroid' && test.id !== 'test-thyroid' && !test.name?.toLowerCase().includes('thyroid')) return false;
+        } else if (test.category !== selectedCategory) {
+          return false;
+        }
+      }
+
+      // 2. Search query
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchesName = test.name.toLowerCase().includes(q);
+        const matchesDesc = test.description?.toLowerCase().includes(q);
+        const matchesKeywords = test.keywords?.some((k) => k.toLowerCase().includes(q));
+        const matchesSynonyms = test.synonyms?.some((s) => s.toLowerCase().includes(q));
+        const matchesConsumer = test.consumerTerms?.some((c) => c.toLowerCase().includes(q));
+
+        if (!matchesName && !matchesDesc && !matchesKeywords && !matchesSynonyms && !matchesConsumer) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [availableCentres, currentCity, selectedCategory, searchQuery]);
+
+  // Unified Lab Tests & Health Checkup Packages
+  // CRITICAL REQUIREMENT: Individual tests come FIRST, package tests come AFTER
+  const unifiedLabItems = useMemo(() => {
+    const testItems = filteredTests.map((test) => ({
+      ...test,
+      id: test.id,
+      isPackage: false,
+      sampleLabel: test.sampleType ? `${test.sampleType} Sample` : 'Blood Sample',
+      displayCategory: getShortCategoryLabel(test),
+      tatSummary: getShortTATLabel(test.reportTAT),
+      fastingSummary: getShortFastingLabel(test),
+    }));
+
+    const pkgItems = filteredPackages.map((pkg) => ({
+      ...pkg,
+      id: pkg.id || pkg.code,
+      isPackage: true,
+      sampleLabel: `${pkg.testsCount || (pkg.tests ? pkg.tests.length : 1)} Tests Included`,
+      displayCategory: getShortCategoryLabel({ ...pkg, isPackage: true }),
+      tatSummary: getShortTATLabel(pkg.tatSummary),
+      fastingSummary: getShortFastingLabel(pkg),
+    }));
+
+    if (searchQuery.trim()) {
+      const q = searchQuery.toLowerCase().trim();
+      // Sort individual tests so prefix/direct name matches come first
+      testItems.sort((a, b) => {
+        const aStarts = a.name.toLowerCase().startsWith(q) ? 2 : (a.name.toLowerCase().includes(q) ? 1 : 0);
+        const bStarts = b.name.toLowerCase().startsWith(q) ? 2 : (b.name.toLowerCase().includes(q) ? 1 : 0);
+        return bStarts - aStarts;
+      });
+      // Sort packages similarly
+      pkgItems.sort((a, b) => {
+        const aStarts = a.name.toLowerCase().startsWith(q) ? 2 : (a.name.toLowerCase().includes(q) ? 1 : 0);
+        const bStarts = b.name.toLowerCase().startsWith(q) ? 2 : (b.name.toLowerCase().includes(q) ? 1 : 0);
+        return bStarts - aStarts;
+      });
+      // Individual tests first, package tests second
+      return [...testItems, ...pkgItems];
     }
 
-    return sorted;
-  }, [selectedCategory, selectedPriceFilter, selectedInclusions, selectedSort, searchQuery]);
+    // Default view: Individual tests first, packages next
+    return [...testItems, ...pkgItems];
+  }, [filteredPackages, filteredTests, searchQuery]);
 
-  const totalPages = Math.ceil(filteredPackages.length / ITEMS_PER_PAGE) || 1;
+  const totalPages = Math.max(1, Math.ceil(unifiedLabItems.length / ITEMS_PER_PAGE));
+  const safeCurrentPage = Math.min(Math.max(1, currentPage), totalPages);
 
-  const paginatedPackages = useMemo(() => {
-    const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return filteredPackages.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [filteredPackages, currentPage]);
+  const paginatedLabItems = useMemo(() => {
+    const start = (safeCurrentPage - 1) * ITEMS_PER_PAGE;
+    return unifiedLabItems.slice(start, start + ITEMS_PER_PAGE);
+  }, [unifiedLabItems, safeCurrentPage]);
 
-  const popularTests = useMemo(() => {
-    return LAB_TESTS_MASTER.filter((t) => t.popular).sort((a, b) => a.popularRank - b.popularRank);
-  }, []);
+  const resetAllFilters = () => {
+    setSelectedCategory('all');
+    setSearchQuery('');
+    setCurrentPage(1);
+  };
 
   const startBooking = (item, preferredMethod = null) => {
     requireLogin(() => _doStartBooking(item, preferredMethod));
   };
 
   const _doStartBooking = (item, preferredMethod = null) => {
+    if (!item) return;
 
     const isPkg = Boolean(item.tests || item.code || item.isPackage);
+    const itemId = item.id || item.code;
+    const isAvail = isPkg
+      ? isPackageAvailableInCity(itemId, currentCity)
+      : isTestAvailableInCity(itemId, currentCity);
+
+    if (!isAvail || !availableCentres || availableCentres.length === 0) {
+      showAlert(
+        'Service Unavailable',
+        `${item.name} is not available for booking in ${currentCity}. Please choose a test available in ${currentCity} or switch your city on the Home Screen.`
+      );
+      return;
+    }
+
     const bookingItem = {
       ...item,
-      id: item.id || item.code,
+      id: itemId,
       name: item.name,
       code: item.code,
       isPackage: isPkg,
@@ -797,622 +936,280 @@ const LabTestsScreenWeb = (props) => {
   // RENDER: BROWSE VIEW (WEB)
   // ===========================================================================
   const renderWebBrowse = () => {
+    const hasActiveFilter = selectedCategory !== 'all' || searchQuery.trim().length > 0;
+    const activeCategoryItem = WEB_LAB_CATEGORIES.find((c) => c.id === selectedCategory);
+
     return (
       <View style={styles.webMainContentWrapper}>
-        {/* Top Hero Banner */}
-        <View
-          style={[
-            styles.webHeroBanner,
-            {
-              paddingVertical: 34,
-              paddingHorizontal: 32,
-              borderRadius: 24,
-              marginBottom: 24,
-              backgroundColor: '#F8FAFC',
-              ...(Platform.OS === 'web'
-                ? {
-                    backgroundImage: 'linear-gradient(135deg, #F0FDF9 0%, #F8FAFC 55%, #EEF2FF 100%)',
-                  }
-                : {}),
-              borderWidth: 1,
-              borderColor: '#E2E8F0',
-              boxShadow: '0 4px 20px rgba(15, 23, 42, 0.04)',
-            },
-          ]}
-        >
-          <View style={styles.webHeroTextCol}>
-            <View style={[styles.webHeroBadge, { backgroundColor: '#FFFFFF', borderColor: '#A7F3D0', borderWidth: 1, boxShadow: '0 2px 6px rgba(0, 184, 148, 0.08)' }]}>
-              <Ionicons name="shield-checkmark" size={15} color="#00B894" />
-              <Text style={[styles.webHeroBadgeText, { color: '#00B894', fontWeight: '800' }]}>
-                NABL & ICMR Certified Clinical Partner Labs • Doorstep Collection
-              </Text>
+        {/* 1. PAGE TITLE, BACK ARROW & CITY LOCATION BADGE */}
+        <View style={styles.webHeaderSection}>
+          <View style={styles.webHeaderTopRow}>
+            <View style={styles.webHeaderTitleLeft}>
+              <TouchableOpacity
+                style={styles.backButton}
+                onPress={handleGoBack}
+                accessibilityRole="button"
+                accessibilityLabel="Go back"
+                activeOpacity={0.7}
+              >
+                <Ionicons name="arrow-back-outline" size={22} color="#0F172A" />
+              </TouchableOpacity>
+              <View>
+                <View style={styles.titleAndLocationRow}>
+                  <Text style={styles.webPageTitle}>Lab Tests</Text>
+                  <View style={styles.selectedCityBadge}>
+                    <Ionicons name="location-sharp" size={14} color="#007D69" style={{ marginRight: 4 }} />
+                    <Text style={styles.selectedCityBadgeText}>{displayCityLocation}</Text>
+                  </View>
+                </View>
+                <Text style={styles.webPageSubtitle}>Find and book lab tests.</Text>
+              </View>
             </View>
-            <Text style={[styles.webHeroTitle, { fontSize: 32, fontWeight: '900', color: '#1E3A8A', marginTop: 10, marginBottom: 6, letterSpacing: -0.6 }]}>
-              Lab Tests & Health Checkup Packages
-            </Text>
-            <Text style={[styles.webHeroSubtitle, { fontSize: 14.5, color: '#647488', maxWidth: 680, lineHeight: 22 }]}>
-              Choose from 13 doctor-verified health checkups with free doorstep sample collection, automated lab testing, and digital reports delivered in 6–8 hours.
-            </Text>
           </View>
 
-          {/* Search Box on Hero */}
-          <View
-            style={[
-              styles.webSearchWrap,
-              {
-                maxWidth: 640,
-                marginTop: 18,
-                backgroundColor: '#FFFFFF',
-                borderWidth: 1,
-                borderColor: '#E2E8F0',
-                borderRadius: 14,
-                boxShadow: '0 4px 14px rgba(15, 23, 42, 0.05)',
-              },
-            ]}
-          >
-            <Ionicons name="search" size={21} color="#00B894" />
+          {/* 2. PROMINENT SEARCH BAR */}
+          <View style={styles.webSearchBarWrap}>
+            <Ionicons name="search-outline" size={20} color="#007D69" style={{ marginLeft: 4, marginRight: 10 }} />
             <TextInput
-              style={[styles.webSearchInput, { fontSize: 14 }]}
-              placeholder="Search checkup (e.g. Executive, Full Body, Diabetes, Vitamin D, POP-EXE-01)..."
+              style={styles.webSearchInput}
+              placeholder="Search tests or packages"
               placeholderTextColor="#94A3B8"
               value={searchQuery}
-              onChangeText={(text) => { setSearchQuery(text); setCurrentPage(1); }}
+              onChangeText={(text) => {
+                setSearchQuery(text);
+                setCurrentPage(1);
+              }}
+              accessibilityLabel="Search tests or packages"
             />
             {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => { setSearchQuery(''); setCurrentPage(1); }}>
-                <Ionicons name="close-circle" size={19} color="#94A3B8" />
+              <TouchableOpacity
+                onPress={() => {
+                  setSearchQuery('');
+                  setCurrentPage(1);
+                }}
+                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                accessibilityLabel="Clear Search"
+              >
+                <Ionicons name="close-circle" size={18} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
+          </View>
+        </View>
+
+        {/* 3. COMPACT CATEGORY SELECTOR (WRAPS ON DESKTOP SO ALL ARE FULLY ACCESSIBLE) */}
+        <View style={styles.webCategoriesSection}>
+          <View style={styles.categoriesHeaderRow}>
+            <Text style={styles.categoriesSectionTitle}>Categories</Text>
+            {hasActiveFilter && (
+              <TouchableOpacity
+                style={styles.resetFilterChip}
+                onPress={resetAllFilters}
+                accessibilityRole="button"
+                accessibilityLabel="Reset Filter"
+              >
+                <Ionicons name="close-circle-outline" size={14} color="#059669" style={{ marginRight: 4 }} />
+                <Text style={styles.resetFilterChipText}>Reset Filter</Text>
               </TouchableOpacity>
             )}
           </View>
 
-          {/* Quick Search Tag Suggestions */}
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 16, flexWrap: 'wrap' }}>
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569' }}>Popular searches:</Text>
-            {[
-              'Full Body Checkup',
-              'Executive Health',
-              'Diabetes Basic',
-              'Heart Risk',
-              'Vitamin D',
-            ].map((tag) => (
-              <TouchableOpacity
-                key={tag}
-                style={{
-                  paddingVertical: 5,
-                  paddingHorizontal: 12,
-                  borderRadius: 16,
-                  backgroundColor: '#FFFFFF',
-                  borderWidth: 1,
-                  borderColor: '#A7F3D0',
-                  boxShadow: '0 1px 3px rgba(0,0,0,0.04)',
-                }}
-                onPress={() => {
-                  setSearchQuery(tag === 'Full Body Checkup' ? 'Full Body' : tag);
-                  setCurrentPage(1);
-                }}
-              >
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#059669' }}>{tag}</Text>
-              </TouchableOpacity>
-            ))}
-          </View>
-
-          {/* Trust Value Badges Strip */}
-          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 12, marginTop: 22, paddingTop: 18, borderTopWidth: 1, borderTopColor: 'rgba(0, 184, 148, 0.18)' }}>
-            {[
-              { icon: 'home-outline', title: 'Free Home Collection', desc: 'Doorstep phlebotomy' },
-              { icon: 'time-outline', title: '6–8 Hours TAT', desc: 'Fast digital reports' },
-              { icon: 'ribbon-outline', title: '100% NABL Accredited', desc: 'Quality assured' },
-              { icon: 'chatbubbles-outline', title: 'Doctor Consultation', desc: 'Free report review' },
-            ].map((feature, i) => (
-              <View
-                key={i}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 10,
-                  flex: 1,
-                  minWidth: 160,
-                  backgroundColor: '#FFFFFF',
-                  paddingVertical: 10,
-                  paddingHorizontal: 12,
-                  borderRadius: 12,
-                  borderWidth: 1,
-                  borderColor: '#A7F3D0',
-                  boxShadow: '0 2px 6px rgba(0,0,0,0.03)',
-                }}
-              >
-                <View style={{ width: 34, height: 34, borderRadius: 17, backgroundColor: '#ECFDF5', alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: '#A7F3D0' }}>
-                  <Ionicons name={feature.icon} size={17} color="#059669" />
-                </View>
-                <View>
-                  <Text style={{ fontSize: 12.5, fontWeight: '800', color: '#0F172A' }}>{feature.title}</Text>
-                  <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>{feature.desc}</Text>
-                </View>
-              </View>
-            ))}
-          </View>
-        </View>
-
-        {/* Categories Bar - Novus Checkup Categories */}
-        <View style={styles.webCategoriesRow}>
-          {NOVUS_PACKAGE_CATEGORIES.map((cat) => {
-            const isSel = selectedCategory === cat.id;
-            return (
-              <TouchableOpacity
-                key={cat.id}
-                style={[styles.webCategoryPill, isSel && styles.webCategoryPillActive]}
-                onPress={() => {
-                  setSelectedCategory(cat.id);
-                  setCurrentPage(1);
-                }}
-              >
-                <Ionicons name={cat.icon} size={16} color={isSel ? '#FFFFFF' : '#00B894'} />
-                <Text style={[styles.webCategoryPillText, isSel && styles.webCategoryPillTextActive]}>
-                  {cat.name}
-                </Text>
-              </TouchableOpacity>
-            );
-          })}
-        </View>
-
-        {/* Quick-Tap Filter Chips */}
-        <View style={{ paddingHorizontal: 20, paddingBottom: 14 }}>
-          <ScrollView
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={{ gap: 8, flexDirection: 'row', alignItems: 'center' }}
-          >
-            <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B', marginRight: 4 }}>Quick Filters:</Text>
-            {[
-              {
-                id: 'CHIP_UNDER_1000',
-                icon: 'flash-outline',
-                label: 'Under ₹1,000',
-                active: selectedPriceFilter === 'UNDER_1000',
-                onToggle: () => {
-                  setSelectedPriceFilter(selectedPriceFilter === 'UNDER_1000' ? 'ALL' : 'UNDER_1000');
-                  setCurrentPage(1);
-                },
-              },
-              {
-                id: 'CHIP_VITAMINS',
-                icon: 'medkit-outline',
-                label: 'Includes Vitamins D & B12',
-                active: selectedInclusions.includes('VITAMINS'),
-                onToggle: () => toggleInclusion('VITAMINS'),
-              },
-              {
-                id: 'CHIP_ECG',
-                icon: 'heart-outline',
-                label: 'Includes ECG / Imaging',
-                active: selectedInclusions.includes('ECG_IMAGING'),
-                onToggle: () => toggleInclusion('ECG_IMAGING'),
-              },
-              {
-                id: 'CHIP_ECHO',
-                icon: 'pulse-outline',
-                label: '2D Echo Included',
-                active: selectedInclusions.includes('ECHO'),
-                onToggle: () => toggleInclusion('ECHO'),
-              },
-              {
-                id: 'CHIP_IRON',
-                icon: 'water-outline',
-                label: 'Iron Profile',
-                active: selectedInclusions.includes('IRON'),
-                onToggle: () => toggleInclusion('IRON'),
-              },
-              {
-                id: 'CHIP_HBA1C',
-                icon: 'analytics-outline',
-                label: 'Sugar & HbA1c',
-                active: selectedInclusions.includes('HBA1C'),
-                onToggle: () => toggleInclusion('HBA1C'),
-              },
-            ].map((chip) => (
-              <TouchableOpacity
-                key={chip.id}
-                style={{
-                  flexDirection: 'row',
-                  alignItems: 'center',
-                  gap: 6,
-                  paddingVertical: 6,
-                  paddingHorizontal: 12,
-                  borderRadius: 20,
-                  backgroundColor: chip.active ? '#00B894' : '#FFFFFF',
-                  borderWidth: 1,
-                  borderColor: chip.active ? '#00B894' : '#CBD5E1',
-                }}
-                onPress={chip.onToggle}
-              >
-                <Ionicons name={chip.icon} size={13} color={chip.active ? '#FFFFFF' : '#64748B'} />
-                <Text
-                  style={{
-                    fontSize: 12,
-                    fontWeight: chip.active ? '700' : '600',
-                    color: chip.active ? '#FFFFFF' : '#334155',
-                  }}
-                >
-                  {chip.label}
-                </Text>
-                {chip.active && (
-                  <Ionicons name="close-circle" size={14} color="#FFFFFF" style={{ marginLeft: 5 }} />
-                )}
-              </TouchableOpacity>
-            ))}
-          </ScrollView>
-        </View>
-
-        {/* Main Two-Column Layout: Sidebar Filters + Test Grid */}
-        <View style={styles.webTwoColumnLayout}>
-          {/* Sidebar Filters */}
-          <View style={styles.webSidebar}>
-            <Text style={styles.sidebarHeading}>Filter Packages</Text>
-
-            {/* Category Filter */}
-            <View style={styles.filterGroup}>
-              <Text style={styles.filterGroupTitle}>Checkup Category</Text>
-              {NOVUS_PACKAGE_CATEGORIES.map((cat) => (
+          <View style={styles.webCategoriesWrapContainer}>
+            {WEB_LAB_CATEGORIES.map((cat) => {
+              const isSel = selectedCategory === cat.id;
+              return (
                 <TouchableOpacity
                   key={cat.id}
-                  style={styles.radioRow}
+                  style={[styles.webCategoryChip, isSel && styles.webCategoryChipActive]}
                   onPress={() => {
-                    setSelectedCategory(cat.id);
+                    setSelectedCategory(isSel && cat.id !== 'all' ? 'all' : cat.id);
                     setCurrentPage(1);
                   }}
+                  activeOpacity={0.8}
                 >
                   <Ionicons
-                    name={selectedCategory === cat.id ? 'radio-button-on' : 'radio-button-off'}
-                    size={16}
-                    color="#00B894"
+                    name={cat.icon}
+                    size={15}
+                    color={isSel ? '#FFFFFF' : '#007D69'}
+                    style={{ marginRight: 7 }}
                   />
-                  <Text style={styles.radioRowLabel}>{cat.name}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Price Range Filter */}
-            <View style={styles.filterGroup}>
-              <Text style={styles.filterGroupTitle}>Package Price Range</Text>
-              {[
-                { id: 'ALL', label: 'All Price Ranges' },
-                { id: 'UNDER_1000', label: 'Under ₹1,000 (2 packages)' },
-                { id: '1000_2000', label: '₹1,000 – ₹2,000 (8 packages)' },
-                { id: 'ABOVE_2000', label: 'Above ₹2,000 (3 packages)' },
-              ].map((p) => (
-                <TouchableOpacity
-                  key={p.id}
-                  style={styles.radioRow}
-                  onPress={() => {
-                    setSelectedPriceFilter(p.id);
-                    setCurrentPage(1);
-                  }}
-                >
-                  <Ionicons
-                    name={selectedPriceFilter === p.id ? 'radio-button-on' : 'radio-button-off'}
-                    size={16}
-                    color="#00B894"
-                  />
-                  <Text style={styles.radioRowLabel}>{p.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Key Inclusions Filter */}
-            <View style={styles.filterGroup}>
-              <Text style={styles.filterGroupTitle}>Key Test Inclusions</Text>
-              {[
-                { id: 'VITAMINS', label: 'Vitamins D & B12' },
-                { id: 'ECG_IMAGING', label: '12-Lead ECG / USG' },
-                { id: 'ECHO', label: '2D Echocardiography' },
-                { id: 'IRON', label: 'Iron & Ferritin' },
-                { id: 'HBA1C', label: 'HbA1c Sugar Control' },
-              ].map((inc) => {
-                const isChecked = selectedInclusions.includes(inc.id);
-                return (
-                  <TouchableOpacity
-                    key={inc.id}
-                    style={styles.radioRow}
-                    onPress={() => toggleInclusion(inc.id)}
+                  <Text
+                    style={[styles.webCategoryChipText, isSel && styles.webCategoryChipTextActive]}
                   >
-                    <Ionicons
-                      name={isChecked ? 'checkbox' : 'square-outline'}
-                      size={18}
-                      color={isChecked ? '#00B894' : '#94A3B8'}
-                    />
-                    <Text style={[styles.radioRowLabel, isChecked && { fontWeight: '700', color: '#0F172A' }]}>
-                      {inc.label}
-                    </Text>
-                  </TouchableOpacity>
+                    {cat.name}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        </View>
+
+        {/* 4. TEST COUNT BAR */}
+        <View style={styles.webResultsBar}>
+          <Text style={styles.webResultsCountText}>
+            {unifiedLabItems.length} {unifiedLabItems.length === 1 ? 'test' : 'tests'} available
+            {selectedCategory !== 'all' ? ` in ${activeCategoryItem?.name || selectedCategory}` : ''}
+            {` in ${currentCity}`}
+          </Text>
+        </View>
+
+        {/* 5. CLEAN GRID OF TEST CARDS */}
+        {unifiedLabItems.length > 0 ? (
+          <>
+            <View style={styles.webCardsGrid}>
+              {paginatedLabItems.map((item) => {
+                const inCart = isTestInCart(item.id);
+                const isPkg = item.isPackage;
+                return (
+                  <View key={item.id} style={styles.webCardItem}>
+                    {/* Header: Short Category & TAT */}
+                    <View style={styles.cardHeaderBadgesRow}>
+                      <View style={styles.categoryPillWrap}>
+                        <Text style={styles.cardCategoryText} numberOfLines={1}>
+                          {item.displayCategory || (isPkg ? 'Health Checkup' : 'Diagnostic Test')}
+                        </Text>
+                      </View>
+                      <View style={styles.tatBadge}>
+                        <Ionicons name="time-outline" size={12} color="#047857" style={{ marginRight: 4 }} />
+                        <Text style={styles.tatBadgeText} numberOfLines={1}>
+                          {item.tatSummary}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Test / Package Name */}
+                    <TouchableOpacity
+                      onPress={() => (isPkg ? setSelectedPackage(item) : setSelectedTest(item))}
+                      activeOpacity={0.85}
+                    >
+                      <Text style={styles.cardTitle} numberOfLines={2}>
+                        {item.name}
+                      </Text>
+                    </TouchableOpacity>
+
+                    {/* Key Details: Tests Included / Sample & Fasting */}
+                    <View style={styles.cardKeyDetailsRow}>
+                      <View style={styles.keyDetailItem}>
+                        <Ionicons
+                          name={isPkg ? 'cube-outline' : 'flask-outline'}
+                          size={13}
+                          color="#64748B"
+                          style={{ marginRight: 5 }}
+                        />
+                        <Text style={styles.keyDetailText} numberOfLines={1}>
+                          {item.sampleLabel}
+                        </Text>
+                      </View>
+                      <View style={styles.keyDetailItem}>
+                        <Ionicons
+                          name="restaurant-outline"
+                          size={13}
+                          color="#64748B"
+                          style={{ marginRight: 5 }}
+                        />
+                        <Text style={styles.keyDetailText} numberOfLines={1}>
+                          {item.fastingSummary}
+                        </Text>
+                      </View>
+                    </View>
+
+                    {/* Footer: Price Row + Action Buttons Row */}
+                    <View style={styles.cardFooterWrap}>
+                      <View style={styles.cardPriceRow}>
+                        <Text style={styles.cardPrice}>₹{item.price}</Text>
+                        {item.mrp && <Text style={styles.cardMrp}>₹{item.mrp}</Text>}
+                        {item.discount && (
+                          <View style={styles.discountBadge}>
+                            <Text style={styles.discountBadgeText}>{item.discount}</Text>
+                          </View>
+                        )}
+                      </View>
+
+                      <View style={styles.cardActionBtnsRow}>
+                        <TouchableOpacity
+                          style={styles.detailsBtn}
+                          onPress={() => (isPkg ? setSelectedPackage(item) : setSelectedTest(item))}
+                          activeOpacity={0.8}
+                          accessibilityRole="button"
+                          accessibilityLabel="Details"
+                        >
+                          <Text style={styles.detailsBtnText}>Details</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={[styles.cartIconBtn, inCart && styles.cartIconBtnActive]}
+                          onPress={() => (isPkg ? handleToggleCartPackage(item) : handleToggleCartTest(item))}
+                          activeOpacity={0.8}
+                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
+                          accessibilityRole="button"
+                          accessibilityLabel="Add to Cart"
+                        >
+                          <Ionicons
+                            name={inCart ? 'checkmark-circle' : 'cart-outline'}
+                            size={16}
+                            color={inCart ? '#FFFFFF' : '#007D69'}
+                          />
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.bookPrimaryBtn}
+                          onPress={() => startBooking(item)}
+                          activeOpacity={0.85}
+                          accessibilityRole="button"
+                          accessibilityLabel="Book Test"
+                        >
+                          <Ionicons name="calendar-outline" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
+                          <Text style={styles.bookPrimaryBtnText}>Book Test</Text>
+                        </TouchableOpacity>
+                      </View>
+                    </View>
+                  </View>
                 );
               })}
             </View>
 
-            {/* Collection Filter */}
-            <View style={styles.filterGroup}>
-              <Text style={styles.filterGroupTitle}>Collection Method</Text>
-              {[
-                { id: 'ALL', label: 'All Methods' },
-                { id: 'HOME', label: 'Home Collection', icon: 'home-outline' },
-                { id: 'CENTRE', label: 'Diagnostic Centre', icon: 'business-outline' },
-              ].map((m) => (
-                <TouchableOpacity
-                  key={m.id}
-                  style={styles.radioRow}
-                  onPress={() => setSelectedCollectionFilter(m.id)}
-                >
-                  <Ionicons
-                    name={selectedCollectionFilter === m.id ? 'radio-button-on' : 'radio-button-off'}
-                    size={16}
-                    color="#00B894"
-                  />
-                  {m.icon ? <Ionicons name={m.icon} size={14} color="#64748B" style={{ marginLeft: 6, marginRight: 2 }} /> : null}
-                  <Text style={styles.radioRowLabel}>{m.label}</Text>
-                </TouchableOpacity>
-              ))}
-            </View>
-
-            {/* Reset */}
-            <TouchableOpacity
-              style={styles.resetFiltersBtn}
-              onPress={() => {
-                setSelectedCategory('all');
-                setSelectedSubCategory('all');
-                setSelectedPriceFilter('ALL');
-                setSelectedInclusions([]);
-                setSelectedSort('RECOMMENDED');
-                setSelectedCollectionFilter('ALL');
-                setSearchQuery('');
-                setCurrentPage(1);
-              }}
-            >
-              <Text style={styles.resetFiltersBtnText}>Reset All Filters</Text>
-            </TouchableOpacity>
-          </View>
-
-          {/* Test Cards Grid - Dedicated Packages Only */}
-          <View style={styles.webContentCol}>
-            <View style={styles.webSectionBlock}>
-              <View style={[styles.webSectionHeader, { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }]}>
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
-                  <Ionicons name="shield-checkmark" size={24} color="#00B894" />
-                  <View>
-                    <Text style={styles.webSectionTitle}>Novus Health Checkup Packages</Text>
-                    <Text style={styles.webSectionSub}>
-                      {filteredPackages.length === 0
-                        ? '0 packages found'
-                        : `Showing ${(currentPage - 1) * ITEMS_PER_PAGE + 1}–${Math.min(currentPage * ITEMS_PER_PAGE, filteredPackages.length)} of ${filteredPackages.length} packages (Page ${currentPage} of ${totalPages})`}
-                    </Text>
-                  </View>
-                </View>
-
-                {/* Sort Bar */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                  <Text style={{ fontSize: 12, fontWeight: '700', color: '#64748B' }}>Sort:</Text>
-                  {[
-                    { id: 'RECOMMENDED', label: 'Featured' },
-                    { id: 'PRICE_LOW_HIGH', label: 'Price: Low to High' },
-                    { id: 'PRICE_HIGH_LOW', label: 'Price: High to Low' },
-                    { id: 'MOST_TESTS', label: 'Most Tests' },
-                  ].map((s) => {
-                    const isS = selectedSort === s.id;
-                    return (
-                      <TouchableOpacity
-                        key={s.id}
-                        style={{
-                          paddingVertical: 5,
-                          paddingHorizontal: 9,
-                          borderRadius: 6,
-                          backgroundColor: isS ? '#0F172A' : '#F1F5F9',
-                          borderWidth: 1,
-                          borderColor: isS ? '#0F172A' : '#E2E8F0',
-                        }}
-                        onPress={() => {
-                          setSelectedSort(s.id);
-                          setCurrentPage(1);
-                        }}
-                      >
-                        <Text
-                          style={{
-                            fontSize: 11.5,
-                            fontWeight: isS ? '700' : '600',
-                            color: isS ? '#FFFFFF' : '#475569',
-                          }}
-                        >
-                          {s.label}
-                        </Text>
-                      </TouchableOpacity>
-                    );
-                  })}
-                </View>
+            {/* Pagination Controls */}
+            {totalPages > 1 && (
+              <View style={{ marginTop: 24, marginBottom: 8 }}>
+                <Pagination
+                  currentPage={safeCurrentPage}
+                  totalPages={totalPages}
+                  onPageChange={(pageNum) => {
+                    setCurrentPage(pageNum);
+                    mainScrollRef.current?.scrollTo({ y: 0, animated: true });
+                  }}
+                />
               </View>
-
-              {filteredPackages.length === 0 ? (
-                <View style={styles.webEmptyState}>
-                  <Ionicons name="search-outline" size={54} color="#94A3B8" />
-                  <Text style={styles.webEmptyTitle}>No matching packages found</Text>
-                  <Text style={styles.webEmptyDesc}>Try clearing your search query or price filter to view all 13 verified packages.</Text>
-                  <TouchableOpacity
-                    style={[styles.modalPrimaryBtn, { marginTop: 14 }]}
-                    onPress={() => {
-                      setSelectedCategory('all');
-                      setSelectedPriceFilter('ALL');
-                      setSearchQuery('');
-                      setCurrentPage(1);
-                    }}
-                  >
-                    <Text style={styles.modalPrimaryBtnText}>Show All 13 Packages</Text>
-                  </TouchableOpacity>
-                </View>
-              ) : (
-                <>
-                  <View style={styles.webPackagesGrid}>
-                    {paginatedPackages.map((pkg) => (
-                      <View
-                        key={pkg.id}
-                        // @ts-ignore
-                        className="novus-card"
-                        style={[
-                          styles.webPackageCard,
-                          {
-                            borderRadius: 18,
-                            borderWidth: 1.5,
-                            borderColor: '#E2E8F0',
-                            backgroundColor: '#FFFFFF',
-                            padding: 22,
-                            position: 'relative',
-                            shadowColor: '#0F172A',
-                            shadowOffset: { width: 0, height: 4 },
-                            shadowOpacity: 0.05,
-                            shadowRadius: 12,
-                          },
-                        ]}
-                      >
-                        {/* Top Code & Category Badges */}
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                          <View style={{ backgroundColor: '#00B894', paddingHorizontal: 9, paddingVertical: 3.5, borderRadius: 6 }}>
-                            <Text style={{ fontSize: 11, fontWeight: '800', color: '#FFFFFF', letterSpacing: 0.3 }}>
-                              {pkg.code}
-                            </Text>
-                          </View>
-                          <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center', flexWrap: 'wrap' }}>
-                            {(['POP-FB-01', 'POP-EXE-01', 'POP-DIA-01', 'POP-HRT-01'].includes(pkg.id) || pkg.isMostPopularBooked) && (
-                              <View style={{ backgroundColor: '#FFF2ED', borderWidth: 1, borderColor: '#FFD7C7', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 12, flexDirection: 'row', alignItems: 'center' }}>
-                                <Ionicons name="flame" size={11} color="#FF7F50" style={{ marginRight: 3 }} />
-                                <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#FF7F50' }}>Most Popular</Text>
-                              </View>
-                            )}
-                            <View style={{ backgroundColor: '#F2FAF0', borderWidth: 1, borderColor: '#C6F6D5', paddingHorizontal: 9, paddingVertical: 3, borderRadius: 12 }}>
-                              <Text style={{ fontSize: 11, fontWeight: '700', color: '#7BC96F' }}>{pkg.category}</Text>
-                            </View>
-                            <View style={{ backgroundColor: '#F2FAF0', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 12 }}>
-                              <Text style={{ fontSize: 10.5, fontWeight: '800', color: '#7BC96F' }}>{pkg.discount}</Text>
-                            </View>
-                          </View>
-                        </View>
-
-                        {/* Title */}
-                        <Text style={{ fontSize: 18, fontWeight: '800', color: '#0F172A', marginBottom: 8, lineHeight: 24 }}>
-                          {pkg.name}
-                        </Text>
-
-                        {/* Key Specs Pills */}
-                        <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginBottom: 12 }}>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#EEF2FF', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                            <Ionicons name="flask-outline" size={13} color="#1E3A8A" />
-                            <Text style={{ fontSize: 11.5, color: '#1E3A8A', fontWeight: '700' }}>{pkg.testsCount} Tests Included</Text>
-                          </View>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#ECFDF5', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                            <Ionicons name="time-outline" size={13} color="#047857" />
-                            <Text style={{ fontSize: 11.5, color: '#047857', fontWeight: '700' }}>{pkg.tatSummary}</Text>
-                          </View>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, backgroundColor: '#FFFBEB', paddingHorizontal: 8, paddingVertical: 4, borderRadius: 6 }}>
-                            <Ionicons name="restaurant-outline" size={13} color="#B45309" />
-                            <Text style={{ fontSize: 11.5, color: '#B45309', fontWeight: '700' }}>{pkg.preparationSummary}</Text>
-                          </View>
-                        </View>
-
-                        {/* Clinical Note Excerpt */}
-                        {Boolean(pkg.clinicalNote) && (
-                          <View style={{ backgroundColor: '#F8FAFC', borderRadius: 8, padding: 9, marginBottom: 12, borderWidth: 1, borderColor: '#E2E8F0', flexDirection: 'row', gap: 6 }}>
-                            <Ionicons name="information-circle-outline" size={15} color="#1E3A8A" style={{ marginTop: 1 }} />
-                            <Text style={{ fontSize: 11.5, color: '#475569', lineHeight: 16, flex: 1 }} numberOfLines={2}>
-                              {pkg.clinicalNote}
-                            </Text>
-                          </View>
-                        )}
-
-                        {/* Tests preview chips */}
-                        <View style={{ marginBottom: 16 }}>
-                          <Text style={{ fontSize: 11, fontWeight: '700', color: '#64748B', marginBottom: 5 }}>INCLUDED TESTS PREVIEW:</Text>
-                          <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 5 }}>
-                            {pkg.tests.slice(0, 4).map((t, ti) => (
-                              <View key={ti} style={{ backgroundColor: '#F1F5F9', paddingHorizontal: 7, paddingVertical: 3, borderRadius: 5 }}>
-                                <Text style={{ fontSize: 11, color: '#334155' }}>{t.name.split('(')[0].trim()}</Text>
-                              </View>
-                            ))}
-                            {pkg.tests.length > 4 && (
-                              <TouchableOpacity
-                                onPress={() => setSelectedPackage(pkg)}
-                                style={{ flexDirection: 'row', alignItems: 'center', gap: 3, backgroundColor: '#E2E8F0', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 5 }}
-                              >
-                                <Text style={{ fontSize: 11, color: '#0F172A', fontWeight: '700' }}>
-                                  +{pkg.tests.length - 4} more tests
-                                </Text>
-                                <Ionicons name="arrow-forward" size={11} color="#0F172A" />
-                              </TouchableOpacity>
-                            )}
-                          </View>
-                        </View>
-
-                        {/* Price & Action Row */}
-                        <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingTop: 14, borderTopWidth: 1, borderTopColor: '#F1F5F9', marginTop: 'auto' }}>
-                          <View>
-                            <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
-                              <Text style={{ fontSize: 22, fontWeight: '800', color: '#0F172A' }}>₹{pkg.price}</Text>
-                              <Text style={{ fontSize: 13, textDecorationLine: 'line-through', color: '#94A3B8' }}>₹{pkg.mrp}</Text>
-                            </View>
-                            <Text style={{ fontSize: 11, fontWeight: '700', color: '#00B894' }}>
-                              Save ₹{pkg.mrp - pkg.price} ({pkg.discount})
-                            </Text>
-                          </View>
-
-                          <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
-                            <TouchableOpacity
-                              // @ts-ignore
-                              className="novus-pill-btn"
-                              style={{
-                                paddingVertical: 8,
-                                paddingHorizontal: 12,
-                                borderRadius: 8,
-                                borderWidth: 1,
-                                borderColor: '#CBD5E1',
-                                backgroundColor: '#FFFFFF',
-                              }}
-                              onPress={() => setSelectedPackage(pkg)}
-                            >
-                              <Text style={{ fontSize: 12, fontWeight: '700', color: '#334155' }}>View Tests</Text>
-                            </TouchableOpacity>
-
-                            <TouchableOpacity
-                              // @ts-ignore
-                              className="novus-btn-cta"
-                              style={{
-                                flexDirection: 'row',
-                                alignItems: 'center',
-                                gap: 4,
-                                paddingVertical: 8,
-                                paddingHorizontal: 16,
-                                borderRadius: 8,
-                                backgroundColor: '#00B894',
-                              }}
-                              onPress={() => startBooking(pkg)}
-                            >
-                              <Text style={{ fontSize: 13, fontWeight: '700', color: '#FFFFFF' }}>Book Now</Text>
-                              <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
-                            </TouchableOpacity>
-                          </View>
-                        </View>
-                      </View>
-                    ))}
-                  </View>
-
-                  {/* Pagination Controls */}
-                  {totalPages > 1 && (
-                    <Pagination
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={(pageNum) => {
-                        setCurrentPage(pageNum);
-                        mainScrollRef.current?.scrollTo({ y: 0, animated: true });
-                      }}
-                    />
-                  )}
-                </>
-              )}
-            </View>
+            )}
+          </>
+        ) : (
+          /* Clean Empty State with City Messaging */
+          <View style={styles.webEmptyState}>
+            {availableCentres.length === 0 ? (
+              <>
+                <Ionicons name="location-outline" size={52} color="#94A3B8" />
+                <Text style={styles.webEmptyTitle}>No tests in {currentCity} yet.</Text>
+                <Text style={styles.webEmptyDesc}>
+                  Try another category or switch city.
+                </Text>
+              </>
+            ) : (
+              <>
+                <Ionicons name="search-outline" size={48} color="#94A3B8" />
+                <Text style={styles.webEmptyTitle}>No Tests Found</Text>
+                <Text style={styles.webEmptyDesc}>
+                  No tests matching your search in {currentCity}.
+                </Text>
+                <TouchableOpacity
+                  style={styles.resetFilterActionBtn}
+                  onPress={resetAllFilters}
+                  activeOpacity={0.8}
+                >
+                  <Text style={styles.resetFilterActionBtnText}>Reset Filter</Text>
+                </TouchableOpacity>
+              </>
+            )}
           </View>
-        </View>
+        )}
       </View>
     );
   };
@@ -2737,75 +2534,305 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   webMainContentWrapper: {
-    maxWidth: 1280,
+    maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 20,
     paddingTop: 24,
-    paddingBottom: 140,
+    paddingBottom: 80,
   },
-  webHeroBanner: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 24,
-    padding: 28,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    marginBottom: 24,
+  // Clean Web Header Section
+  webHeaderSection: {
+    marginBottom: 20,
   },
-  webHeroTextCol: {
+  webHeaderTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 16,
+    flexWrap: 'wrap',
+    gap: 12,
   },
-  webHeroBadge: {
+  webHeaderTitleLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  backButton: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  titleAndLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 10,
+    marginBottom: 2,
+  },
+  selectedCityBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ECFDF5',
-    alignSelf: 'flex-start',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
     paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    gap: 6,
-    marginBottom: 8,
+    paddingVertical: 3.5,
+    borderRadius: 14,
   },
-  webHeroBadgeText: {
+  selectedCityBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#007D69',
   },
-  webHeroTitle: {
+  webHeaderTitleRow: {
+    marginBottom: 16,
+  },
+  webPageTitle: {
     fontSize: 26,
     fontWeight: '800',
-    color: '#1E3A8A',
+    color: '#0F172A',
+    letterSpacing: -0.5,
   },
-  webHeroSubtitle: {
-    fontSize: 14,
-    color: '#4A6572',
-    marginTop: 4,
-    maxWidth: 700,
+  webPageSubtitle: {
+    fontSize: 13.5,
+    color: '#64748B',
+    lineHeight: 18,
   },
-  webSearchWrap: {
+  webSearchBarWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FAFCFD',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#DCE7EC',
-    maxWidth: 650,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
+    maxWidth: 680,
   },
   webSearchInput: {
     flex: 1,
-    marginLeft: 10,
     fontSize: 14,
-    color: '#1E3A8A',
+    color: '#0F172A',
+    padding: 0,
+    margin: 0,
   },
-  webCategoriesRow: {
+  // Popular Tests Section
+  popularSectionWrap: {
+    marginBottom: 24,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 16,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  popularHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  popularHeaderLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 4,
+  },
+  popularSectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  popularCategorySub: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#64748B',
+    marginLeft: 4,
+  },
+  popularViewAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 4,
+    paddingHorizontal: 8,
+  },
+  popularViewAllText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#007D69',
+  },
+  popularCardsScroll: {
+    gap: 12,
+    paddingBottom: 4,
+  },
+  popularCardItem: {
+    width: 230,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 12,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 1,
+    justifyContent: 'space-between',
+  },
+  popCardTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 8,
+  },
+  popCategoryBadge: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 6,
+    paddingVertical: 2.5,
+    borderRadius: 4,
+    maxWidth: '65%',
+  },
+  popCategoryText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: '#007D69',
+    textTransform: 'uppercase',
+  },
+  popDiscountBadge: {
+    backgroundColor: '#FFF2ED',
+    paddingHorizontal: 5,
+    paddingVertical: 2,
+    borderRadius: 4,
+  },
+  popDiscountText: {
+    color: '#FF7F50',
+    fontSize: 9.5,
+    fontWeight: '800',
+  },
+  popCardContent: {
+    marginVertical: 4,
+  },
+  popCardName: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#0F172A',
+    lineHeight: 18,
+    marginBottom: 4,
+  },
+  popCardSub: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  popCardFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    marginTop: 8,
+  },
+  popPriceWrap: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 4,
+  },
+  popPriceText: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  popMrpText: {
+    fontSize: 11,
+    color: '#94A3B8',
+    textDecorationLine: 'line-through',
+  },
+  popActionBtns: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  popCartBtn: {
+    width: 28,
+    height: 28,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#007D69',
+    backgroundColor: '#F0FDF9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  popCartBtnActive: {
+    backgroundColor: '#007D69',
+  },
+  popBookBtn: {
+    backgroundColor: '#007D69',
+    paddingHorizontal: 10,
+    height: 28,
+    borderRadius: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  popBookBtnText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  // Categories Section
+  webCategoriesSection: {
+    marginBottom: 18,
+  },
+  categoriesHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  categoriesSectionTitle: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  resetFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  resetFilterChipText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  webCategoriesScroll: {
+    gap: 8,
+    paddingBottom: 4,
+  },
+  webCategoriesWrapContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 10,
-    marginBottom: 16,
+    gap: 8,
+    paddingVertical: 4,
   },
-  webCategoryPill: {
+  webCategoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 14,
@@ -2813,199 +2840,240 @@ const styles = StyleSheet.create({
     borderRadius: 20,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#DCE7EC',
-    gap: 6,
+    borderColor: '#E2E8F0',
   },
-  webCategoryPillActive: {
-    backgroundColor: '#00B894',
-    borderColor: '#00B894',
+  webCategoryChipActive: {
+    backgroundColor: '#007D69',
+    borderColor: '#007D69',
   },
-  webCategoryPillText: {
-    fontSize: 13,
+  webCategoryChipText: {
+    fontSize: 12.5,
     fontWeight: '600',
-    color: '#334155',
-  },
-  webCategoryPillTextActive: {
-    color: '#FFFFFF',
-    fontWeight: '700',
-  },
-  webSubCategoriesBar: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-    backgroundColor: '#FFFFFF',
-    padding: 12,
-    borderRadius: 10,
-    marginBottom: 20,
-    borderWidth: 1,
-    borderColor: '#DCE7EC',
-  },
-  webSubCatPill: {
-    paddingHorizontal: 12,
-    paddingVertical: 5,
-    borderRadius: 14,
-    backgroundColor: '#FAFCFD',
-    borderWidth: 1,
-    borderColor: '#DCE7EC',
-  },
-  webSubCatPillActive: {
-    backgroundColor: '#00B894',
-    borderColor: '#00B894',
-  },
-  webSubCatPillText: {
-    fontSize: 12,
     color: '#475569',
-    fontWeight: '600',
   },
-  webSubCatPillTextActive: {
+  webCategoryChipTextActive: {
     color: '#FFFFFF',
+    fontWeight: '700',
   },
-  webTwoColumnLayout: {
-    flexDirection: 'row',
-    gap: 24,
-  },
-  webSidebar: {
-    width: 260,
-    backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#DCE7EC',
-    alignSelf: 'flex-start',
-  },
-  sidebarHeading: {
-    fontSize: 15,
-    fontWeight: '800',
-    color: '#1E3A8A',
+  // Results count
+  webResultsBar: {
     marginBottom: 14,
   },
-  filterGroup: {
-    marginBottom: 18,
-  },
-  filterGroupTitle: {
-    fontSize: 12,
+  webResultsCountText: {
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#64748B',
-    marginBottom: 8,
-    textTransform: 'uppercase',
   },
-  radioRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    paddingVertical: 5,
+  // Cards Grid
+  webCardsGrid: {
+    ...(Platform.OS === 'web'
+      ? {
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
+          gap: 16,
+        }
+      : {
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          gap: 16,
+        }),
   },
-  radioRowLabel: {
-    fontSize: 13,
-    color: '#334155',
-    fontWeight: '500',
-  },
-  resetFiltersBtn: {
-    backgroundColor: '#F1F8FB',
-    paddingVertical: 8,
-    borderRadius: 8,
-    alignItems: 'center',
-    marginTop: 6,
-  },
-  resetFiltersBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1E3A8A',
-  },
-  webContentCol: {
-    flex: 1,
-  },
-  webSectionBlock: {
-    marginBottom: 28,
-  },
-  webSectionHeader: {
-    marginBottom: 14,
-  },
-  webSectionTitle: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  webSectionSub: {
-    fontSize: 13,
-    color: '#64748B',
-    marginTop: 2,
-  },
-  webPackagesGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 16,
-  },
-  webPackageCard: {
-    width: '48%',
+  webCardItem: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
     padding: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-  },
-  packageCardHeader: {
-    flexDirection: 'row',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    elevation: 2,
     justifyContent: 'space-between',
+  },
+  cardHeaderBadgesRow: {
+    flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 8,
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    gap: 8,
   },
-  packageBadgePill: {
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+  categoryPillWrap: {
+    backgroundColor: '#F8FAFC',
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
     borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    maxWidth: '60%',
   },
-  packageBadgePillText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#D97706',
-  },
-  packageParamCount: {
-    fontSize: 12,
-    color: '#00B894',
+  cardCategoryText: {
+    fontSize: 10,
     fontWeight: '700',
+    color: '#007D69',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
   },
-  packageName: {
-    fontSize: 16,
+  tatBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#D1FAE5',
+  },
+  tatBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#047857',
+  },
+  cardTitle: {
+    fontSize: 15.5,
     fontWeight: '800',
     color: '#0F172A',
-    marginBottom: 4,
+    marginBottom: 10,
+    lineHeight: 21,
   },
-  packageDesc: {
-    fontSize: 12,
-    color: '#64748B',
-    lineHeight: 17,
-    marginBottom: 12,
-  },
-  packagePriceRow: {
+  cardKeyDetailsRow: {
     flexDirection: 'row',
-    justifyContent: 'space-between',
     alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 14,
+  },
+  keyDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 6,
+  },
+  keyDetailText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  cardFooterWrap: {
+    paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
-    paddingTop: 10,
+    marginTop: 'auto',
+    gap: 10,
   },
-  packagePrice: {
-    fontSize: 18,
+  cardPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+  },
+  cardPrice: {
+    fontSize: 17,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#0F172A',
   },
-  packageMrp: {
+  cardMrp: {
     fontSize: 12,
     color: '#94A3B8',
     textDecorationLine: 'line-through',
   },
-  packageViewBtn: {
-    backgroundColor: '#00B894',
-    paddingHorizontal: 14,
+  discountBadge: {
+    backgroundColor: '#FFF2ED',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  discountBadgeText: {
+    color: '#FF7F50',
+    fontSize: 10.5,
+    fontWeight: '800',
+  },
+  cardActionBtnsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  detailsBtn: {
+    paddingHorizontal: 12,
+    height: 36,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  detailsBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  cartIconBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#007D69',
+    backgroundColor: '#F0FDF9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  cartIconBtnActive: {
+    backgroundColor: '#007D69',
+    borderColor: '#007D69',
+  },
+  bookPrimaryBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#007D69',
+    height: 36,
+    borderRadius: 8,
+    paddingHorizontal: 10,
+  },
+  bookPrimaryBtnText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  webEmptyState: {
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 56,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginTop: 10,
+  },
+  webEmptyTitle: {
+    fontSize: 17,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginTop: 12,
+    marginBottom: 4,
+  },
+  webEmptyDesc: {
+    fontSize: 13,
+    color: '#64748B',
+    textAlign: 'center',
+    maxWidth: 420,
+    marginBottom: 16,
+  },
+  resetFilterActionBtn: {
+    backgroundColor: '#007D69',
+    paddingHorizontal: 18,
     paddingVertical: 8,
     borderRadius: 8,
   },
-  packageViewBtnText: {
-    color: '#FFFFFF',
-    fontSize: 12,
+  resetFilterActionBtnText: {
+    fontSize: 13,
     fontWeight: '700',
+    color: '#FFFFFF',
   },
   webTestsGrid: {
     flexDirection: 'row',

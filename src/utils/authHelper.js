@@ -9,7 +9,8 @@ export const isGuestUser = async () => {
   try {
     const isLoggedIn = await AsyncStorage.getItem('isLoggedIn');
     const isGuest = await AsyncStorage.getItem('@unnathi_is_guest');
-    if (isGuest === 'true' || isLoggedIn !== 'true') {
+    const userStr = (await AsyncStorage.getItem('user')) || (await AsyncStorage.getItem('@unnathi_primary_user'));
+    if (isGuest === 'true' || isLoggedIn !== 'true' || !userStr) {
       return true;
     }
     return false;

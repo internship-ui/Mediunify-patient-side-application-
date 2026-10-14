@@ -684,6 +684,7 @@ export const RADIOLOGY_PROVIDERS = [
   // ==================================================
   {
     id: 'prov-unnathi-mysore',
+    supportedCategories: ["mri","ct","xray","usg","dexa","doppler","ecg","echo","cardiology"],
     name: 'Unnathi Advanced Diagnostics & 3T MRI Centre',
     city: 'Mysuru',
     area: 'Kuvempunagar',
@@ -723,6 +724,7 @@ export const RADIOLOGY_PROVIDERS = [
   },
   {
     id: 'prov-apollo-mysore',
+    supportedCategories: ["mri","ct","xray","usg","mammo","pet","dexa","doppler","ecg","echo","cardiology","other"],
     name: 'Apollo BGS Hospitals — Institute of Radiology',
     city: 'Mysuru',
     area: 'Adichunchanagiri Road',
@@ -762,6 +764,7 @@ export const RADIOLOGY_PROVIDERS = [
   },
   {
     id: 'prov-mysore-scan',
+    supportedCategories: ["mri","ct","xray","usg","doppler","ecg","echo"],
     name: 'Mysore Scan & Advanced Diagnostic Centre',
     city: 'Mysuru',
     area: 'Saraswathipuram',
@@ -801,6 +804,7 @@ export const RADIOLOGY_PROVIDERS = [
   },
   {
     id: 'prov-spark-mysore',
+    supportedCategories: ["ct","xray","usg","doppler","ecg"],
     name: 'Spark Diagnostic & Imaging Institute',
     city: 'Mysuru',
     area: 'Vontikoppal',
@@ -840,6 +844,7 @@ export const RADIOLOGY_PROVIDERS = [
   },
   {
     id: 'prov-manipal-mysore',
+    supportedCategories: ["mri","ct","xray","usg","mammo","dexa","doppler","ecg","echo","cardiology","other"],
     name: 'Manipal Hospital Radiology & Imaging Wing',
     city: 'Mysuru',
     area: 'Yadavagiri',
@@ -879,6 +884,7 @@ export const RADIOLOGY_PROVIDERS = [
   },
   {
     id: 'prov-narayana-mysore',
+    supportedCategories: ["mri","ct","xray","usg","dexa","doppler","ecg","echo","cardiology"],
     name: 'Narayana Multispeciality Hospital — Diagnostic Imaging',
     city: 'Mysuru',
     area: 'Devanur',
@@ -918,6 +924,7 @@ export const RADIOLOGY_PROVIDERS = [
   },
   {
     id: 'prov-jss-mysore',
+    supportedCategories: ["mri","ct","xray","usg","mammo","dexa","doppler","ecg","echo","cardiology","other"],
     name: 'JSS Hospital & Research Institute — Dept. of Radiodiagnosis',
     city: 'Mysuru',
     area: 'Agrahara',
@@ -957,6 +964,7 @@ export const RADIOLOGY_PROVIDERS = [
   },
   {
     id: 'prov-clearmedi-mysore',
+    supportedCategories: ["mri","ct","xray","usg","mammo","pet","dexa","doppler"],
     name: 'Clearmedi Radiant Hospital & Cancer Imaging Center',
     city: 'Mysuru',
     area: 'Vijayanagar',
@@ -996,6 +1004,7 @@ export const RADIOLOGY_PROVIDERS = [
   },
   {
     id: 'prov-medall-mysore',
+    supportedCategories: ["ct","xray","usg","doppler","ecg","echo"],
     name: 'Medall Precision Diagnostics & Scan Centre',
     city: 'Mysuru',
     area: 'Vidyaranyapuram',
@@ -1035,6 +1044,7 @@ export const RADIOLOGY_PROVIDERS = [
   },
   {
     id: 'prov-sigma-mysore',
+    supportedCategories: ["ct","xray","usg","doppler","ecg"],
     name: 'Sigma Hospital & Advanced Diagnostic Wing',
     city: 'Mysuru',
     area: 'Saraswathipuram',
@@ -1078,6 +1088,7 @@ export const RADIOLOGY_PROVIDERS = [
   // ==================================================
   {
     id: 'prov-mediunify-blr',
+    supportedCategories: ["mri","ct","xray","usg","mammo","pet","dexa","doppler","ecg","echo","cardiology","other"],
     name: 'MediUnify Advanced Imaging & PET-CT Institute',
     city: 'Bengaluru',
     area: 'Indiranagar',
@@ -1117,6 +1128,7 @@ export const RADIOLOGY_PROVIDERS = [
   },
   {
     id: 'prov-narayana-blr',
+    supportedCategories: ["mri","ct","xray","usg","mammo","pet","dexa","doppler","ecg","echo","cardiology","other"],
     name: 'Narayana Health City — Diagnostic Radiology Institute',
     city: 'Bengaluru',
     area: 'Bommasandra',
@@ -1156,6 +1168,7 @@ export const RADIOLOGY_PROVIDERS = [
   },
   {
     id: 'prov-manipal-blr',
+    supportedCategories: ["mri","ct","xray","usg","mammo","pet","dexa","doppler","ecg","echo","cardiology","other"],
     name: 'Manipal Hospital — Dept of Imaging Sciences',
     city: 'Bengaluru',
     area: 'Old Airport Road',
@@ -1195,6 +1208,7 @@ export const RADIOLOGY_PROVIDERS = [
   },
   {
     id: 'prov-aster-blr',
+    supportedCategories: ["mri","ct","xray","usg","mammo","pet","dexa","doppler","ecg","echo","cardiology","other"],
     name: 'Aster CMI Hospital — Diagnostic Center',
     city: 'Bengaluru',
     area: 'Hebbal',
@@ -1234,6 +1248,7 @@ export const RADIOLOGY_PROVIDERS = [
   },
   {
     id: 'prov-clumax-blr',
+    supportedCategories: ["mri","ct","xray","usg","mammo","dexa","doppler","ecg","echo"],
     name: 'Clumax Diagnostics & Advanced Imaging',
     city: 'Bengaluru',
     area: 'Jayanagar',
@@ -1273,6 +1288,7 @@ export const RADIOLOGY_PROVIDERS = [
   },
   {
     id: 'prov-anand-blr',
+    supportedCategories: ["mri","ct","xray","usg","dexa","doppler","ecg","echo"],
     name: 'Neuberg Anand Reference Laboratory & Diagnostic Scans',
     city: 'Bengaluru',
     area: 'Shivajinagar',
@@ -1316,6 +1332,7 @@ export const RADIOLOGY_PROVIDERS = [
   // ==================================================
   {
     id: 'prov-hassan-scan',
+    supportedCategories: ["mri","ct","xray","usg","doppler","ecg","echo"],
     name: 'Hassan Advanced Scan & Diagnostic Centre',
     city: 'Hassan',
     area: 'BM Road',
@@ -1355,6 +1372,7 @@ export const RADIOLOGY_PROVIDERS = [
   },
   {
     id: 'prov-mangala-hassan',
+    supportedCategories: ["ct","xray","usg","doppler","ecg","echo"],
     name: 'Mangala Hospital & Diagnostic Center',
     city: 'Hassan',
     area: 'Salagame Road',
@@ -1394,6 +1412,7 @@ export const RADIOLOGY_PROVIDERS = [
   },
   {
     id: 'prov-sanjeevini-hassan',
+    supportedCategories: ["ct","xray","usg","doppler","ecg"],
     name: 'Sanjeevini Multispeciality Hospital & Imaging',
     city: 'Hassan',
     area: 'BM Road',
@@ -1554,12 +1573,37 @@ export const RADIOLOGY_CENTRES_FILTERED = (city = 'Mysuru') => {
     if (lower.includes('mangal') && pCity.includes('mangal')) return true;
     return pCity === lower;
   });
-  return matched.length > 0 ? matched : RADIOLOGY_PROVIDERS.filter((p) => (p.city || '').toLowerCase().includes('mys'));
+  return matched;
+};
+
+export const getAvailableCategoriesForCity = (city = 'Mysuru') => {
+  const centres = RADIOLOGY_CENTRES_FILTERED(city);
+  if (!centres || centres.length === 0) return [];
+  const supportedCatSet = new Set();
+  centres.forEach((c) => {
+    (c.supportedCategories || []).forEach((catId) => supportedCatSet.add(catId));
+  });
+  return RADIOLOGY_CATEGORIES.filter((cat) => supportedCatSet.has(cat.id));
+};
+
+export const getAvailableTestsForCity = (city = 'Mysuru') => {
+  const centres = RADIOLOGY_CENTRES_FILTERED(city);
+  if (!centres || centres.length === 0) return [];
+  const supportedCatSet = new Set();
+  centres.forEach((c) => {
+    (c.supportedCategories || []).forEach((catId) => supportedCatSet.add(catId));
+  });
+  return RADIOLOGY_TESTS.filter((test) => supportedCatSet.has(test.categoryId));
 };
 
 export const getProvidersForTest = (test, city = 'Mysuru') => {
   const filtered = RADIOLOGY_CENTRES_FILTERED(city);
-  return filtered.map((provider) => {
+  const eligible = filtered.filter((provider) => {
+    if (!test || !test.categoryId) return true;
+    if (!provider.supportedCategories || !Array.isArray(provider.supportedCategories)) return true;
+    return provider.supportedCategories.includes(test.categoryId);
+  });
+  return eligible.map((provider) => {
     const discountedPrice = Math.round(test.typicalPrice * provider.discountMultiplier);
     const mrp = test.mrp;
     const discountPercent = Math.round(((mrp - discountedPrice) / mrp) * 100);

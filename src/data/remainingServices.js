@@ -2,7 +2,7 @@ export const REMAINING_SERVICES = [
   {
     id: 'nurse',
     title: 'Home Nurse & Caregiver',
-    subtitle: 'Certified Nurses for 1 Hr, 12 Hrs, 1-30 Days Care',
+    subtitle: 'Certified nurses & caregivers at home',
     icon: 'people-outline',
     route: 'NurseBooking',
     color: '#6366F1',
@@ -14,7 +14,7 @@ export const REMAINING_SERVICES = [
   {
     id: 'equipment',
     title: 'Medical Equipment Rental',
-    subtitle: 'Hospital Beds, Oxygen Concentrators & Wheelchairs',
+    subtitle: 'Beds, oxygen & mobility equipment',
     icon: 'fitness-outline',
     route: 'EquipmentRental',
     color: '#F59E0B',
@@ -23,7 +23,7 @@ export const REMAINING_SERVICES = [
   {
     id: 'insurance',
     title: 'Health Insurance & Mediclaim',
-    subtitle: '100% Cashless Mediclaim & Fast Claim Support',
+    subtitle: 'Cashless claims & health plans',
     icon: 'shield-checkmark-outline',
     route: 'HealthInsurance',
     color: '#00B894',
@@ -32,7 +32,7 @@ export const REMAINING_SERVICES = [
   {
     id: 'monitor',
     title: 'Self Health Monitor',
-    subtitle: 'Track Blood Sugar, BP, SpO2 & Body Vitals',
+    subtitle: 'Track blood sugar, BP, and vitals',
     icon: 'pulse-outline',
     route: 'HealthMonitor',
     color: '#EF4444',
@@ -41,7 +41,7 @@ export const REMAINING_SERVICES = [
   {
     id: 'emergency',
     title: '24/7 Emergency & Ambulance',
-    subtitle: 'Immediate Trauma Response & Advanced Life Support',
+    subtitle: 'Fast ambulance & trauma support',
     icon: 'flash-outline',
     route: 'Emergency',
     color: '#DC2626',

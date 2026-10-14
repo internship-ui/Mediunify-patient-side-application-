@@ -213,18 +213,12 @@ Manages UI theme modes, internationalization across 5 Indian languages, biometri
 | `LabTestsScreen` | `src/screens/services/lab/LabTestsScreen.js` | Catalog of 100+ lab tests and full-body health checkup packages with fast add-to-cart |
 | `LabBookingScreen` | `src/screens/services/lab/LabBookingScreen.js` | Sample collection slot booking (doorstep phlebotomist vs lab visit), patient selector |
 
-#### E. Radiology & Diagnostic Imaging
+#### E. Radiology & Diagnostic Imaging (Scans & X-Ray)
 | Screen | File | Key Functions / Responsibilities |
 |---|---|---|
-| `RadiologyLabsScreen` | `src/screens/services/radiology/RadiologyLabsScreen.js` | Accredited scan centers, MRI/CT/USG pricing, NABH badges, distance filters |
-| `RadiologyLabDetailsScreen` | `src/screens/services/radiology/RadiologyLabDetailsScreen.js` | Center equipment specs (e.g., 3T MRI, 128-slice CT), modalities, doctor radiologists |
-| `RadiologyBookingScreen` | `src/screens/services/radiology/RadiologyBookingScreen.js` | Patient info form (name, age, gender, fasting status, contrast notes, prescription upload) |
-| `RadiologyPaymentScreen` | `src/screens/services/radiology/RadiologyPaymentScreen.js` | Payment processing (UPI, Cards, NetBanking, Pay at Center) for radiology scans |
-| `RadiologyOrderSuccessScreen` | `src/screens/services/radiology/RadiologyOrderSuccessScreen.js` | Booking confirmation, QR pass, appointment instructions, preparation checklist |
-| `RadiologistListScreen` | `src/screens/services/radiology/RadiologistListScreen.js` | List of MD Radiologists for second opinions and scan review |
-| `RadiologistBookingScreen` | `src/screens/services/radiology/RadiologistBookingScreen.js` | Book 1-on-1 scan consultation with senior radiologists |
-| `RadiologyReportUploadScreen` | `src/screens/services/radiology/RadiologyReportUploadScreen.js` | DICOM / PDF scan upload interface for AI analysis and physician review |
-| `ImagingScreen` | `src/screens/services/radiology/ImagingScreen.js` | Modality-specific navigation hub (MRI, CT, PET-CT, Ultrasound, X-Ray) |
+| `ImagingScreen` / `ImagingScreen.web` | `src/screens/services/radiology/ImagingScreen.web.js` | Unified Master Flow: Modality-specific categories (MRI, CT, PET-CT, USG, X-Ray), tests, diagnostic centres, 3-step booking wizard, payment, directions, and My Bookings across Web & Mobile |
+| `RadiologyLabsScreen` | `src/screens/services/radiology/RadiologyLabsScreen.js` | Cross-platform navigation entry point for diagnostic scan centres and search integration |
+| `RadiologyOrderSuccessScreen` | `src/screens/services/radiology/RadiologyOrderSuccessScreen.js` | Deep-link / confirmation entry point routing to confirmed bookings |
 
 #### F. Doorstep Pharmacy & Medicines
 | Screen | File | Key Functions / Responsibilities |

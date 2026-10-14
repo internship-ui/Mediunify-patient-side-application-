@@ -3,11 +3,12 @@ import * as Location from 'expo-location';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 export const normalizeCityName = (rawCity) => {
-  if (!rawCity || typeof rawCity !== 'string') return 'Bangalore';
+  if (!rawCity || typeof rawCity !== 'string') return '';
   const clean = rawCity.trim().toLowerCase();
 
+  if (clean.includes('mysuru')) return 'Mysuru';
+  if (clean.includes('mysore')) return 'Mysore';
   if (clean.includes('bengaluru') || clean.includes('bangalore')) return 'Bangalore';
-  if (clean.includes('mysuru') || clean.includes('mysore')) return 'Mysore';
   if (clean.includes('hubli') || clean.includes('hubballi') || clean.includes('dharwad')) return 'Hubli - Dharwad';
   if (clean.includes('mangaluru') || clean.includes('mangalore')) return 'Mangalore';
   if (clean.includes('belagavi') || clean.includes('belgaum')) return 'Belgaum';
@@ -173,17 +174,8 @@ export const getCurrentPositionWebSafe = async (options = {}) => {
           maximumAge: 60000,
         });
       } catch (secondErr) {
-        // Fallback to closest default Mysore coordinate if position is completely unavailable
-        console.warn('[LocationHelper] Web geolocation timed out; using Mysore center fallback');
-        return {
-          coords: {
-            latitude: 12.2858,
-            longitude: 76.6341,
-            accuracy: 100,
-          },
-          timestamp: Date.now(),
-          isFallback: true,
-        };
+        console.warn('[LocationHelper] Web geolocation unavailable:', secondErr);
+        throw secondErr;
       }
     }
   }
@@ -225,49 +217,7 @@ export const reverseGeocodeWebSafe = async ({ latitude, longitude }) => {
     }
   }
 
-  // 1. Try OpenStreetMap Nominatim (High detail: road, suburb, city, pincode)
-  try {
-    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
-    const timeoutId = controller ? setTimeout(() => controller.abort(), 4500) : null;
-
-    const osmUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`;
-    const res = await fetch(osmUrl, {
-      headers: { 'User-Agent': 'UnnathiHealthcareApp/1.0' },
-      signal: controller?.signal,
-    });
-    if (timeoutId) clearTimeout(timeoutId);
-
-    if (res.ok) {
-      const data = await res.json();
-      if (data && data.address) {
-        const addr = data.address;
-        const mainName = addr.amenity || addr.road || addr.suburb || addr.neighbourhood || 'Current Location';
-        const district = addr.suburb || addr.neighbourhood || addr.city_district || addr.residential || addr.county || '';
-        const rawCity = addr.city || addr.town || addr.village || addr.municipality || addr.city_district || addr.state_district || addr.county || addr.state || 'Bangalore';
-        const city = normalizeCityName(rawCity);
-        const state = addr.state || 'Karnataka';
-        const postalCode = addr.postcode || '';
-
-        return [
-          {
-            name: mainName,
-            street: addr.road || '',
-            district: district || city,
-            subregion: district || city,
-            city: city,
-            region: state,
-            postalCode: postalCode,
-            country: addr.country || 'India',
-            formattedAddress: data.display_name || `${mainName}, ${city} - ${postalCode}`,
-          },
-        ];
-      }
-    }
-  } catch (osmErr) {
-    // OSM failed or timed out, try BigDataCloud
-  }
-
-  // 2. Try BigDataCloud Reverse Geocoding Client (Fast & CORS friendly)
+  // 1. Try BigDataCloud Reverse Geocoding Client (Fast, CORS friendly, works in all browsers)
   try {
     const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
     const timeoutId = controller ? setTimeout(() => controller.abort(), 4000) : null;
@@ -281,7 +231,7 @@ export const reverseGeocodeWebSafe = async ({ latitude, longitude }) => {
     if (res.ok) {
       const data = await res.json();
       if (data && (data.locality || data.city || data.principalSubdivision)) {
-        const rawCity = data.city || data.locality || data.principalSubdivision || 'Bangalore';
+        const rawCity = data.city || data.locality || data.principalSubdivision;
         const city = normalizeCityName(rawCity);
         const locality = data.locality || data.city || city;
         const state = data.principalSubdivision || 'Karnataka';
@@ -303,12 +253,55 @@ export const reverseGeocodeWebSafe = async ({ latitude, longitude }) => {
       }
     }
   } catch (bdcErr) {
-    // BigDataCloud failed, proceed to local matcher
+    // BigDataCloud failed, try OpenStreetMap
   }
 
-  // 3. Fallback: Distance matcher for known Mysore & Bangalore coords
+  // 2. Try OpenStreetMap Nominatim
+  try {
+    const controller = typeof AbortController !== 'undefined' ? new AbortController() : null;
+    const timeoutId = controller ? setTimeout(() => controller.abort(), 4500) : null;
+
+    const osmUrl = `https://nominatim.openstreetmap.org/reverse?format=json&lat=${latitude}&lon=${longitude}&zoom=18&addressdetails=1`;
+    const headers = Platform.OS === 'web' ? {} : { 'User-Agent': 'UnnathiHealthcareApp/1.0' };
+    const res = await fetch(osmUrl, {
+      headers,
+      signal: controller?.signal,
+    });
+    if (timeoutId) clearTimeout(timeoutId);
+
+    if (res.ok) {
+      const data = await res.json();
+      if (data && data.address) {
+        const addr = data.address;
+        const mainName = addr.amenity || addr.road || addr.suburb || addr.neighbourhood || 'Current Location';
+        const district = addr.suburb || addr.neighbourhood || addr.city_district || addr.residential || addr.county || '';
+        const rawCity = addr.city || addr.town || addr.village || addr.municipality || addr.city_district || addr.state_district || addr.county || addr.state;
+        const city = normalizeCityName(rawCity);
+        const state = addr.state || 'Karnataka';
+        const postalCode = addr.postcode || '';
+
+        return [
+          {
+            name: mainName,
+            street: addr.road || '',
+            district: district || city,
+            subregion: district || city,
+            city: city,
+            region: state,
+            postalCode: postalCode,
+            country: addr.country || 'India',
+            formattedAddress: data.display_name || `${mainName}, ${city} - ${postalCode}`,
+          },
+        ];
+      }
+    }
+  } catch (osmErr) {
+    // OSM failed
+  }
+
+  // 3. Distance matcher for known Mysore coords (within 25 km)
   const distToMysore = calculateDistanceKm(latitude, longitude, 12.2958, 76.6394);
-  if (distToMysore < 40) {
+  if (distToMysore < 25) {
     const closest = getClosestMysoreLocality(latitude, longitude);
     return [
       {
@@ -316,28 +309,17 @@ export const reverseGeocodeWebSafe = async ({ latitude, longitude }) => {
         street: `${closest.name} Main Road`,
         district: closest.name,
         subregion: closest.name,
-        city: 'Mysore',
+        city: 'Mysuru',
         region: 'Karnataka',
         postalCode: closest.pincode || '570023',
         country: 'India',
-        formattedAddress: `${closest.name}, Mysore - ${closest.pincode || '570023'}`,
+        formattedAddress: `${closest.name}, Mysuru - ${closest.pincode || '570023'}`,
       },
     ];
   }
 
-  return [
-    {
-      name: 'Current Location',
-      street: '',
-      district: 'Bangalore',
-      subregion: 'Bangalore',
-      city: 'Bangalore',
-      region: 'Karnataka',
-      postalCode: '560001',
-      country: 'India',
-      formattedAddress: 'Bangalore, Karnataka',
-    },
-  ];
+  // Do not fake Bangalore or Mysore if completely unknown
+  return [];
 };
 
 /**
@@ -639,21 +621,21 @@ export const detectAutoLocation = async () => {
       console.log('[LocationHelper] IP fallback error:', ipErr?.message);
     }
 
-    // 4. Default fallback
+    // 4. Fallback: do not silently substitute an unrelated default city
     return {
       success: false,
-      city: 'Bangalore',
-      fullLocation: 'Bangalore, Karnataka',
-      coords: { latitude: 12.9716, longitude: 77.5946 },
-      source: 'default',
+      city: null,
+      fullLocation: null,
+      coords: null,
+      source: 'none',
     };
   } catch (err) {
     return {
       success: false,
-      city: 'Bangalore',
-      fullLocation: 'Bangalore, Karnataka',
-      coords: { latitude: 12.9716, longitude: 77.5946 },
-      source: 'default',
+      city: null,
+      fullLocation: null,
+      coords: null,
+      source: 'none',
     };
   }
 };

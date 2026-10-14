@@ -48,14 +48,8 @@ import AyurvedaWellnessScreen from '../screens/services/ayurveda/AyurvedaWellnes
 import EquipmentRentalScreen from '../screens/services/equipment/EquipmentRentalScreen';
 
 import RadiologyLabsScreen from '../screens/services/radiology/RadiologyLabsScreen';
-import RadiologyLabDetailsScreen from '../screens/services/radiology/RadiologyLabDetailsScreen';
-import RadiologyBookingScreen from '../screens/services/radiology/RadiologyBookingScreen';
-import RadiologyPaymentScreen from '../screens/services/radiology/RadiologyPaymentScreen';
 import RadiologyOrderSuccessScreen from '../screens/services/radiology/RadiologyOrderSuccessScreen';
 
-import RadiologistListScreen from '../screens/services/radiology/RadiologistListScreen';
-import RadiologistBookingScreen from '../screens/services/radiology/RadiologistBookingScreen';
-import RadiologyReportUploadScreen from '../screens/services/radiology/RadiologyReportUploadScreen';
 
 import ChatbotScreen from '../screens/chatbot/ChatbotScreen';
 
@@ -478,17 +472,17 @@ const MainStackScreen = () => {
 
         <Stack.Screen
           name="RadiologyLabDetails"
-          component={RadiologyLabDetailsScreen}
+          component={ImagingScreen}
         />
 
         <Stack.Screen
           name="RadiologyBooking"
-          component={RadiologyBookingScreen}
+          component={ImagingScreen}
         />
 
         <Stack.Screen
           name="RadiologyPayment"
-          component={RadiologyPaymentScreen}
+          component={ImagingScreen}
         />
 
         <Stack.Screen
@@ -503,7 +497,7 @@ const MainStackScreen = () => {
 
         <Stack.Screen
           name="RadiologistBooking"
-          component={RadiologyBookingScreen}
+          component={ImagingScreen}
         />
 
         <Stack.Screen

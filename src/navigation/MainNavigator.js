@@ -101,16 +101,8 @@ import AllServicesScreen from '../screens/services/AllServicesScreen';
 // ==================================================
 // RADIOLOGY & SCANS
 // ==================================================
-
 import RadiologyLabsScreen from '../screens/services/radiology/RadiologyLabsScreen';
-import RadiologyLabDetailsScreen from '../screens/services/radiology/RadiologyLabDetailsScreen';
-import RadiologyBookingScreen from '../screens/services/radiology/RadiologyBookingScreen';
-import RadiologyPaymentScreen from '../screens/services/radiology/RadiologyPaymentScreen';
 import RadiologyOrderSuccessScreen from '../screens/services/radiology/RadiologyOrderSuccessScreen';
-
-import RadiologistListScreen from '../screens/services/radiology/RadiologistListScreen';
-import RadiologistBookingScreen from '../screens/services/radiology/RadiologistBookingScreen';
-import RadiologyReportUploadScreen from '../screens/services/radiology/RadiologyReportUploadScreen';
 
 
 
@@ -522,7 +514,7 @@ const MainNavigator = ({
                   }
                 }
               });
-            }).catch(() => {});
+            }).catch(() => { });
           }
         }
       }
@@ -575,6 +567,9 @@ const MainNavigator = ({
             'RadiologyLabs',
             'RadiologyLabDetails',
             'Pharmacy',
+            'ProductDetails',
+            'PharmacyStoreDetail',
+            'PharmacyLocation',
             'EquipmentRental',
             'FindDoctors',
             'DoctorList',
@@ -630,428 +625,428 @@ const MainNavigator = ({
 
         >
 
-        {/* ==================================================
+          {/* ==================================================
             HOME
         ================================================== */}
 
-        <Stack.Screen
-          name="Home"
-          component={HomeScreen}
-        />
+          <Stack.Screen
+            name="Home"
+            component={HomeScreen}
+          />
 
 
-        {/* ==================================================
+          {/* ==================================================
             GLOBAL SEARCH
         ================================================== */}
 
-        <Stack.Screen
-          name="GlobalSearch"
-          component={GlobalSearchScreen}
-        />
+          <Stack.Screen
+            name="GlobalSearch"
+            component={GlobalSearchScreen}
+          />
 
 
-        {/* ==================================================
+          {/* ==================================================
             NOTIFICATIONS
         ================================================== */}
 
-        <Stack.Screen
-          name="Notifications"
-          component={NotificationsScreen}
-        />
+          <Stack.Screen
+            name="Notifications"
+            component={NotificationsScreen}
+          />
 
-        <Stack.Screen
-          name="Alerts"
-          component={NotificationsScreen}
-        />
+          <Stack.Screen
+            name="Alerts"
+            component={NotificationsScreen}
+          />
 
 
-        {/* ==================================================
+          {/* ==================================================
             CHATBOT
         ================================================== */}
 
-        <Stack.Screen
-          name="Chatbot"
-          component={ChatbotScreen}
-        />
+          <Stack.Screen
+            name="Chatbot"
+            component={ChatbotScreen}
+          />
 
 
-        {/* ==================================================
+          {/* ==================================================
             DOCTOR FLOW
         ================================================== */}
 
-        <Stack.Screen
-          name="FindDoctors"
-          component={FindDoctorsScreen}
-        />
+          <Stack.Screen
+            name="FindDoctors"
+            component={FindDoctorsScreen}
+          />
 
-        <Stack.Screen
-          name="DoctorList"
-          component={DoctorListScreen}
-        />
+          <Stack.Screen
+            name="DoctorList"
+            component={DoctorListScreen}
+          />
 
-        <Stack.Screen
-          name="DoctorDetails"
-          component={DoctorDetailsScreen}
-        />
+          <Stack.Screen
+            name="DoctorDetails"
+            component={DoctorDetailsScreen}
+          />
 
-        <Stack.Screen
-          name="DoctorBooking"
-          component={DoctorBookingScreen}
-        />
+          <Stack.Screen
+            name="DoctorBooking"
+            component={DoctorBookingScreen}
+          />
 
 
-        {/* ==================================================
+          {/* ==================================================
             HOSPITAL FLOW
         ================================================== */}
 
-        <Stack.Screen
-          name="HospitalList"
-          component={HospitalListScreen}
-        />
+          <Stack.Screen
+            name="HospitalList"
+            component={HospitalListScreen}
+          />
 
-        <Stack.Screen
-          name="HospitalCare"
-          component={SurgeryScreen}
-        />
+          <Stack.Screen
+            name="HospitalCare"
+            component={SurgeryScreen}
+          />
 
-        <Stack.Screen
-          name="HospitalSurgeryDetails"
-          component={HospitalSurgeryDetailsScreen}
-        />
+          <Stack.Screen
+            name="HospitalSurgeryDetails"
+            component={HospitalSurgeryDetailsScreen}
+          />
 
-        <Stack.Screen
-          name="SurgeryQuoteRequest"
-          component={SurgeryQuoteRequestScreen}
-        />
+          <Stack.Screen
+            name="SurgeryQuoteRequest"
+            component={SurgeryQuoteRequestScreen}
+          />
 
-        <Stack.Screen
-          name="HealthInsurance"
-          component={HealthInsuranceScreen}
-        />
+          <Stack.Screen
+            name="HealthInsurance"
+            component={HealthInsuranceScreen}
+          />
 
-        <Stack.Screen
-          name="NurseBooking"
-          component={NurseBookingScreen}
-        />
+          <Stack.Screen
+            name="NurseBooking"
+            component={NurseBookingScreen}
+          />
 
-        <Stack.Screen
-          name="AyurvedaWellness"
-          component={AyurvedaWellnessScreen}
-        />
-        <Stack.Screen
-          name="EquipmentRental"
-          component={EquipmentRentalScreen}
-        />
+          <Stack.Screen
+            name="AyurvedaWellness"
+            component={AyurvedaWellnessScreen}
+          />
+          <Stack.Screen
+            name="EquipmentRental"
+            component={EquipmentRentalScreen}
+          />
 
-        <Stack.Screen
-          name="AllServices"
-          component={AllServicesScreen}
-        />
+          <Stack.Screen
+            name="AllServices"
+            component={AllServicesScreen}
+          />
 
 
-        {/* ==================================================
+          {/* ==================================================
             VIDEO CONSULTATION
         ================================================== */}
 
-        <Stack.Screen
-          name="VideoConsultation"
-          component={VideoConsultationScreen}
-        />
+          <Stack.Screen
+            name="VideoConsultation"
+            component={VideoConsultationScreen}
+          />
 
-        <Stack.Screen
-          name="VideoBooking"
-          component={VideoBookingScreen}
-        />
+          <Stack.Screen
+            name="VideoBooking"
+            component={VideoBookingScreen}
+          />
 
-        <Stack.Screen
-          name="VideoMeeting"
-          component={VideoMeetingScreen}
-        />
+          <Stack.Screen
+            name="VideoMeeting"
+            component={VideoMeetingScreen}
+          />
 
 
-        {/* ==================================================
+          {/* ==================================================
             LAB TESTS
         ================================================== */}
 
-        <Stack.Screen
-          name="LabTests"
-          component={LabTestsScreen}
-        />
+          <Stack.Screen
+            name="LabTests"
+            component={LabTestsScreen}
+          />
 
-        <Stack.Screen
-          name="LabBooking"
-          component={LabBookingScreen}
-        />
+          <Stack.Screen
+            name="LabBooking"
+            component={LabBookingScreen}
+          />
 
 
-        {/* ==================================================
+          {/* ==================================================
             PHARMACY
         ================================================== */}
 
-        <Stack.Screen
-          name="Pharmacy"
-          component={PharmacyScreen}
-        />
+          <Stack.Screen
+            name="Pharmacy"
+            component={PharmacyScreen}
+          />
 
-        <Stack.Screen
-          name="PharmacyStoreDetail"
-          component={PharmacyStoreDetailScreen}
-        />
+          <Stack.Screen
+            name="PharmacyStoreDetail"
+            component={PharmacyStoreDetailScreen}
+          />
 
-        <Stack.Screen
-          name="PharmacyLocation"
-          component={PharmacyLocationScreen}
-        />
+          <Stack.Screen
+            name="PharmacyLocation"
+            component={PharmacyLocationScreen}
+          />
 
-        <Stack.Screen
-          name="ProductDetails"
-          component={ProductDetailsScreen}
-        />
+          <Stack.Screen
+            name="ProductDetails"
+            component={ProductDetailsScreen}
+          />
 
-        <Stack.Screen
-          name="Cart"
-          component={CartScreen}
-        />
+          <Stack.Screen
+            name="Cart"
+            component={CartScreen}
+          />
 
-        <Stack.Screen
-          name="Checkout"
-          component={CheckoutScreen}
-        />
+          <Stack.Screen
+            name="Checkout"
+            component={CheckoutScreen}
+          />
 
-        <Stack.Screen
-          name="Payment"
-          component={PaymentScreen}
-        />
+          <Stack.Screen
+            name="Payment"
+            component={PaymentScreen}
+          />
 
-        <Stack.Screen
-          name="OrderSuccess"
-          component={OrderSuccessScreen}
-        />
+          <Stack.Screen
+            name="OrderSuccess"
+            component={OrderSuccessScreen}
+          />
 
-        <Stack.Screen
-          name="MyOrders"
-          component={MyMedicineOrdersScreen}
-        />
+          <Stack.Screen
+            name="MyOrders"
+            component={MyMedicineOrdersScreen}
+          />
 
 
-        {/* ==================================================
+          {/* ==================================================
             IMAGING
         ================================================== */}
 
-        <Stack.Screen
-          name="Imaging"
-          component={ImagingScreen}
-        />
+          <Stack.Screen
+            name="Imaging"
+            component={ImagingScreen}
+          />
 
 
-        {/* ==================================================
+          {/* ==================================================
             EMERGENCY
         ================================================== */}
 
-        <Stack.Screen
-          name="Emergency"
-          component={EmergencyScreen}
-        />
+          <Stack.Screen
+            name="Emergency"
+            component={EmergencyScreen}
+          />
 
 
-        {/* ==================================================
+          {/* ==================================================
             HEALTH RECORDS & SELF MONITOR
         ================================================== */}
 
-        <Stack.Screen
-          name="HealthMonitor"
-          component={HealthMonitorScreen}
-        />
+          <Stack.Screen
+            name="HealthMonitor"
+            component={HealthMonitorScreen}
+          />
 
-        <Stack.Screen
-          name="HealthRecords"
-          component={HealthRecordsScreen}
-        />
+          <Stack.Screen
+            name="HealthRecords"
+            component={HealthRecordsScreen}
+          />
 
-        <Stack.Screen
-          name="Prescriptions"
-          component={PrescriptionsScreen}
-        />
+          <Stack.Screen
+            name="Prescriptions"
+            component={PrescriptionsScreen}
+          />
 
-        <Stack.Screen
-          name="Reports"
-          component={ReportsScreen}
-        />
+          <Stack.Screen
+            name="Reports"
+            component={ReportsScreen}
+          />
 
 
-        {/* ==================================================
+          {/* ==================================================
             RADIOLOGY & SCANS
         ================================================== */}
 
-        <Stack.Screen
-          name="RadiologyLabs"
-          component={RadiologyLabsScreen}
-        />
+          <Stack.Screen
+            name="RadiologyLabs"
+            component={RadiologyLabsScreen}
+          />
 
-        <Stack.Screen
-          name="RadiologyLabDetails"
-          component={RadiologyLabDetailsScreen}
-        />
+          <Stack.Screen
+            name="RadiologyLabDetails"
+            component={ImagingScreen}
+          />
 
-        <Stack.Screen
-          name="RadiologyBooking"
-          component={RadiologyBookingScreen}
-        />
+          <Stack.Screen
+            name="RadiologyBooking"
+            component={ImagingScreen}
+          />
 
-        <Stack.Screen
-          name="RadiologyPayment"
-          component={RadiologyPaymentScreen}
-        />
+          <Stack.Screen
+            name="RadiologyPayment"
+            component={ImagingScreen}
+          />
 
-        <Stack.Screen
-          name="RadiologyOrderSuccess"
-          component={RadiologyOrderSuccessScreen}
-        />
+          <Stack.Screen
+            name="RadiologyOrderSuccess"
+            component={RadiologyOrderSuccessScreen}
+          />
 
-        <Stack.Screen
-          name="RadiologistList"
-          component={RadiologistListScreen}
-        />
+          <Stack.Screen
+            name="RadiologistList"
+            component={RadiologyLabsScreen}
+          />
 
-        <Stack.Screen
-          name="RadiologistBooking"
-          component={RadiologistBookingScreen}
-        />
+          <Stack.Screen
+            name="RadiologistBooking"
+            component={ImagingScreen}
+          />
 
-        <Stack.Screen
-          name="RadiologyReportUpload"
-          component={RadiologyReportUploadScreen}
-        />
+          <Stack.Screen
+            name="RadiologyReportUpload"
+            component={RadiologyLabsScreen}
+          />
 
 
-        {/* ==================================================
+          {/* ==================================================
             BOOKINGS
         ================================================== */}
 
-        <Stack.Screen
-          name="Bookings"
-          component={MyTestsScreen}
-        />
+          <Stack.Screen
+            name="Bookings"
+            component={MyTestsScreen}
+          />
 
-        <Stack.Screen
-          name="BookingDetails"
-          component={BookingDetailsScreen}
-        />
+          <Stack.Screen
+            name="BookingDetails"
+            component={BookingDetailsScreen}
+          />
 
 
-        {/* ==================================================
+          {/* ==================================================
             PROFILE & SETTINGS
         ================================================== */}
 
-        <Stack.Screen
-          name="Profile"
-          component={ProfileScreen}
-        />
+          <Stack.Screen
+            name="Profile"
+            component={ProfileScreen}
+          />
 
-        <Stack.Screen
-          name="EditProfile"
-          component={EditProfileScreen}
-        />
+          <Stack.Screen
+            name="EditProfile"
+            component={EditProfileScreen}
+          />
 
-        <Stack.Screen
-          name="FamilyProfiles"
-          component={FamilyProfilesScreen}
-        />
+          <Stack.Screen
+            name="FamilyProfiles"
+            component={FamilyProfilesScreen}
+          />
 
-        <Stack.Screen
-          name="TransactionHistory"
-          component={TransactionHistoryScreen}
-        />
+          <Stack.Screen
+            name="TransactionHistory"
+            component={TransactionHistoryScreen}
+          />
 
-        <Stack.Screen
-          name="History"
-          component={TransactionHistoryScreen}
-        />
+          <Stack.Screen
+            name="History"
+            component={TransactionHistoryScreen}
+          />
 
-        <Stack.Screen
-          name="Wallet"
-          component={WalletScreen}
-        />
+          <Stack.Screen
+            name="Wallet"
+            component={WalletScreen}
+          />
 
-        <Stack.Screen
-          name="ReferEarn"
-          component={ReferEarnScreen}
-        />
+          <Stack.Screen
+            name="ReferEarn"
+            component={ReferEarnScreen}
+          />
 
-        <Stack.Screen
-          name="Settings"
-          component={SettingsScreen}
-        />
+          <Stack.Screen
+            name="Settings"
+            component={SettingsScreen}
+          />
 
-        <Stack.Screen
-          name="MyAppointments"
-          component={MyAppointmentsScreen}
-        />
+          <Stack.Screen
+            name="MyAppointments"
+            component={MyAppointmentsScreen}
+          />
 
-        <Stack.Screen
-          name="MyTests"
-          component={MyTestsScreen}
-        />
+          <Stack.Screen
+            name="MyTests"
+            component={MyTestsScreen}
+          />
 
-        <Stack.Screen
-          name="MyMedicineOrders"
-          component={MyMedicineOrdersScreen}
-        />
+          <Stack.Screen
+            name="MyMedicineOrders"
+            component={MyMedicineOrdersScreen}
+          />
 
-        <Stack.Screen
-          name="MyMedicalRecords"
-          component={MyMedicalRecordsScreen}
-        />
+          <Stack.Screen
+            name="MyMedicalRecords"
+            component={MyMedicalRecordsScreen}
+          />
 
-        <Stack.Screen
-          name="MyOnlineConsultations"
-          component={MyOnlineConsultationsScreen}
-        />
+          <Stack.Screen
+            name="MyOnlineConsultations"
+            component={MyOnlineConsultationsScreen}
+          />
 
-        <Stack.Screen
-          name="OnlineConsultant"
-          component={MyOnlineConsultationsScreen}
-        />
+          <Stack.Screen
+            name="OnlineConsultant"
+            component={MyOnlineConsultationsScreen}
+          />
 
-        <Stack.Screen
-          name="MyFeedback"
-          component={MyFeedbackScreen}
-        />
+          <Stack.Screen
+            name="MyFeedback"
+            component={MyFeedbackScreen}
+          />
 
-        <Stack.Screen
-          name="HelpSupport"
-          component={HelpSupportScreen}
-        />
+          <Stack.Screen
+            name="HelpSupport"
+            component={HelpSupportScreen}
+          />
 
-        <Stack.Screen
-          name="Membership"
-          component={MembershipScreen}
-        />
+          <Stack.Screen
+            name="Membership"
+            component={MembershipScreen}
+          />
 
-        {/* ==================================================
+          {/* ==================================================
             AUTH FLOW
         ================================================== */}
-        <Stack.Screen
-          name="Login"
-          component={LoginScreen}
-        />
+          <Stack.Screen
+            name="Login"
+            component={LoginScreen}
+          />
 
-        <Stack.Screen
-          name="Register"
-          component={RegisterScreen}
-        />
+          <Stack.Screen
+            name="Register"
+            component={RegisterScreen}
+          />
 
-        <Stack.Screen
-          name="ForgotPassword"
-          component={ForgotPasswordScreen}
-        />
+          <Stack.Screen
+            name="ForgotPassword"
+            component={ForgotPasswordScreen}
+          />
 
-        <Stack.Screen
-          name="OTP"
-          component={OTPScreen}
-        />
+          <Stack.Screen
+            name="OTP"
+            component={OTPScreen}
+          />
 
-      </Stack.Navigator>
+        </Stack.Navigator>
       </View>
 
 

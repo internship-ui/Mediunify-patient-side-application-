@@ -30,7 +30,7 @@ const QUICK_SUGGESTIONS = [
   { icon: 'flask-outline', text: 'Book a Lab Test' },
   { icon: 'person-outline', text: 'Find a Doctor' },
   { icon: 'medkit-outline', text: 'Order Medicine' },
-  { icon: 'scan-outline', text: 'View Scans & X-Ray' },
+  { icon: 'scan-outline', text: 'View Scan & X-Ray' },
   { icon: 'fitness-outline', text: 'I have fever & body pain' },
   { icon: 'heart-outline', text: 'Book Home Nursing' },
   { icon: 'bed-outline', text: 'Rent Medical Equipment' },
@@ -43,7 +43,7 @@ const COMPACT_TRY_ASKING = [
   { id: '1', icon: 'flask-outline', color: '#00C2CB', bg: '#E0F7FA', title: 'Book a Lab Test', query: 'Book a lab test at home' },
   { id: '2', icon: 'person-outline', color: '#007D69', bg: '#E6F4F1', title: 'Find a Doctor', query: 'Find best doctor for consultation' },
   { id: '3', icon: 'medkit-outline', color: '#8B5CF6', bg: '#F3E8FF', title: 'Order Medicine', query: 'Order medicines from pharmacy' },
-  { id: '4', icon: 'scan-outline', color: '#1E3A8A', bg: '#EBF4FF', title: 'View Scans & X-Ray', query: 'View Scans & X-Ray diagnostics' },
+  { id: '4', icon: 'scan-outline', color: '#1E3A8A', bg: '#EBF4FF', title: 'View Scan & X-Ray', query: 'View Scan & X-Ray diagnostics' },
   { id: '5', icon: 'fitness-outline', color: '#EF4444', bg: '#FEE2E2', title: 'Fever & body pain', query: 'I have fever and body pain' },
   { id: '6', icon: 'heart-outline', color: '#EC4899', bg: '#FCE7F3', title: 'Home Nursing', query: 'Book home nursing and care' },
 ];
@@ -351,7 +351,7 @@ const ChatbotScreen = ({ navigation }) => {
         suggestedLab: topLab,
         actionButtons: [
           {
-            title: 'View Scans & X-Ray',
+            title: 'View Scan & X-Ray',
             icon: 'scan-outline',
             action: () => navigation.navigate('Imaging'),
           },
@@ -824,7 +824,7 @@ const ChatbotScreen = ({ navigation }) => {
           action: () => navigation.navigate('Pharmacy'),
         },
         {
-          title: 'View Scans & X-Ray',
+          title: 'View Scan & X-Ray',
           icon: 'scan-outline',
           action: () => navigation.navigate('Imaging'),
         },

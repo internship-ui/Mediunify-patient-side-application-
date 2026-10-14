@@ -6,53 +6,76 @@ import {
   StyleSheet,
   useWindowDimensions,
   TextInput,
-  Image,
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../theme/colors';
 import { useTheme } from '../../context/ThemeContext';
-import { isDesktopLayout, isDesktopSiteRequested } from '../../utils/responsiveLayoutHelper';
+import { isDesktopSiteRequested } from '../../utils/responsiveLayoutHelper';
+import { navigationRef } from '../../navigation/navigationRef';
 
 const OUR_SERVICES = [
   { labelKey: 'card_lab_tests', label: 'Lab Tests', route: 'LabTests' },
-  { labelKey: 'card_scans_xray', label: 'Scans & X-Ray', route: 'Imaging' },
-  { labelKey: 'card_video_consult', label: 'Consultation', route: 'VideoConsultation' },
-  { labelKey: 'card_order_medicines', label: 'Pharmacy', route: 'Pharmacy' },
-  { labelKey: 'card_surgeries', label: 'Hospital & Surgery', route: 'HospitalCare' },
+  { labelKey: 'card_scans_xray', label: 'Scan & X-Ray', route: 'Imaging' },
+  { labelKey: 'card_video_consult', label: 'Video Consultation', route: 'VideoConsultation' },
+  { labelKey: 'card_order_medicines', label: 'Order Medicines', route: 'Pharmacy' },
+  { labelKey: 'card_surgeries', label: 'Surgeries', route: 'HospitalCare' },
   { labelKey: 'card_health_insurance', label: 'Health Insurance', route: 'HealthInsurance' },
   { labelKey: 'card_ayurveda', label: 'Ayurveda & Wellness', route: 'AyurvedaWellness' },
-  { labelKey: 'card_fertility', label: 'Fertility & IVF Care', route: 'FertilityIvf' },
+  { labelKey: 'card_fertility', label: 'Fertility & IVF', route: 'FertilityIvf' },
   { labelKey: 'card_equipment_rental', label: 'Equipment Rental', route: 'EquipmentRental' },
-  { labelKey: 'card_emergency', label: 'Emergency', route: 'Emergency' },
+  { labelKey: 'card_emergency', label: 'Emergency SOS', route: 'Emergency' },
 ];
 
 const SUPPORT_LINKS = [
-  { labelKey: 'help_support', label: 'Help Center', route: 'HelpSupport' },
-  { labelKey: 'help_support', label: 'FAQs', route: 'HelpSupport' },
-  { labelKey: 'help_support', label: 'Contact Us', route: 'HelpSupport' },
-  { labelKey: 'support_providers', label: 'For Providers', route: 'HelpSupport' },
-  { labelKey: 'support_corporates', label: 'For Corporates', route: 'HelpSupport' },
+  { labelKey: 'help_support', label: 'Help & Support', route: 'HelpSupport' },
+  { labelKey: 'support_faqs', label: 'FAQs', route: 'HelpSupport' },
+  { labelKey: 'support_contact', label: 'Contact Us', route: 'HelpSupport' },
+  { labelKey: 'support_providers', label: 'Join as Doctor or Lab', route: 'HelpSupport' },
+  { labelKey: 'support_corporates', label: 'Corporate Health Plans', route: 'HelpSupport' },
   { labelKey: 'support_terms', label: 'Terms of Service', route: 'HelpSupport' },
-  { labelKey: 'support_privacy', label: 'Privacy Policy', route: 'HelpSupport' },
-  { labelKey: 'support_privacy', label: 'Refund Policy', route: 'HelpSupport' },
+  { labelKey: 'support_privacy', label: 'Privacy Policy & HIPAA', route: 'HelpSupport' },
+  { labelKey: 'support_refund', label: 'Refund Policy', route: 'HelpSupport' },
+];
+
+const SOCIAL_LINKS = [
+  { id: 'linkedin', icon: 'logo-linkedin', bg: '#1E3A8A', url: 'https://www.linkedin.com' },
+  { id: 'instagram', icon: 'logo-instagram', bg: '#00B894', url: 'https://www.instagram.com' },
+  { id: 'facebook', icon: 'logo-facebook', bg: '#1E3A8A', url: 'https://www.facebook.com' },
+  { id: 'youtube', icon: 'logo-youtube', bg: '#00C2CB', url: 'https://www.youtube.com' },
 ];
 
 const WebFooter = ({ navigation, style }) => {
   const { width } = useWindowDimensions();
   const { t, isIndic } = useTheme();
   const desktopSiteMode = isDesktopSiteRequested();
-  const isDesktop = isDesktopLayout(width);
+
+  // Responsive device categorization
+  const isDesktop = width >= 1024 || desktopSiteMode;
+  const isTablet = width >= 768 && width < 1024 && !desktopSiteMode;
+  const isMobile = width < 768 && !desktopSiteMode;
+
   const [emailInput, setEmailInput] = useState('');
   const [subscribed, setSubscribed] = useState(false);
 
-  if (!isDesktop) {
+  // Preserve native mobile app layout — WebFooter only renders on web
+  if (Platform.OS !== 'web') {
     return null;
   }
 
   const handleNavigate = (route) => {
     if (navigation?.navigate) {
-      navigation.navigate('MainApp', { screen: route });
+      try {
+        navigation.navigate(route);
+      } catch (e) {
+        navigation.navigate('MainApp', { screen: route });
+      }
+    } else if (navigationRef?.navigate) {
+      try {
+        navigationRef.navigate(route);
+      } catch (e) {
+        navigationRef.navigate('MainApp', { screen: route });
+      }
     }
   };
 
@@ -64,21 +87,54 @@ const WebFooter = ({ navigation, style }) => {
     }
   };
 
+  const handleSocialClick = (url) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
+  const handleStoreClick = (url) => {
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      window.open(url, '_blank', 'noopener,noreferrer');
+    }
+  };
+
   const scrollToTop = () => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
 
+  const containerPadding = isDesktop ? 40 : isTablet ? 24 : 16;
+
   return (
-    <View style={[styles.footerWrapper, desktopSiteMode && { minWidth: 1200, width: '100%' }, style]} nativeID="mediunify-footer">
-      <View style={[styles.footerContainer, desktopSiteMode && { minWidth: 1200, width: '100%' }]}>
+    <View
+      style={[
+        styles.footerWrapper,
+        desktopSiteMode && { minWidth: 1200, width: '100%' },
+        style,
+      ]}
+      nativeID="mediunify-footer"
+    >
+      <View
+        style={[
+          styles.footerContainer,
+          { paddingHorizontal: containerPadding },
+          desktopSiteMode && { minWidth: 1200, width: '100%' },
+        ]}
+      >
         {/* ============================================================
-            MAIN 5-COLUMN ROW
+            MAIN 5-COLUMN ROW (Spans full available width)
         ============================================================ */}
-        <View style={styles.colsRow}>
+        <View
+          style={[
+            styles.colsRow,
+            isTablet && styles.colsRowTablet,
+            isMobile && styles.colsRowMobile,
+          ]}
+        >
           {/* Column 1: MediUnify Brand Info & Socials */}
-          <View style={[styles.footerCol, { flex: 1.4 }]}>
+          <View style={[styles.footerCol, styles.footerColBrand]}>
             <View style={styles.brandRow}>
               <View>
                 <View style={styles.brandTitleRow}>
@@ -92,29 +148,33 @@ const WebFooter = ({ navigation, style }) => {
             </View>
 
             <Text style={[styles.brandDesc, isIndic && { lineHeight: 22 }]}>
-              {t('footer_brand_desc', 'MediUnify brings together lab tests, consultation, pharmacy, hospital care, insurance and more — to make quality healthcare simple, accessible and intelligent for everyone.')}
+              {t(
+                'footer_brand_desc',
+                'All your healthcare on one intelligent platform. Trusted doctors, diagnostics, and hospital care.'
+              )}
             </Text>
 
             {/* Social Icons */}
             <View style={styles.socialRow}>
-              <TouchableOpacity style={[styles.socialIconBtn, { backgroundColor: '#1E3A8A' }]}>
-                <Ionicons name="logo-linkedin" size={15} color="#FFFFFF" />
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.socialIconBtn, { backgroundColor: '#00B894' }]}>
-                <Ionicons name="logo-instagram" size={15} color="#FFFFFF" />
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.socialIconBtn, { backgroundColor: '#1E3A8A' }]}>
-                <Ionicons name="logo-facebook" size={15} color="#FFFFFF" />
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.socialIconBtn, { backgroundColor: '#00C2CB' }]}>
-                <Ionicons name="logo-youtube" size={15} color="#FFFFFF" />
-              </TouchableOpacity>
+              {SOCIAL_LINKS.map((item) => (
+                <TouchableOpacity
+                  key={item.id}
+                  style={[styles.socialIconBtn, { backgroundColor: item.bg }]}
+                  onPress={() => handleSocialClick(item.url)}
+                  activeOpacity={0.8}
+                  accessibilityLabel={item.id}
+                >
+                  <Ionicons name={item.icon} size={15} color="#FFFFFF" />
+                </TouchableOpacity>
+              ))}
             </View>
           </View>
 
-          {/* Column 2: Our Services */}
-          <View style={styles.footerCol}>
-            <Text style={styles.colHeading}>{t('footer_patient_services', 'Our Services')}</Text>
+          {/* Column 2: Patient Services */}
+          <View style={[styles.footerCol, styles.footerColLinks]}>
+            <Text style={styles.colHeading}>
+              {t('footer_patient_services', 'Patient Services')}
+            </Text>
             {OUR_SERVICES.map((item, i) => (
               <TouchableOpacity
                 key={i}
@@ -129,9 +189,11 @@ const WebFooter = ({ navigation, style }) => {
             ))}
           </View>
 
-          {/* Column 3: Support */}
-          <View style={styles.footerCol}>
-            <Text style={styles.colHeading}>{t('footer_support_trust', 'Support')}</Text>
+          {/* Column 3: Support & Trust */}
+          <View style={[styles.footerCol, styles.footerColLinks]}>
+            <Text style={styles.colHeading}>
+              {t('footer_support_trust', 'Support & Trust')}
+            </Text>
             {SUPPORT_LINKS.map((item, i) => (
               <TouchableOpacity
                 key={i}
@@ -147,19 +209,28 @@ const WebFooter = ({ navigation, style }) => {
           </View>
 
           {/* Column 4: Download App */}
-          <View style={styles.footerCol}>
+          <View style={[styles.footerCol, styles.footerColApps]}>
             <Text style={styles.colHeading}>{t('app_download', 'Download App')}</Text>
-            <TouchableOpacity style={styles.storeBadge} activeOpacity={0.85}>
+
+            <TouchableOpacity
+              style={styles.storeBadge}
+              onPress={() => handleStoreClick('https://play.google.com/store')}
+              activeOpacity={0.85}
+            >
               <Ionicons name="logo-google-playstore" size={20} color="#FFFFFF" />
-              <View>
+              <View style={styles.storeBadgeTextWrap}>
                 <Text style={styles.storeBadgeSmall}>{t('get_it_on', 'GET IT ON')}</Text>
                 <Text style={styles.storeBadgeLarge}>Google Play</Text>
               </View>
             </TouchableOpacity>
 
-            <TouchableOpacity style={[styles.storeBadge, { marginTop: 10 }]} activeOpacity={0.85}>
+            <TouchableOpacity
+              style={[styles.storeBadge, { marginTop: 10 }]}
+              onPress={() => handleStoreClick('https://www.apple.com/app-store/')}
+              activeOpacity={0.85}
+            >
               <Ionicons name="logo-apple" size={22} color="#FFFFFF" />
-              <View>
+              <View style={styles.storeBadgeTextWrap}>
                 <Text style={styles.storeBadgeSmall}>{t('download_on', 'Download on the')}</Text>
                 <Text style={styles.storeBadgeLarge}>App Store</Text>
               </View>
@@ -167,8 +238,10 @@ const WebFooter = ({ navigation, style }) => {
           </View>
 
           {/* Column 5: Subscribe to our newsletter */}
-          <View style={[styles.footerCol, { flex: 1.2 }]}>
-            <Text style={styles.colHeading}>{t('newsletter_subscribe', 'Subscribe to our newsletter')}</Text>
+          <View style={[styles.footerCol, styles.footerColNewsletter]}>
+            <Text style={styles.colHeading}>
+              {t('newsletter_subscribe', 'Subscribe to our newsletter')}
+            </Text>
             <Text style={styles.newsletterSub}>
               {t('newsletter_desc', 'Get health tips, offers and updates.')}
             </Text>
@@ -187,12 +260,13 @@ const WebFooter = ({ navigation, style }) => {
                 style={styles.subscribeBtn}
                 onPress={handleSubscribe}
                 activeOpacity={0.88}
+                accessibilityLabel="Subscribe"
               >
                 <Ionicons name="arrow-forward" size={17} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
             {subscribed && (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 8 }}>
+              <View style={styles.subscribedRow}>
                 <Ionicons name="checkmark-circle" size={14} color="#00B894" />
                 <Text style={styles.subscribedSuccess}>
                   {t('newsletter_success', 'Thank you for subscribing!')}
@@ -203,26 +277,34 @@ const WebFooter = ({ navigation, style }) => {
         </View>
 
         {/* ============================================================
-            BOTTOM STRIP: COPYRIGHT & SCROLL TO TOP
+            BOTTOM STRIP: COPYRIGHT, BRAND PROMISE & SCROLL TO TOP
         ============================================================ */}
-        <View style={styles.bottomStrip}>
+        <View style={[styles.bottomStrip, isMobile && styles.bottomStripMobile]}>
           <Text style={[styles.copyrightText, isIndic && { lineHeight: 18 }]}>
-            {t('footer_rights', '© 2026 Unnathi Healthcare / MediUnify • All rights reserved.')}
+            {t(
+              'footer_rights',
+              '© 2026 Unnathi Healthcare / MediUnify • All rights reserved. Registered Telemedicine Network in India.'
+            )}
           </Text>
 
-          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-            <Text style={styles.madeWithText}>{t('made_with_love', 'Made with')}</Text>
-            <Ionicons name="heart" size={13} color="#EF4444" />
-            <Text style={styles.madeWithText}>{t('healthier_tomorrow', 'for a healthier tomorrow.')}</Text>
-          </View>
+          <View style={[styles.bottomRightWrap, isMobile && styles.bottomRightWrapMobile]}>
+            <View style={styles.madeWithWrap}>
+              <Text style={styles.madeWithText}>{t('made_with_love', 'Made with')}</Text>
+              <Ionicons name="heart" size={13} color="#EF4444" style={{ marginHorizontal: 4 }} />
+              <Text style={styles.madeWithText}>
+                {t('healthier_tomorrow', 'for a healthier tomorrow.')}
+              </Text>
+            </View>
 
-          <TouchableOpacity
-            style={styles.scrollTopBtn}
-            onPress={scrollToTop}
-            activeOpacity={0.8}
-          >
-            <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
-          </TouchableOpacity>
+            <TouchableOpacity
+              style={styles.scrollTopBtn}
+              onPress={scrollToTop}
+              activeOpacity={0.8}
+              accessibilityLabel="Scroll to top"
+            >
+              <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
+            </TouchableOpacity>
+          </View>
         </View>
       </View>
     </View>
@@ -238,23 +320,49 @@ const styles = StyleSheet.create({
     width: '100%',
     paddingTop: 54,
     paddingBottom: 30,
+    boxSizing: 'border-box',
+    overflow: 'hidden',
   },
   footerContainer: {
     width: '100%',
-    maxWidth: 1360,
-    alignSelf: 'center',
-    paddingHorizontal: 28,
+    boxSizing: 'border-box',
   },
   colsRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 32,
+    flexWrap: 'nowrap',
+    gap: 28,
     justifyContent: 'space-between',
+    width: '100%',
     marginBottom: 44,
+  },
+  colsRowTablet: {
+    flexWrap: 'wrap',
+    gap: 24,
+  },
+  colsRowMobile: {
+    flexDirection: 'column',
+    gap: 28,
+    marginBottom: 32,
   },
   footerCol: {
     flex: 1,
-    minWidth: 160,
+    minWidth: 150,
+  },
+  footerColBrand: {
+    flex: 1.35,
+    minWidth: 220,
+  },
+  footerColLinks: {
+    flex: 1,
+    minWidth: 150,
+  },
+  footerColApps: {
+    flex: 1,
+    minWidth: 165,
+  },
+  footerColNewsletter: {
+    flex: 1.25,
+    minWidth: 230,
   },
 
   // Brand Info
@@ -262,28 +370,26 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
-    marginBottom: 14,
-  },
-  logoImg: {
-    width: 34,
-    height: 34,
+    marginBottom: 12,
   },
   brandTitleRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
   },
   brandTitle: {
-    fontSize: 21,
+    fontSize: 22,
     fontWeight: '900',
     color: '#1E3A8A',
+    letterSpacing: -0.3,
   },
   brandTitleAccent: {
-    fontSize: 21,
+    fontSize: 22,
     fontWeight: '900',
     color: '#00B894',
+    letterSpacing: -0.3,
   },
   brandTagline: {
-    fontSize: 10,
+    fontSize: 10.5,
     color: '#475569',
     fontWeight: '600',
     marginTop: -1,
@@ -293,12 +399,13 @@ const styles = StyleSheet.create({
     lineHeight: 19,
     color: '#64748B',
     marginBottom: 18,
-    maxWidth: 320,
+    maxWidth: 340,
   },
   socialRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 10,
+    marginTop: 4,
   },
   socialIconBtn: {
     width: 32,
@@ -306,6 +413,12 @@ const styles = StyleSheet.create({
     borderRadius: 16,
     alignItems: 'center',
     justifyContent: 'center',
+    shadowColor: '#1E3A8A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 3,
+    elevation: 2,
+    cursor: 'pointer',
   },
 
   // Headings & Links
@@ -317,12 +430,14 @@ const styles = StyleSheet.create({
     letterSpacing: -0.2,
   },
   footerLinkItem: {
-    paddingVertical: 5.5,
+    paddingVertical: 5,
+    cursor: 'pointer',
   },
   footerLinkText: {
     fontSize: 13,
     color: '#475569',
     fontWeight: '500',
+    lineHeight: 18,
   },
 
   // Download Badges
@@ -334,7 +449,12 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     paddingHorizontal: 14,
     gap: 10,
-    maxWidth: 170,
+    maxWidth: 180,
+    width: '100%',
+    cursor: 'pointer',
+  },
+  storeBadgeTextWrap: {
+    justifyContent: 'center',
   },
   storeBadgeSmall: {
     fontSize: 9,
@@ -353,6 +473,7 @@ const styles = StyleSheet.create({
     fontSize: 12.5,
     color: '#64748B',
     marginBottom: 14,
+    lineHeight: 18,
   },
   subscribeInputRow: {
     flexDirection: 'row',
@@ -365,6 +486,8 @@ const styles = StyleSheet.create({
     paddingRight: 4,
     paddingVertical: 4,
     height: 44,
+    maxWidth: 380,
+    width: '100%',
     boxShadow: '0 2px 6px rgba(30, 58, 138, 0.05)',
   },
   newsletterInput: {
@@ -380,29 +503,56 @@ const styles = StyleSheet.create({
     backgroundColor: '#00B894',
     alignItems: 'center',
     justifyContent: 'center',
+    cursor: 'pointer',
+  },
+  subscribedRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 8,
   },
   subscribedSuccess: {
     fontSize: 12,
     color: '#00B894',
     fontWeight: '700',
-    marginTop: 8,
   },
 
   // Bottom Strip
   bottomStrip: {
     borderTopWidth: 1,
     borderTopColor: '#C4D8E7',
-    paddingTop: 24,
+    paddingTop: 22,
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
     alignItems: 'center',
-    gap: 14,
+    gap: 16,
+    width: '100%',
+  },
+  bottomStripMobile: {
+    flexDirection: 'column',
+    alignItems: 'flex-start',
+    gap: 12,
   },
   copyrightText: {
     fontSize: 12.5,
     color: '#64748B',
     fontWeight: '500',
+    flex: 1,
+    minWidth: 260,
+  },
+  bottomRightWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  bottomRightWrapMobile: {
+    width: '100%',
+    justifyContent: 'space-between',
+  },
+  madeWithWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   madeWithText: {
     fontSize: 12.5,
@@ -415,6 +565,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#00B894',
     justifyContent: 'center',
     alignItems: 'center',
+    cursor: 'pointer',
   },
 });
 

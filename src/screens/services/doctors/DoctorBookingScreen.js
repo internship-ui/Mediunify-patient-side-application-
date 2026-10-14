@@ -949,17 +949,21 @@ const styles = StyleSheet.create({
   // MODAL CARD
   modalCard: {
     backgroundColor: '#FFFFFF',
+    backgroundImage: 'linear-gradient(180deg, #FFFFFF 0%, #FAFCFF 80%, #F0FDF9 100%)',
     borderRadius: 20,
     width: '100%',
     maxWidth: 500,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
+    borderTopWidth: 4,
+    borderTopColor: '#00B894',
     overflow: 'hidden',
     shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.15,
     shadowRadius: 25,
     elevation: 8,
+    boxShadow: '0 20px 40px -8px rgba(30, 58, 138, 0.16)',
   },
 
   // MODAL HEADER

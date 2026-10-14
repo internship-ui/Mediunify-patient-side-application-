@@ -68,7 +68,7 @@ const linking = {
     } else if (cleanPath.match(/^\/?bookings?/i)) {
       cleanPath = '/my-tests';
     } else if (cleanPath.match(/^\/?login/i)) {
-      cleanPath = '/login';
+      cleanPath = Platform.OS === 'web' ? '/home' : '/login';
     }
 
     try {
@@ -80,7 +80,20 @@ const linking = {
       console.warn('[NavigationLinking] getStateFromPath parse error:', err);
     }
 
-    // Safe fallback to Auth/Login instead of failing or leaving a blank white screen
+    // Safe fallback: On Web fallback to MainApp/Home, on Mobile fallback to Auth/Login
+    if (Platform.OS === 'web') {
+      return {
+        routes: [
+          {
+            name: 'MainApp',
+            state: {
+              routes: [{ name: 'Home' }],
+            },
+          },
+        ],
+      };
+    }
+
     return {
       routes: [
         {
@@ -98,7 +111,7 @@ const linking = {
         screens: {
           Login: {
             path: 'login',
-            alias: ['Login', ''],
+            alias: Platform.OS === 'web' ? ['Login'] : ['Login', ''],
           },
           Splash: 'splash',
           Register: 'register',
@@ -108,10 +121,19 @@ const linking = {
       },
       MainApp: {
         screens: {
-          Home: 'home',
+          Home: {
+            path: 'home',
+            alias: Platform.OS === 'web' ? ['home', 'Home', ''] : ['home', 'Home'],
+          },
           LabTests: 'lab-tests',
-          Imaging: 'radiology',
-          RadiologyLabs: 'radiology-labs',
+          Imaging: {
+            path: 'scan-xray',
+            alias: ['scan-xray', 'scans-xray', 'radiology', 'Imaging', 'imaging'],
+          },
+          RadiologyLabs: {
+            path: 'radiology-labs',
+            alias: ['radiology-labs', 'radiology_labs', 'RadiologyLabs'],
+          },
           Pharmacy: 'pharmacy',
           Cart: 'cart',
           Checkout: 'checkout',
@@ -205,7 +227,7 @@ const AppNavigator = () => {
       <AuthGuardProvider>
         <View style={{ flex: 1 }}>
           <Stack.Navigator
-            initialRouteName="Auth"
+            initialRouteName={Platform.OS === 'web' ? 'MainApp' : 'Auth'}
             screenOptions={{
               headerShown: false,
             }}

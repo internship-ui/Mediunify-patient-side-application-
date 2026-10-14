@@ -34,6 +34,8 @@ import {
   getCategoryById,
   getTestById,
   getProvidersForTest,
+  getAvailableCategoriesForCity,
+  getAvailableTestsForCity,
   RADIOLOGY_CENTRES_FILTERED,
   getGoogleMapsDirectionsUrl,
 } from '../../../data/radiologyCatalogData';
@@ -127,12 +129,31 @@ export default function ImagingScreenWeb({ navigation, route }) {
   const [bookingStep, setBookingStep] = useState(1); // 1: Patient, 2: Date & Slot, 3: Review
   const [patientsList, setPatientsList] = useState(DEFAULT_PATIENTS);
   const [selectedPatient, setSelectedPatient] = useState(DEFAULT_PATIENTS[0]);
+  const [prescriptionDoc, setPrescriptionDoc] = useState(null);
   const [showAddPatientForm, setShowAddPatientForm] = useState(false);
   const [newPatient, setNewPatient] = useState({ name: '', relation: 'Family', age: '', gender: 'Male', phone: '' });
 
   // Date & Slot
   const [selectedDateIndex, setSelectedDateIndex] = useState(0); // 0 = Today, 1 = Tomorrow, etc.
   const [selectedTimeSlot, setSelectedTimeSlot] = useState('');
+
+  // Card-level Slot Selection & Expansion State
+  const [cardSelectedSlots, setCardSelectedSlots] = useState({});
+  const [expandedSlots, setExpandedSlots] = useState({});
+
+  const handleSelectCardSlot = (providerId, slot) => {
+    setCardSelectedSlots((prev) => ({
+      ...prev,
+      [providerId]: prev[providerId] === slot ? null : slot,
+    }));
+  };
+
+  const handleToggleMoreTimes = (providerId) => {
+    setExpandedSlots((prev) => ({
+      ...prev,
+      [providerId]: !prev[providerId],
+    }));
+  };
 
   // Real-time slot update ticker
   const [slotRefreshTick, setSlotRefreshTick] = useState(0);
@@ -209,7 +230,8 @@ export default function ImagingScreenWeb({ navigation, route }) {
       else normalized = effective;
       setSelectedCity(normalized);
     } catch (e) {
-      loadHomeLocation();
+      console.warn('[ImagingScreenWeb] Error loading home location:', e);
+      setSelectedCity('Mysuru');
     }
   };
 
@@ -497,14 +519,36 @@ export default function ImagingScreenWeb({ navigation, route }) {
     } catch (e) {}
   };
 
-  // Sync route params
+  // Sync route params & city
   useEffect(() => {
+    if (route?.params?.city) {
+      const lower = route.params.city.toLowerCase().trim();
+      let normalized = 'Mysuru';
+      if (lower.includes('mys')) normalized = 'Mysuru';
+      else if (lower.includes('bengal') || lower.includes('bangal')) normalized = 'Bengaluru';
+      else if (lower.includes('hassan')) normalized = 'Hassan';
+      else if (lower.includes('mandya')) normalized = 'Mandya';
+      else if (lower.includes('mangal')) normalized = 'Mangaluru';
+      else normalized = route.params.city;
+      setSelectedCity(normalized);
+    }
     if (route?.params?.initialCategory) {
       const cat = getCategoryById(route.params.initialCategory);
       if (cat) {
         setSelectedCategory(cat);
         setViewMode('tests');
       }
+    }
+    if (route?.params?.testId) {
+      const t = getTestById(route.params.testId);
+      if (t) {
+        setSelectedTest(t);
+        const cat = getCategoryById(t.categoryId);
+        if (cat) setSelectedCategory(cat);
+        setViewMode('providers');
+      }
+    } else if (route?.params?.searchTest) {
+      setGlobalSearch(route.params.searchTest);
     }
     if (route?.params?.initialView === 'my-bookings') {
       setViewMode('my-bookings');
@@ -616,7 +660,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
   };
 
   // 5. BOOK PROVIDER CLICK DIRECTLY -> OPEN BOOKING WIZARD
-  const handleStartBooking = (provider, test = null) => {
+  const handleStartBooking = (provider, test = null, preferredSlot = null) => {
     const activeTest = test || selectedTest || getTestsByCategory(selectedCategory?.id)[0];
     setSelectedTest(activeTest);
     setSelectedProvider(provider);
@@ -630,9 +674,25 @@ export default function ImagingScreenWeb({ navigation, route }) {
     setBookingStep(1);
     setSelectedDateIndex(0);
     const chosenDay = appointmentDays[0] || { isoDate: new Date().toISOString().split('T')[0] };
-    const preferred = (provider.availableSlots && provider.availableSlots[0]) || '10:00 AM';
-    const validSlot = getFirstAvailableSlot(chosenDay.isoDate, provider.id, preferred);
-    setSelectedTimeSlot(validSlot);
+
+    // Use slot picked on card, or calculate next available slot
+    let slotToUse = preferredSlot || cardSelectedSlots[provider.id];
+    if (slotToUse) {
+      const st = getSlotStatus({
+        date: chosenDay.isoDate,
+        time: slotToUse,
+        serviceType: 'radiology',
+        providerId: provider.id,
+      });
+      if (!st.available) {
+        slotToUse = null;
+      }
+    }
+    if (!slotToUse) {
+      const fallbackPref = (provider.availableSlots && provider.availableSlots[0]) || '10:00 AM';
+      slotToUse = getFirstAvailableSlot(chosenDay.isoDate, provider.id, fallbackPref);
+    }
+    setSelectedTimeSlot(slotToUse);
     setViewMode('booking');
     scrollToTop();
   };
@@ -640,7 +700,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
   // Forward transition helpers in Booking Wizard
   const handleContinueToStep2 = () => {
     if (!selectedPatient) {
-      showAlert('Patient Missing', 'Please select a patient.');
+      showAlert('Select Patient', 'Select a patient to continue.');
       return;
     }
     pushHistory({
@@ -656,7 +716,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
 
   const handleContinueToStep3 = () => {
     if (!selectedTimeSlot) {
-      showAlert('Slot Missing', 'Please select an appointment time slot.');
+      showAlert('Select Time', 'Select an appointment time.');
       return;
     }
     pushHistory({
@@ -689,11 +749,11 @@ export default function ImagingScreenWeb({ navigation, route }) {
   // --------------------------------------------------
   const handleAddNewPatient = () => {
     if (!newPatient.name.trim()) {
-      showAlert('Required', 'Please enter patient full name.');
+      showAlert('Patient Name', 'Enter the patient name.');
       return;
     }
     if (!newPatient.age || isNaN(newPatient.age)) {
-      showAlert('Required', 'Please enter a valid age.');
+      showAlert('Patient Age', 'Enter a valid age.');
       return;
     }
     const created = {
@@ -716,11 +776,11 @@ export default function ImagingScreenWeb({ navigation, route }) {
   // --------------------------------------------------
   const handleProceedToPayment = () => {
     if (!selectedPatient) {
-      showAlert('Patient Missing', 'Please select a patient.');
+      showAlert('Select Patient', 'Select a patient to continue.');
       return;
     }
     if (!selectedTimeSlot) {
-      showAlert('Slot Missing', 'Please select an appointment time slot.');
+      showAlert('Select Time', 'Select an appointment time.');
       return;
     }
     const chosenDay = appointmentDays[selectedDateIndex] || appointmentDays[0];
@@ -749,9 +809,21 @@ export default function ImagingScreenWeb({ navigation, route }) {
   // 6. PROCESS PAYMENT & CONFIRM
   // --------------------------------------------------
   const handleExecutePayment = async () => {
+    if (isProcessingPayment) return;
+
     const isGuest = await isGuestUser();
     if (isGuest) {
       promptLoginRequired(navigation, { service: 'radiology' });
+      return;
+    }
+
+    if (!selectedTest || !selectedProvider || !selectedPatient || !selectedTimeSlot) {
+      showAlert('Incomplete Details', 'Please complete patient and slot selection before proceeding.');
+      return;
+    }
+
+    if (selectedProvider.supportedCategories && !selectedProvider.supportedCategories.includes(selectedTest.categoryId)) {
+      showAlert('Service Unavailable', `${selectedProvider.name} does not offer this scan modality.`);
       return;
     }
 
@@ -832,7 +904,9 @@ export default function ImagingScreenWeb({ navigation, route }) {
         reportStatus: 'Scheduled',
         bookingDate: new Date().toISOString().split('T')[0],
         instructions: selectedTest.preparation || 'Wear loose comfortable clothing without metal fasteners or jewelry.',
-        doctorPrescription: 'Diagnostic Radiologist Referral',
+        doctorPrescription: prescriptionDoc ? prescriptionDoc.name : 'Physical referral at centre',
+        prescriptionAttached: !!prescriptionDoc,
+        prescriptionFileName: prescriptionDoc?.name || null,
         contactPhone: selectedPatient.phone || '+91 80 4342 0100',
         canReschedule: true,
         canCancel: true,
@@ -1009,22 +1083,29 @@ export default function ImagingScreenWeb({ navigation, route }) {
   // --------------------------------------------------
   // FILTERED DATA HELPERS
   // --------------------------------------------------
+  // Categories available in selected city (Strict City Isolation)
+  const cityCategories = useMemo(() => {
+    return getAvailableCategoriesForCity(selectedCity);
+  }, [selectedCity]);
+
   // Filtered categories for main view
   const displayedCategories = useMemo(() => {
-    if (!globalSearch.trim()) return RADIOLOGY_CATEGORIES;
+    const base = cityCategories;
+    if (!globalSearch.trim()) return base;
     const q = globalSearch.toLowerCase().trim();
-    return RADIOLOGY_CATEGORIES.filter(
+    return base.filter(
       (c) =>
         c.name.toLowerCase().includes(q) ||
         c.description.toLowerCase().includes(q) ||
         c.tagline.toLowerCase().includes(q)
     );
-  }, [globalSearch]);
+  }, [cityCategories, globalSearch]);
 
-  // Filtered tests in active category
+  // Filtered tests in active category (only show tests available in this city)
   const displayedTests = useMemo(() => {
     if (!selectedCategory) return [];
     let list = getTestsByCategory(selectedCategory.id);
+    list = list.filter((t) => getProvidersForTest(t, selectedCity).length > 0);
     if (globalSearch.trim()) {
       const q = globalSearch.toLowerCase().trim();
       list = list.filter(
@@ -1035,7 +1116,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
       );
     }
     return list;
-  }, [selectedCategory, globalSearch]);
+  }, [selectedCategory, selectedCity, globalSearch]);
 
   // Filtered providers for active test
   const displayedProviders = useMemo(() => {
@@ -1094,6 +1175,45 @@ export default function ImagingScreenWeb({ navigation, route }) {
     });
   }, [userBookings, myBookingsTab]);
 
+  // Card Display Helpers (Clean, Compact, Formatted)
+  const getProviderModalitiesText = (provider) => {
+    if (provider.facilities && Array.isArray(provider.facilities) && provider.facilities.length > 0) {
+      const cleanList = provider.facilities
+        .map((f) => {
+          let s = f.replace(/^GE\s+/i, '').replace(/^Siemens\s+/i, '').replace(/^Philips\s+/i, '');
+          s = s.replace(/High\s+Def(inition)?/i, '').replace(/1\.5T\s+HD/i, '1.5T MRI');
+          return s.trim();
+        })
+        .filter(Boolean);
+      return cleanList.slice(0, 2).join(' · ');
+    }
+    if (provider.supportedCategories && Array.isArray(provider.supportedCategories)) {
+      return provider.supportedCategories.slice(0, 2).map((c) => c.toUpperCase()).join(' · ');
+    }
+    return 'MRI · CT Scan';
+  };
+
+  const getProviderNextAvailableSlot = (provider) => {
+    if (!provider.availableSlots || provider.availableSlots.length === 0) return 'Contact Centre';
+    const todayIso = new Date().toISOString().split('T')[0];
+    for (const s of provider.availableSlots) {
+      const st = getSlotStatus({
+        date: todayIso,
+        time: s,
+        serviceType: 'radiology',
+        providerId: provider.id,
+      });
+      if (st.available) return s;
+    }
+    return 'Tomorrow';
+  };
+
+  const getProviderReportTime = (provider) => {
+    const rt = provider.turnaroundTime || provider.reportTurnaround;
+    if (!rt) return 'Within 24 hours';
+    return rt.replace(/^Reports?\s+within\s+/i, 'Within ');
+  };
+
   return (
     <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
       {/* ============================================================
@@ -1109,7 +1229,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
         <View style={styles.pinnedTitleContainer}>
           <Text style={[styles.pinnedTitleText, isIndic && { lineHeight: 20 }]} numberOfLines={1} ellipsizeMode="tail">
             {viewMode === 'categories'
-              ? t('navigation.scans_xray', 'Scans & X-Ray')
+              ? t('navigation.scans_xray', 'Scan & X-Ray')
               : viewMode === 'tests'
               ? selectedCategory?.name ? t(selectedCategory.name, selectedCategory.name) : t('Select Scan')
               : viewMode === 'providers'
@@ -1118,17 +1238,17 @@ export default function ImagingScreenWeb({ navigation, route }) {
               ? t('Centre Details')
               : viewMode === 'booking'
               ? bookingStep === 1
-                ? t('doctors.select_patient', 'Select Patient')
+                ? 'Select Patient'
                 : bookingStep === 2
-                ? t('doctors.select_date_time', 'Select Date & Time')
-                : t('Review Booking')
+                ? 'Select Date & Time'
+                : 'Review Booking'
               : viewMode === 'payment'
               ? t('common.price', 'Payment')
               : viewMode === 'confirmation'
               ? t('booking.confirmed', 'Confirmed')
               : viewMode === 'my-bookings'
               ? t('booking.my_appointments', 'My Bookings')
-              : t('navigation.scans_xray', 'Scans & X-Ray')}
+              : t('navigation.scans_xray', 'Scan & X-Ray')}
           </Text>
           <View style={styles.pinnedCityBadge}>
             <Ionicons name="location-sharp" size={10} color="#00B894" />
@@ -1192,20 +1312,14 @@ export default function ImagingScreenWeb({ navigation, route }) {
           >
             <View style={styles.heroInnerContainer}>
               <View style={styles.heroContentBlock}>
-                <View style={styles.heroBadgeRow}>
-                  <View style={styles.accreditedTag}>
-                    <Ionicons name="shield-checkmark" size={13} color="#00B894" />
-                    <Text style={styles.accreditedTagText}>NABH & NABL Accredited Centres</Text>
-                  </View>
-                  <View style={styles.pacsTag}>
-                    <Ionicons name="document-text-outline" size={13} color="#1E3A8A" />
-                    <Text style={styles.pacsTagText}>Digital Reports Online</Text>
-                  </View>
+                <View style={styles.cityLocationRow}>
+                  <Ionicons name="location-sharp" size={14} color="#00B894" />
+                  <Text style={styles.cityLocationText}>{selectedCity}</Text>
                 </View>
 
-                <Text style={styles.heroHeading}>{t('navigation.scans_xray', 'Scans & X-Ray')}</Text>
+                <Text style={styles.heroHeading}>Scan & X-Ray</Text>
                 <Text style={styles.heroSubheading}>
-                  Book verified imaging centres with instant digital reports in {selectedCity}.
+                  Find and book diagnostic scans near you.
                 </Text>
 
                 {/* Search Bar */}
@@ -1213,7 +1327,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                   <Ionicons name="search" size={18} color="#00B894" style={styles.searchIcon} />
                   <TextInput
                     style={styles.heroSearchInput}
-                    placeholder="Search MRI, CT, X-Ray, Ultrasound, 2D Echo..."
+                    placeholder="Search scans or centres"
                     placeholderTextColor="#94A3B8"
                     value={globalSearch}
                     onChangeText={setGlobalSearch}
@@ -1236,7 +1350,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     showsHorizontalScrollIndicator={false}
                     contentContainerStyle={styles.popularChipsScroll}
                   >
-                    {POPULAR_SEARCH_CHIPS.map((chip) => (
+                    {['MRI Brain', 'Chest X-Ray', 'CT Chest', 'Ultrasound Pelvis'].map((chip) => (
                       <TouchableOpacity
                         key={chip}
                         style={styles.popularChipPill}
@@ -1257,127 +1371,100 @@ export default function ImagingScreenWeb({ navigation, route }) {
             MAIN CONTENT AREA BASED ON VIEW MODE
         ============================================================ */}
         <View style={styles.mainBodyContainer}>
-          {/* VIEW 1: ALL 12 CATEGORIES (MAIN PAGE) */}
+          {/* VIEW 1: CATEGORIES (MAIN PAGE) */}
           {viewMode === 'categories' && (
             <View style={styles.sectionWrap}>
               <View style={styles.sectionHeaderRow}>
                 <View>
-                  <Text style={styles.sectionTitle}>Browse Modalities</Text>
+                  <Text style={styles.sectionTitle}>Scan & X-Ray Categories</Text>
                   <Text style={styles.sectionSubtitle}>
-                    Select a scan category to view available tests in {selectedCity}
+                    Diagnostic imaging services in {selectedCity}
                   </Text>
                 </View>
                 <Text style={styles.categoryCountLabel}>
-                  {displayedCategories.length} Categories Available
+                  {displayedCategories.length} Categories
                 </Text>
               </View>
 
-              {/* Categories Grid (Responsive 2 cols on tablet, 3 on desktop, 1 on mobile) */}
-              <View style={styles.categoriesGrid}>
-                {displayedCategories.map((cat) => (
-                  <View
-                    key={cat.id}
-                    style={[
-                      styles.categoryCard,
-                      {
-                        borderColor: cat.border || '#E2E8F0',
-                        width: getCategoryCardWidth(),
-                      },
-                    ]}
-                  >
-                    {/* 1. Top Fixed Image Container */}
-                    <View style={[styles.cardImageContainer, { backgroundColor: cat.bg || '#F1F5F9' }]}>
-                      {RADIOLOGY_3D_ICONS[cat.id] ? (
-                        <Image
-                          source={RADIOLOGY_3D_ICONS[cat.id]}
-                          style={styles.cardImage}
-                          resizeMode="contain"
-                        />
-                      ) : (
-                        <Ionicons name={cat.icon} size={30} color={cat.color} />
-                      )}
-                      <View style={[styles.catBadgePill, { backgroundColor: cat.bg || '#E0F7FA' }]}>
-                        <Text style={[styles.catBadgeText, { color: cat.color }]}>
-                          {cat.badge}
+              {/* Categories Grid or Empty State */}
+              {displayedCategories.length === 0 ? (
+                <View style={styles.emptyStateBox}>
+                  <Ionicons name="location-outline" size={48} color="#94A3B8" />
+                  <Text style={styles.emptyStateTitle}>
+                    {globalSearch.trim() ? 'No Matching Scans Found' : 'No scans available in this city yet.'}
+                  </Text>
+                  <Text style={styles.emptyStateSubtitle}>
+                    {globalSearch.trim()
+                      ? `No scan modalities match "${globalSearch}". Try clearing your search.`
+                      : `Diagnostic scans are currently available in Mysuru, Bengaluru, and Hassan.`}
+                  </Text>
+                  {globalSearch.trim() ? (
+                    <TouchableOpacity
+                      style={styles.emptyResetBtn}
+                      onPress={() => setGlobalSearch('')}
+                    >
+                      <Text style={styles.emptyResetBtnText}>Clear Search</Text>
+                    </TouchableOpacity>
+                  ) : (
+                    <TouchableOpacity
+                      style={styles.emptyResetBtn}
+                      onPress={() => {
+                        if (navigation?.navigate) navigation.navigate('Home');
+                      }}
+                    >
+                      <Text style={styles.emptyResetBtnText}>Change City on Home Screen</Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+              ) : (
+                <View style={styles.categoriesGrid}>
+                  {displayedCategories.map((cat) => (
+                    <TouchableOpacity
+                      key={cat.id}
+                      style={[
+                        styles.categoryCard,
+                        {
+                          borderColor: cat.border || '#E2E8F0',
+                          width: getCategoryCardWidth(),
+                        },
+                      ]}
+                      onPress={() => handleSelectCategory(cat)}
+                      activeOpacity={0.88}
+                    >
+                      {/* 1. Top Fixed Image Container */}
+                      <View style={[styles.cardImageContainer, { backgroundColor: cat.bg || '#F1F5F9' }]}>
+                        {RADIOLOGY_3D_ICONS[cat.id] ? (
+                          <Image
+                            source={RADIOLOGY_3D_ICONS[cat.id]}
+                            style={styles.cardImage}
+                            resizeMode="contain"
+                          />
+                        ) : (
+                          <Ionicons name={cat.icon} size={30} color={cat.color} />
+                        )}
+                      </View>
+
+                      {/* 2. Card Body Content */}
+                      <View style={styles.cardBody}>
+                        <Text style={styles.catCardTitle} numberOfLines={1}>
+                          {cat.name}
+                        </Text>
+                        <Text style={styles.catCardSubText} numberOfLines={1}>
+                          {cat.testCount} Tests available
                         </Text>
                       </View>
-                    </View>
 
-                    {/* 2. Card Body Content */}
-                    <View style={styles.cardBody}>
-                      <Text style={styles.catCardTitle} numberOfLines={1}>
-                        {cat.name}
-                      </Text>
-                      <Text style={styles.catCardTagline} numberOfLines={1}>
-                        {cat.tagline}
-                      </Text>
-                      <Text style={styles.catCardDescription} numberOfLines={2}>
-                        {cat.description}
-                      </Text>
-
-                      {/* 3. Availability Row */}
-                      <View style={styles.cardAvailabilityRow}>
-                        <Ionicons name="checkmark-circle" size={13} color="#00B894" />
-                        <Text style={styles.cardAvailabilityText}>Available in {selectedCity}</Text>
-                        <Text style={styles.cardTestCountText}>• {cat.testCount} Tests</Text>
+                      {/* 3. Action Button */}
+                      <View style={styles.cardActionsRowSingle}>
+                        <View style={styles.cardPrimaryBtn}>
+                          <Text style={styles.cardPrimaryBtnText}>Explore Scans</Text>
+                          <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
+                        </View>
                       </View>
-                    </View>
-
-                    {/* 4. Action Buttons */}
-                    <View style={styles.cardActionsRow}>
-                      <TouchableOpacity
-                        style={styles.cardSecondaryBtn}
-                        onPress={() => handleSelectCategory(cat)}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.cardSecondaryBtnText}>View Details</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={styles.cardPrimaryBtn}
-                        onPress={() => handleSelectCategory(cat)}
-                        activeOpacity={0.85}
-                      >
-                        <Text style={styles.cardPrimaryBtnText}>Explore Scans</Text>
-                        <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
-              </View>
-
-              {/* Quality & Trust Banner */}
-              <View style={styles.trustHighlightsSection}>
-                <View style={styles.trustItem}>
-                  <View style={[styles.trustIconWrap, { backgroundColor: '#E0F2FE' }]}>
-                    <Ionicons name="shield-checkmark" size={24} color="#1E3A8A" />
-                  </View>
-                  <View style={styles.trustTextCol}>
-                    <Text style={styles.trustTitle}>Certified Radiologists</Text>
-                    <Text style={styles.trustDesc}>All scans reviewed and dual-signed by MD/DNB certified radiologists.</Text>
-                  </View>
+                    </TouchableOpacity>
+                  ))}
                 </View>
-
-                <View style={styles.trustItem}>
-                  <View style={[styles.trustIconWrap, { backgroundColor: '#ECFDF5' }]}>
-                    <Ionicons name="flash" size={24} color="#00B894" />
-                  </View>
-                  <View style={styles.trustTextCol}>
-                    <Text style={styles.trustTitle}>Fastest Turnaround</Text>
-                    <Text style={styles.trustDesc}>Digital PACS reports delivered via WhatsApp and Patient Portal within 4-12 hrs.</Text>
-                  </View>
-                </View>
-
-                <View style={styles.trustItem}>
-                  <View style={[styles.trustIconWrap, { backgroundColor: '#FEF3C7' }]}>
-                    <Ionicons name="pricetag" size={24} color="#D97706" />
-                  </View>
-                  <View style={styles.trustTextCol}>
-                    <Text style={styles.trustTitle}>Transparent Pricing</Text>
-                    <Text style={styles.trustDesc}>No hidden lab charges. Guaranteed up to 25% lower than direct hospital walk-in.</Text>
-                  </View>
-                </View>
-              </View>
+              )}
             </View>
           )}
 
@@ -1413,8 +1500,8 @@ export default function ImagingScreenWeb({ navigation, route }) {
                         {displayedTests.length} Tests Available
                       </Text>
                     </View>
-                    <Text style={styles.catBannerTitle}>{selectedCategory.name} Tests</Text>
-                    <Text style={styles.catBannerDesc}>{selectedCategory.description}</Text>
+                    <Text style={styles.catBannerTitle}>{selectedCategory.name}</Text>
+                    <Text style={styles.catBannerDesc}>Select a scan to compare diagnostic centres in {selectedCity}</Text>
                   </View>
                 </View>
 
@@ -1431,111 +1518,118 @@ export default function ImagingScreenWeb({ navigation, route }) {
               {/* Tests Grid */}
               <View style={styles.sectionHeaderRow}>
                 <View>
-                  <Text style={styles.sectionTitle}>Available {selectedCategory.name} Procedures</Text>
+                  <Text style={styles.sectionTitle}>Available {selectedCategory.name} Scans</Text>
                   <Text style={styles.sectionSubtitle}>
-                    Select a test to compare prices across diagnostic centres in {selectedCity}
+                    Compare prices across centres in {selectedCity}
                   </Text>
                 </View>
               </View>
 
-              <View style={styles.testsGrid}>
-                {displayedTests.map((test) => (
-                  <View key={test.id} style={[styles.testCard, { width: getTestCardWidth() }]}>
-                    {/* 1. Top Fixed Image Container */}
-                    <View style={[styles.cardImageContainer, { backgroundColor: selectedCategory.bg || '#F1F5F9' }]}>
-                      <Image
-                        source={RADIOLOGY_3D_ICONS[selectedCategory.id] || RADIOLOGY_3D_ICONS.mri}
-                        style={styles.cardImage}
-                        resizeMode="contain"
-                      />
-                      <View style={styles.testCardBadgeRow}>
-                        <View style={styles.testCategoryTag}>
-                          <Text style={styles.testCategoryTagText}>{selectedCategory.name}</Text>
-                        </View>
-                        <View
-                          style={[
-                            styles.fastingPill,
-                            test.fastingRequired ? styles.fastingPillActive : styles.fastingPillNone,
-                          ]}
-                        >
-                          <Ionicons
-                            name={test.fastingRequired ? 'restaurant-outline' : 'checkmark-circle-outline'}
-                            size={11}
-                            color={test.fastingRequired ? '#D97706' : '#059669'}
-                          />
-                          <Text
+              {displayedTests.length === 0 ? (
+                <View style={styles.emptyStateBox}>
+                  <Ionicons name="medical-outline" size={48} color="#94A3B8" />
+                  <Text style={styles.emptyStateTitle}>No {selectedCategory.name} scans in {selectedCity}</Text>
+                  <Text style={styles.emptyStateSubtitle}>
+                    Diagnostic centres offering this scan are not listed in {selectedCity} yet.
+                  </Text>
+                  <TouchableOpacity
+                    style={styles.emptyResetBtn}
+                    onPress={() => navigateToView('categories')}
+                  >
+                    <Text style={styles.emptyResetBtnText}>View All Categories</Text>
+                  </TouchableOpacity>
+                </View>
+              ) : (
+                <View style={styles.testsGrid}>
+                  {displayedTests.map((test) => (
+                    <View key={test.id} style={[styles.testCard, { width: getTestCardWidth() }]}>
+                      {/* 1. Top Fixed Image Container */}
+                      <View style={[styles.cardImageContainer, { backgroundColor: selectedCategory.bg || '#F1F5F9' }]}>
+                        <Image
+                          source={RADIOLOGY_3D_ICONS[selectedCategory.id] || RADIOLOGY_3D_ICONS.mri}
+                          style={styles.cardImage}
+                          resizeMode="contain"
+                        />
+                        <View style={styles.testCardBadgeRow}>
+                          <View style={styles.testCategoryTag}>
+                            <Text style={styles.testCategoryTagText}>{selectedCategory.name}</Text>
+                          </View>
+                          <View
                             style={[
-                              styles.fastingPillText,
-                              test.fastingRequired ? styles.fastingPillTextActive : styles.fastingPillTextNone,
+                              styles.fastingPill,
+                              test.fastingRequired ? styles.fastingPillActive : styles.fastingPillNone,
                             ]}
                           >
-                            {test.fastingRequired ? `Fasting (${test.fastingHours || '4-6h'})` : 'No Fasting'}
-                          </Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    {/* 2. Card Body Content */}
-                    <View style={styles.cardBody}>
-                      <Text style={styles.testCardName} numberOfLines={1}>
-                        {test.name}
-                      </Text>
-                      <Text style={styles.testCardSummary} numberOfLines={2}>
-                        {test.summary || test.description}
-                      </Text>
-
-                      {/* Specs Row */}
-                      <View style={styles.testKeyParamsRow}>
-                        <View style={styles.testParamItem}>
-                          <Ionicons name="time-outline" size={12} color="#64748B" />
-                          <Text style={styles.testParamText}>{test.duration}</Text>
-                        </View>
-                        <View style={styles.testParamItem}>
-                          <Ionicons name="document-text-outline" size={12} color="#64748B" />
-                          <Text style={styles.testParamText}>{test.reportTime}</Text>
-                        </View>
-                        <View style={styles.testParamItem}>
-                          <Ionicons name="checkmark-circle-outline" size={12} color="#00B894" />
-                          <Text style={[styles.testParamText, { color: '#00B894', fontWeight: '700' }]}>Available</Text>
+                            <Ionicons
+                              name={test.fastingRequired ? 'alert-circle-outline' : 'checkmark-circle-outline'}
+                              size={11}
+                              color={test.fastingRequired ? '#D97706' : '#059669'}
+                            />
+                            <Text
+                              style={[
+                                styles.fastingPillText,
+                                test.fastingRequired ? styles.fastingPillTextActive : styles.fastingPillTextNone,
+                              ]}
+                            >
+                              {test.fastingRequired ? 'Preparation required' : 'No preparation needed'}
+                            </Text>
+                          </View>
                         </View>
                       </View>
 
-                      {/* Price Row */}
-                      <View style={styles.testPriceRow}>
-                        <Text style={styles.startsAtLabel}>Starts from </Text>
-                        <Text style={styles.discountedPrice}>
-                          ₹{test.typicalPrice.toLocaleString('en-IN')}
+                      {/* 2. Card Body Content */}
+                      <View style={styles.cardBody}>
+                        <Text style={styles.testCardName} numberOfLines={1}>
+                          {test.name}
                         </Text>
-                        {test.mrp && (
-                          <Text style={styles.mrpPrice}>
-                            ₹{test.mrp.toLocaleString('en-IN')}
+
+                        {/* Specs Row */}
+                        <View style={styles.testKeyParamsRow}>
+                          {test.reportTime ? (
+                            <View style={styles.testParamItem}>
+                              <Ionicons name="document-text-outline" size={12} color="#64748B" />
+                              <Text style={styles.testParamText}>Report in {test.reportTime}</Text>
+                            </View>
+                          ) : null}
+                        </View>
+
+                        {/* Price Row */}
+                        <View style={styles.testPriceRow}>
+                          <Text style={styles.startsAtLabel}>Starts at </Text>
+                          <Text style={styles.discountedPrice}>
+                            ₹{test.typicalPrice.toLocaleString('en-IN')}
                           </Text>
-                        )}
+                          {test.mrp && (
+                            <Text style={styles.mrpPrice}>
+                              ₹{test.mrp.toLocaleString('en-IN')}
+                            </Text>
+                          )}
+                        </View>
+                      </View>
+
+                      {/* 3. Action Buttons */}
+                      <View style={styles.cardActionsRow}>
+                        <TouchableOpacity
+                          style={styles.cardSecondaryBtn}
+                          onPress={() => setTestDetailsModal(test)}
+                          activeOpacity={0.8}
+                        >
+                          <Text style={styles.cardSecondaryBtnText}>View Details</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.cardPrimaryBtn}
+                          onPress={() => handleSelectTest(test)}
+                          activeOpacity={0.85}
+                        >
+                          <Text style={styles.cardPrimaryBtnText}>Book Now</Text>
+                          <Ionicons name="chevron-forward" size={13} color="#FFFFFF" />
+                        </TouchableOpacity>
                       </View>
                     </View>
-
-                    {/* 3. Action Buttons */}
-                    <View style={styles.cardActionsRow}>
-                      <TouchableOpacity
-                        style={styles.cardSecondaryBtn}
-                        onPress={() => setTestDetailsModal(test)}
-                        activeOpacity={0.8}
-                      >
-                        <Text style={styles.cardSecondaryBtnText}>View Details</Text>
-                      </TouchableOpacity>
-
-                      <TouchableOpacity
-                        style={styles.cardPrimaryBtn}
-                        onPress={() => handleSelectTest(test)}
-                        activeOpacity={0.85}
-                      >
-                        <Text style={styles.cardPrimaryBtnText}>Select Centre</Text>
-                        <Ionicons name="chevron-forward" size={13} color="#FFFFFF" />
-                      </TouchableOpacity>
-                    </View>
-                  </View>
-                ))}
-              </View>
+                  ))}
+                </View>
+              )}
             </View>
           )}
 
@@ -1568,10 +1662,10 @@ export default function ImagingScreenWeb({ navigation, route }) {
                       style={styles.viewProtocolBtn}
                       onPress={() => setTestDetailsModal(selectedTest)}
                       activeOpacity={0.8}
-                      accessibilityLabel="View test protocol"
+                      accessibilityLabel="View scan details"
                     >
                       <Ionicons name="information-circle-outline" size={14} color="#00B894" />
-                      <Text style={styles.viewProtocolBtnText}>Protocol</Text>
+                      <Text style={styles.viewProtocolBtnText}>Details</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -1582,26 +1676,23 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     <Text style={styles.selectedTestHeroTitle} numberOfLines={2}>
                       {selectedTest.name}
                     </Text>
-                    <Text style={styles.selectedTestHeroPurpose} numberOfLines={2}>
-                      {selectedTest.purpose}
-                    </Text>
                     <View style={styles.selectedTestHeroBadges}>
                       <View style={styles.heroMiniBadge}>
                         <Ionicons name="time-outline" size={12} color="#1E3A8A" />
-                        <Text style={styles.heroMiniBadgeText}>Duration: {selectedTest.duration}</Text>
+                        <Text style={styles.heroMiniBadgeText}>{selectedTest.duration}</Text>
                       </View>
                       <View style={styles.heroMiniBadge}>
                         <Ionicons name="calendar-outline" size={12} color="#059669" />
-                        <Text style={styles.heroMiniBadgeText}>Reports in {selectedTest.reportTime}</Text>
+                        <Text style={styles.heroMiniBadgeText}>Report: {selectedTest.reportTime?.replace(/^Within\s+/i, '') || '24 hrs'}</Text>
                       </View>
                       <View style={styles.heroMiniBadge}>
                         <Ionicons
-                          name="restaurant-outline"
+                          name={selectedTest.fastingRequired ? 'alert-circle-outline' : 'checkmark-circle-outline'}
                           size={12}
-                          color={selectedTest.fastingRequired ? '#D97706' : '#64748B'}
+                          color={selectedTest.fastingRequired ? '#D97706' : '#059669'}
                         />
                         <Text style={styles.heroMiniBadgeText}>
-                          {selectedTest.fastingRequired ? `Fasting: ${selectedTest.fastingHours} hrs` : 'No Fasting'}
+                          {selectedTest.fastingRequired ? 'Prep Required' : 'No Prep Needed'}
                         </Text>
                       </View>
                     </View>
@@ -1634,7 +1725,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                   <Ionicons name="search" size={16} color="#64748B" />
                   <TextInput
                     style={styles.providerSearchInput}
-                    placeholder="Search diagnostic centres or hospitals by name or area..."
+                    placeholder="Search centres or area..."
                     placeholderTextColor="#94A3B8"
                     value={providerSearch}
                     onChangeText={setProviderSearch}
@@ -1646,58 +1737,10 @@ export default function ImagingScreenWeb({ navigation, route }) {
                   )}
                 </View>
 
-                {/* Filter Chips */}
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filterChipsRow}>
-                  {/* Rating Filter */}
-                  <TouchableOpacity
-                    style={[styles.filterChip, filterRating > 0 && styles.filterChipActive]}
-                    onPress={() => setFilterRating((prev) => (prev > 0 ? 0 : 4.5))}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name="star"
-                      size={13}
-                      color={filterRating > 0 ? '#FFFFFF' : '#F59E0B'}
-                    />
-                    <Text style={[styles.filterChipText, filterRating > 0 && styles.filterChipTextActive]}>
-                      Top Rated (4.5+)
-                    </Text>
-                  </TouchableOpacity>
-
-                  {/* Open 24x7 */}
-                  <TouchableOpacity
-                    style={[styles.filterChip, filterOpen24x7 && styles.filterChipActive]}
-                    onPress={() => setFilterOpen24x7((prev) => !prev)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name="time"
-                      size={13}
-                      color={filterOpen24x7 ? '#FFFFFF' : '#1E3A8A'}
-                    />
-                    <Text style={[styles.filterChipText, filterOpen24x7 && styles.filterChipTextActive]}>
-                      Open 24x7
-                    </Text>
-                  </TouchableOpacity>
-
-                  {/* Cashless TPA */}
-                  <TouchableOpacity
-                    style={[styles.filterChip, filterCashless && styles.filterChipActive]}
-                    onPress={() => setFilterCashless((prev) => !prev)}
-                    activeOpacity={0.7}
-                  >
-                    <Ionicons
-                      name="card-outline"
-                      size={13}
-                      color={filterCashless ? '#FFFFFF' : '#059669'}
-                    />
-                    <Text style={[styles.filterChipText, filterCashless && styles.filterChipTextActive]}>
-                      Cashless Insurance
-                    </Text>
-                  </TouchableOpacity>
-
-                  {/* Sort Selector */}
-                  <View style={styles.sortSelectorWrap}>
+                {/* Clean Sort Selector Bar */}
+                <View style={styles.sortBarContainer}>
+                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.sortSelectorWrap}>
+                    <Ionicons name="swap-vertical" size={13} color="#64748B" />
                     <Text style={styles.sortLabel}>Sort By:</Text>
                     {[
                       { key: 'price-low', label: 'Price: Low to High' },
@@ -1717,197 +1760,119 @@ export default function ImagingScreenWeb({ navigation, route }) {
                         </Text>
                       </TouchableOpacity>
                     ))}
-                  </View>
-                </ScrollView>
+                  </ScrollView>
+                </View>
               </View>
 
               {/* Providers Comparison List */}
               <View style={styles.providersListingHeader}>
                 <Text style={styles.providersListingTitle}>
-                  Available Centres for {selectedTest.name} in {selectedCity} ({displayedProviders.length})
-                </Text>
-                <Text style={styles.providersListingHint}>
-                  Compare facilities, slot timings, and discounted package prices.
+                  Diagnostic Centres in {selectedCity} ({displayedProviders.length})
                 </Text>
               </View>
 
               {displayedProviders.length === 0 ? (
                 <View style={styles.emptyStateBox}>
-                  <Ionicons name="medical-outline" size={48} color="#94A3B8" />
-                  <Text style={styles.emptyStateTitle}>No Diagnostic Centres Matched</Text>
+                  <Ionicons name="business-outline" size={44} color="#94A3B8" />
+                  <Text style={styles.emptyStateTitle}>No centres found in this city</Text>
                   <Text style={styles.emptyStateSubtitle}>
-                    Try clearing some filters or switch city location to Mysuru or Bengaluru.
+                    {providerSearch.trim()
+                      ? `No centres match "${providerSearch.trim()}" in ${selectedCity}. Try a different search term.`
+                      : `No diagnostic centres currently offering this scan in ${selectedCity}.`}
                   </Text>
-                  <TouchableOpacity
-                    style={styles.emptyResetBtn}
-                    onPress={() => {
-                      setFilterRating(0);
-                      setFilterOpen24x7(false);
-                      setFilterCashless(false);
-                      setProviderSearch('');
-                      setSelectedCity('Mysuru');
-                    }}
-                  >
-                    <Text style={styles.emptyResetBtnText}>Reset All Filters</Text>
-                  </TouchableOpacity>
+                  {providerSearch.trim() ? (
+                    <TouchableOpacity
+                      style={styles.emptyResetBtn}
+                      onPress={() => {
+                        setFilterRating(0);
+                        setFilterOpen24x7(false);
+                        setFilterCashless(false);
+                        setProviderSearch('');
+                      }}
+                    >
+                      <Text style={styles.emptyResetBtnText}>Clear Search</Text>
+                    </TouchableOpacity>
+                  ) : null}
                 </View>
               ) : (
                 <View style={styles.providersList}>
-                  {displayedProviders.map((provider) => (
-                    <View key={provider.id} style={[styles.providerCard, { width: getProviderCardWidth() }]}>
-                      <TouchableOpacity activeOpacity={0.9} onPress={() => handleOpenCentreDetails(provider)}>
-                      {/* Provider Header: Name, Location, Distance, Rating */}
-                      <View style={styles.providerCardHeader}>
-                        <View style={styles.providerIdentity}>
-                          <View style={styles.providerNameRow}>
-                            <Text style={styles.providerName}>{provider.name}</Text>
-                            {provider.accreditations?.map((acc) => (
-                              <View key={acc} style={styles.providerAccredPill}>
-                                <Text style={styles.providerAccredText}>{acc}</Text>
-                              </View>
-                            ))}
-                          </View>
-                          <View style={styles.providerLocationRow}>
-                            <Ionicons name="location-outline" size={14} color="#64748B" />
-                            <Text style={styles.providerAddressText}>
-                              {provider.area}, {provider.city}
+                  {displayedProviders.map((provider) => {
+                    return (
+                      <View key={provider.id} style={[styles.compactCentreCard, { width: getProviderCardWidth() }]}>
+                        {/* Top: Centre Name & Rating */}
+                        <View style={styles.compactCardTopRow}>
+                          <TouchableOpacity
+                            style={styles.compactNameContainer}
+                            onPress={() => handleOpenCentreDetails(provider)}
+                            activeOpacity={0.8}
+                          >
+                            <Text style={styles.compactCentreName} numberOfLines={2}>
+                              {provider.name}
                             </Text>
-                            <Text style={styles.providerDot}>•</Text>
-                            <Ionicons name="navigate-outline" size={13} color="#1E3A8A" />
-                            <Text style={styles.providerDistanceText}>{provider.distance} away</Text>
-                            <Text style={styles.providerDot}>•</Text>
-                            <Text style={styles.providerTypeText}>{provider.type}</Text>
-                          </View>
+                          </TouchableOpacity>
+
+                          {provider.rating ? (
+                            <View style={styles.compactRatingWrap}>
+                              <Ionicons name="star" size={12} color="#F59E0B" />
+                              <Text style={styles.compactRatingScore}>{provider.rating}</Text>
+                              {provider.reviewsCount ? (
+                                <Text style={styles.compactReviewsCount}>({provider.reviewsCount})</Text>
+                              ) : null}
+                            </View>
+                          ) : null}
                         </View>
 
-                        {/* Rating Badge */}
-                        <View style={styles.providerRatingBox}>
-                          <View style={styles.ratingNumberRow}>
-                            <Ionicons name="star" size={15} color="#F59E0B" />
-                            <Text style={styles.ratingScore}>{provider.rating}</Text>
-                          </View>
-                          <Text style={styles.reviewsCountText}>{provider.reviewsCount} reviews</Text>
-                        </View>
-                      </View>
-
-                      {/* Facilities & Machinery Chips */}
-                      <View style={styles.providerFacilitiesRow}>
-                        {provider.facilities?.map((fac) => (
-                          <View key={fac} style={styles.facilityChip}>
-                            <Ionicons name="checkmark-circle" size={12} color="#00B894" />
-                            <Text style={styles.facilityChipText}>{fac}</Text>
-                          </View>
-                        ))}
-                        {provider.cashlessSupported && (
-                          <View style={[styles.facilityChip, { backgroundColor: '#ECFDF5' }]}>
-                            <Ionicons name="shield-checkmark" size={12} color="#059669" />
-                            <Text style={[styles.facilityChipText, { color: '#059669' }]}>Cashless Insurance</Text>
-                          </View>
-                        )}
-                        <View style={styles.facilityChip}>
-                          <Ionicons name="time-outline" size={12} color="#64748B" />
-                          <Text style={styles.facilityChipText}>{provider.openHours}</Text>
-                        </View>
-                      </View>
-
-                      </TouchableOpacity>
-                      {/* Available Slots Preview */}
-                      <View style={styles.providerSlotsBlock}>
-                        <View style={styles.slotsLabelRow}>
-                          <Ionicons name="time" size={14} color="#00B894" />
-                          <Text style={styles.slotsLabelText}>Available Today & Tomorrow Slots:</Text>
-                        </View>
-                        <View style={styles.slotsPillsRow}>
-                          {provider.availableSlots?.map((slot) => {
-                            const todayIso = new Date().toISOString().split('T')[0];
-                            const st = getSlotStatus({
-                              date: todayIso,
-                              time: slot,
-                              serviceType: 'radiology',
-                              providerId: provider.id,
-                            });
-                            return (
-                              <View
-                                key={slot}
-                                style={[
-                                  styles.miniSlotPill,
-                                  !st.available && { opacity: 0.5, backgroundColor: '#F1F5F9' },
-                                ]}
-                              >
-                                <Text
-                                  style={[
-                                    styles.miniSlotText,
-                                    !st.available && { color: '#94A3B8', textDecorationLine: 'line-through' },
-                                  ]}
-                                >
-                                  {slot}
-                                </Text>
-                              </View>
-                            );
-                          })}
-                        </View>
-                      </View>
-
-                      {/* Pricing & Booking CTA Footer */}
-                      <View style={styles.providerCardFooter}>
-                        {/* Report Delivery Info */}
-                        <View style={styles.reportDeliveryNote}>
-                          <Ionicons name="flash-outline" size={15} color="#D97706" />
-                          <Text style={styles.reportDeliveryNoteText}>
-                            Report: <Text style={styles.reportDeliveryBold}>{provider.turnaroundTime}</Text>
+                        {/* Location and distance */}
+                        <View style={styles.compactLocationRow}>
+                          <Ionicons name="location-outline" size={13} color="#64748B" style={styles.compactMetaIcon} />
+                          <Text style={styles.compactMetaText} numberOfLines={1}>
+                            {provider.area} · {provider.distance} away
                           </Text>
                         </View>
 
-                        {/* Price Details */}
-                        <View style={styles.providerPriceBlock}>
-                          <View style={styles.discountBadgeWrap}>
-                            <Text style={styles.discountBadgeWrapText}>{provider.discountPercent}% OFF</Text>
-                          </View>
-                          <View style={styles.priceNumbersCol}>
-                            <Text style={styles.providerFinalPrice}>
-                              ₹{provider.price.toLocaleString('en-IN')}
+                        {/* Price Row: Prominent current price, original price, discount */}
+                        <View style={styles.compactPriceRow}>
+                          <Text style={styles.compactCurrentPrice}>
+                            ₹{provider.price.toLocaleString('en-IN')}
+                          </Text>
+                          {provider.discountPercent ? (
+                            <Text style={styles.compactDiscountText}>
+                              {' '}· {provider.discountPercent}% off
                             </Text>
-                            <Text style={styles.providerMrpPrice}>
-                              ₹{provider.mrp.toLocaleString('en-IN')}
+                          ) : null}
+                          {provider.mrp && provider.mrp > provider.price ? (
+                            <Text style={styles.compactStrikeMrp}>
+                              {' '}₹{provider.mrp.toLocaleString('en-IN')}
                             </Text>
-                          </View>
+                          ) : null}
                         </View>
 
-                        {/* Action Buttons */}
-                        <View style={styles.providerActionButtons}>
+                        {/* Essential Actions: Directions & Book Now */}
+                        <View style={styles.compactCardActionsRow}>
                           <TouchableOpacity
-                            style={styles.providerDirectionsBtn}
+                            style={styles.compactSecondaryBtn}
                             onPress={() => {
                               const url = getGoogleMapsDirectionsUrl(provider);
                               Linking.openURL(url);
                             }}
                             activeOpacity={0.7}
                           >
-                            <Ionicons name="navigate-outline" size={15} color="#00B894" />
-                            <Text style={styles.providerDirectionsBtnText}>Directions</Text>
+                            <Ionicons name="navigate-outline" size={14} color="#00B894" />
+                            <Text style={styles.compactSecondaryBtnText}>Directions</Text>
                           </TouchableOpacity>
 
                           <TouchableOpacity
-                            style={styles.providerDetailsBtn}
-                            onPress={() => handleOpenCentreDetails(provider)}
-                            activeOpacity={0.7}
-                          >
-                            <Ionicons name="information-circle-outline" size={16} color="#1E3A8A" />
-                            <Text style={styles.providerDetailsBtnText}>Details</Text>
-                          </TouchableOpacity>
-
-                          <TouchableOpacity
-                            style={styles.providerBookBtn}
+                            style={styles.compactPrimaryBtn}
                             onPress={() => handleStartBooking(provider, selectedTest)}
-                            activeOpacity={0.8}
+                            activeOpacity={0.85}
                           >
-                            <Text style={styles.providerBookBtnText}>Book Slot</Text>
-                            <Ionicons name="calendar" size={14} color="#FFFFFF" />
+                            <Text style={styles.compactPrimaryBtnText}>Book Now</Text>
+                            <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
                           </TouchableOpacity>
                         </View>
                       </View>
-                    </View>
-                  ))}
+                    );
+                  })}
                 </View>
               )}
             </View>
@@ -1943,16 +1908,10 @@ export default function ImagingScreenWeb({ navigation, route }) {
 
                 {/* Accreditations & Badges */}
                 <View style={styles.centreAccredRow}>
-                  {selectedProvider.accreditations?.map((acc) => (
-                    <View key={acc} style={styles.centreAccredChip}>
+                  {selectedProvider.accreditations?.[0] && (
+                    <View style={styles.centreAccredChip}>
                       <Ionicons name="shield-checkmark" size={12} color="#00B894" />
-                      <Text style={styles.centreAccredText}>{acc}</Text>
-                    </View>
-                  ))}
-                  {selectedProvider.cashlessSupported && (
-                    <View style={[styles.centreAccredChip, { backgroundColor: '#ECFDF5' }]}>
-                      <Ionicons name="card-outline" size={12} color="#059669" />
-                      <Text style={[styles.centreAccredText, { color: '#059669' }]}>Cashless Insurance</Text>
+                      <Text style={styles.centreAccredText}>{selectedProvider.accreditations[0]}</Text>
                     </View>
                   )}
                   <View style={styles.centreAccredChip}>
@@ -1971,16 +1930,16 @@ export default function ImagingScreenWeb({ navigation, route }) {
                   activeOpacity={0.8}
                 >
                   <Ionicons name="navigate" size={16} color="#00B894" />
-                  <Text style={styles.centreDirectionsBtnText}>Get Directions on Google Maps</Text>
+                  <Text style={styles.centreDirectionsBtnText}>Get Directions</Text>
                   <Ionicons name="open-outline" size={14} color="#00B894" />
                 </TouchableOpacity>
 
                 <View style={styles.centreDivider} />
 
                 {/* Facilities & Equipment Section */}
-                <Text style={styles.centreSectionHeading}>Imaging Equipment & Machinery</Text>
+                <Text style={styles.centreSectionHeading}>Key Facilities</Text>
                 <View style={styles.centreFacilitiesList}>
-                  {selectedProvider.facilities?.map((fac) => (
+                  {selectedProvider.facilities?.slice(0, 3).map((fac) => (
                     <View key={fac} style={styles.centreFacilityItem}>
                       <Ionicons name="checkmark-circle" size={14} color="#00B894" />
                       <Text style={styles.centreFacilityText}>{fac}</Text>
@@ -1991,7 +1950,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                 <View style={styles.centreDivider} />
 
                 {/* Selected Test Details Box */}
-                <Text style={styles.centreSectionHeading}>Selected Radiology Procedure</Text>
+                <Text style={styles.centreSectionHeading}>Selected Scan</Text>
                 <View style={styles.centreTestSummaryBox}>
                   <View style={styles.centreTestSummaryTop}>
                     <View style={{ flex: 1 }}>
@@ -2006,8 +1965,6 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     </View>
                   </View>
 
-                  <Text style={styles.centreTestPurpose}>{selectedTest.purpose}</Text>
-
                   <View style={styles.centreTestMetaRow}>
                     <View style={styles.centreMetaItem}>
                       <Ionicons name="time-outline" size={13} color="#64748B" />
@@ -2016,7 +1973,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     <View style={styles.centreMetaItem}>
                       <Ionicons name="document-text-outline" size={13} color="#00B894" />
                       <Text style={[styles.centreMetaText, { color: '#00B894', fontWeight: '700' }]}>
-                        Report in {selectedProvider.turnaroundTime}
+                        Report in {selectedProvider.turnaroundTime?.replace(/^Within\s+/i, '') || '24 hrs'}
                       </Text>
                     </View>
                   </View>
@@ -2062,9 +2019,9 @@ export default function ImagingScreenWeb({ navigation, route }) {
               <View style={styles.stepperHeader}>
                 <View style={styles.stepperProgressRow}>
                   {[
-                    { num: 1, label: isMobile ? 'Patient' : 'Select Patient' },
-                    { num: 2, label: isMobile ? 'Date & Time' : 'Date & Time Slot' },
-                    { num: 3, label: isMobile ? 'Review' : 'Review Booking' },
+                    { num: 1, label: 'Patient' },
+                    { num: 2, label: 'Date & Time' },
+                    { num: 3, label: 'Review' },
                   ].map((s, idx) => (
                     <React.Fragment key={s.num}>
                       <TouchableOpacity
@@ -2126,18 +2083,18 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     <View style={styles.wizardCard}>
                       <View style={styles.wizardStepTitleRow}>
                         <Ionicons name="person-circle-outline" size={24} color="#00B894" />
-                        <View>
-                          <Text style={styles.wizardStepHeading}>Step 1: Select Patient</Text>
-                          <Text style={styles.wizardStepSub}>
-                            Choose a patient or add a family member
-                          </Text>
-                        </View>
+                        <Text style={styles.wizardStepHeading}>Select Patient</Text>
                       </View>
 
                       {/* Patients List */}
                       <View style={styles.patientCardsList}>
                         {patientsList.map((pat) => {
                           const isSelected = selectedPatient?.id === pat.id;
+                          const metaItems = [
+                            pat.age ? `${pat.age} Yrs` : null,
+                            pat.gender ? pat.gender : null,
+                            pat.phone ? pat.phone : null,
+                          ].filter(Boolean);
                           return (
                             <TouchableOpacity
                               key={pat.id}
@@ -2148,32 +2105,31 @@ export default function ImagingScreenWeb({ navigation, route }) {
                               onPress={() => setSelectedPatient(pat)}
                               activeOpacity={0.8}
                             >
-                              <View style={styles.patientRadioWrap}>
-                                <View
-                                  style={[
-                                    styles.radioOuter,
-                                    isSelected && styles.radioOuterSelected,
-                                  ]}
-                                >
-                                  {isSelected && <View style={styles.radioInner} />}
-                                </View>
+                              <View style={[styles.patientAvatarWrap, isSelected && styles.patientAvatarWrapSelected]}>
+                                <Ionicons name="person" size={18} color={isSelected ? '#00B894' : '#64748B'} />
                               </View>
 
                               <View style={styles.patientInfoCol}>
                                 <View style={styles.patientNameRelationRow}>
                                   <Text style={styles.patientNameText} numberOfLines={1} ellipsizeMode="tail">{pat.name}</Text>
-                                  <View style={styles.relationBadge}>
-                                    <Text style={styles.relationBadgeText}>{pat.relation}</Text>
-                                  </View>
+                                  {pat.relation ? (
+                                    <View style={styles.relationBadge}>
+                                      <Text style={styles.relationBadgeText}>{pat.relation}</Text>
+                                    </View>
+                                  ) : null}
                                 </View>
-                                <Text style={styles.patientMetaText} numberOfLines={1} ellipsizeMode="tail">
-                                  {pat.age} Yrs • {pat.gender} • {pat.phone}
-                                </Text>
+                                {metaItems.length > 0 && (
+                                  <Text style={styles.patientMetaText} numberOfLines={1} ellipsizeMode="tail">
+                                    {metaItems.join(' • ')}
+                                  </Text>
+                                )}
                               </View>
 
-                              {isSelected && (
-                                <Ionicons name="checkmark-circle" size={20} color="#00B894" />
-                              )}
+                              <View style={[styles.patientSelectIndicator, isSelected && styles.patientSelectIndicatorSelected]}>
+                                {isSelected ? (
+                                  <Ionicons name="checkmark" size={14} color="#FFFFFF" />
+                                ) : null}
+                              </View>
                             </TouchableOpacity>
                           );
                         })}
@@ -2186,12 +2142,12 @@ export default function ImagingScreenWeb({ navigation, route }) {
                           onPress={() => setShowAddPatientForm(true)}
                           activeOpacity={0.8}
                         >
-                          <Ionicons name="add-circle-outline" size={18} color="#00B894" />
-                          <Text style={styles.addNewPatientBtnText}>{isMobile ? '+ Add Family Member' : '+ Add New Patient / Family Member'}</Text>
+                          <Ionicons name="add" size={18} color="#00B894" />
+                          <Text style={styles.addNewPatientBtnText}>Add Family Member</Text>
                         </TouchableOpacity>
                       ) : (
                         <View style={styles.newPatientFormBox}>
-                          <Text style={styles.formSectionTitle}>Add Dependent Information</Text>
+                          <Text style={styles.formSectionTitle}>Add Family Member</Text>
                           <View style={styles.formRow}>
                             <View style={styles.formInputGroup}>
                               <Text style={styles.inputLabel}>Full Name *</Text>
@@ -2283,6 +2239,51 @@ export default function ImagingScreenWeb({ navigation, route }) {
                         </View>
                       )}
 
+                      {/* Prescription Upload (Optional) */}
+                      <View style={styles.prescriptionUploadCard}>
+                        <View style={styles.prescriptionCardHeaderRow}>
+                          <View style={styles.prescriptionIconWrap}>
+                            <Ionicons name="document-text-outline" size={20} color="#00B894" />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <Text style={styles.prescriptionTitle}>Upload prescription (optional)</Text>
+                            <Text style={styles.prescriptionSubtitle}>Attach doctor's referral slip (PDF, JPG, PNG)</Text>
+                          </View>
+                          {prescriptionDoc ? (
+                            <TouchableOpacity
+                              onPress={() => setPrescriptionDoc(null)}
+                              style={styles.prescriptionRemoveBtn}
+                              accessibilityLabel="Remove prescription"
+                            >
+                              <Ionicons name="trash-outline" size={15} color="#EF4444" />
+                              <Text style={styles.prescriptionRemoveText}>Remove</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <TouchableOpacity
+                              style={styles.prescriptionAttachPillBtn}
+                              onPress={() => {
+                                setPrescriptionDoc({
+                                  name: `Rx_${(selectedTest?.name || 'Scan').replace(/[^a-zA-Z0-9]/g, '_').slice(0, 20)}_Referral.pdf`,
+                                  size: '1.4 MB',
+                                  date: new Date().toLocaleDateString(),
+                                });
+                              }}
+                              activeOpacity={0.8}
+                            >
+                              <Ionicons name="cloud-upload-outline" size={16} color="#00B894" />
+                              <Text style={styles.prescriptionAttachPillText}>Attach File</Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
+                        {prescriptionDoc && (
+                          <View style={styles.attachedFilePill}>
+                            <Ionicons name="checkmark-circle" size={16} color="#00B894" />
+                            <Text style={styles.attachedFileName} numberOfLines={1}>{prescriptionDoc.name}</Text>
+                            <Text style={styles.attachedFileSize}>({prescriptionDoc.size})</Text>
+                          </View>
+                        )}
+                      </View>
+
                       {/* Step 1 Footer Actions */}
                       <View style={styles.wizardFooterBtnRow}>
                         <TouchableOpacity
@@ -2311,16 +2312,24 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     <View style={styles.wizardCard}>
                       <View style={styles.wizardStepTitleRow}>
                         <Ionicons name="calendar-outline" size={24} color="#00B894" />
-                        <View>
-                          <Text style={styles.wizardStepHeading}>Step 2: Select Date & Time Slot</Text>
-                          <Text style={styles.wizardStepSub}>
-                            Choose an available appointment slot at {selectedProvider.name}
-                          </Text>
+                        <Text style={styles.wizardStepHeading}>Choose Date & Time</Text>
+                      </View>
+
+                      {/* Compact Summary of Selected Scan & Centre */}
+                      <View style={styles.stepSummaryBanner}>
+                        <View style={styles.stepSummaryItem}>
+                          <Ionicons name="scan-outline" size={15} color="#00B894" />
+                          <Text style={styles.stepSummaryMain} numberOfLines={1}>{selectedTest.name}</Text>
+                        </View>
+                        <Text style={styles.stepSummaryDivider}>•</Text>
+                        <View style={styles.stepSummaryItem}>
+                          <Ionicons name="location-outline" size={14} color="#64748B" />
+                          <Text style={styles.stepSummarySub} numberOfLines={1}>{selectedProvider.name} · {selectedProvider.area}</Text>
                         </View>
                       </View>
 
                       {/* Next 7 Days Horizontal Bar */}
-                      <Text style={styles.subSectionTitle}>Select Appointment Date</Text>
+                      <Text style={styles.subSectionTitle}>Date</Text>
                       <ScrollView
                         horizontal
                         showsHorizontalScrollIndicator={false}
@@ -2367,24 +2376,16 @@ export default function ImagingScreenWeb({ navigation, route }) {
                         })}
                       </ScrollView>
 
-                      {/* Selected Date Indicator */}
-                      <View style={styles.selectedDateNotice}>
-                        <Ionicons name="checkmark-circle-outline" size={16} color="#00B894" />
-                        <Text style={styles.selectedDateNoticeText}>
-                          Appointment Date: <Text style={styles.boldText}>{appointmentDays[selectedDateIndex]?.fullLabel}</Text>
-                        </Text>
-                      </View>
-
                       {/* Time Slots Categorized */}
-                      <Text style={[styles.subSectionTitle, { marginTop: 24 }]}>
-                        Select Available Time Slot
-                      </Text>
+                      <View style={styles.slotSectionHeaderRow}>
+                        <Text style={styles.subSectionTitle}>Available Time Slots</Text>
+                      </View>
 
                       {/* Morning Slots */}
                       <View style={styles.slotCategoryGroup}>
                         <View style={styles.slotCategoryHeader}>
                           <Ionicons name="sunny-outline" size={15} color="#D97706" />
-                          <Text style={styles.slotCategoryTitle}>Morning Slots (08:00 AM - 12:00 PM)</Text>
+                          <Text style={styles.slotCategoryTitle}>Morning (8 AM - 12 PM)</Text>
                         </View>
                         <View style={styles.slotsPillsGrid}>
                           {['08:30 AM', '09:30 AM', '10:30 AM', '11:30 AM'].map((slot) => {
@@ -2438,7 +2439,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                       <View style={styles.slotCategoryGroup}>
                         <View style={styles.slotCategoryHeader}>
                           <Ionicons name="partly-sunny-outline" size={15} color="#0284C7" />
-                          <Text style={styles.slotCategoryTitle}>Afternoon Slots (12:00 PM - 04:00 PM)</Text>
+                          <Text style={styles.slotCategoryTitle}>Afternoon (12 PM - 4 PM)</Text>
                         </View>
                         <View style={styles.slotsPillsGrid}>
                           {['12:30 PM', '01:30 PM', '02:30 PM', '03:30 PM'].map((slot) => {
@@ -2492,7 +2493,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                       <View style={styles.slotCategoryGroup}>
                         <View style={styles.slotCategoryHeader}>
                           <Ionicons name="moon-outline" size={15} color="#1E3A8A" />
-                          <Text style={styles.slotCategoryTitle}>Evening Slots (04:00 PM - 08:00 PM)</Text>
+                          <Text style={styles.slotCategoryTitle}>Evening (4 PM - 8 PM)</Text>
                         </View>
                         <View style={styles.slotsPillsGrid}>
                           {['04:30 PM', '05:30 PM', '06:30 PM', '07:30 PM'].map((slot) => {
@@ -2542,6 +2543,16 @@ export default function ImagingScreenWeb({ navigation, route }) {
                         </View>
                       </View>
 
+                      {/* Selected Slot Feedback Banner */}
+                      {selectedTimeSlot ? (
+                        <View style={styles.selectedDateNotice}>
+                          <Ionicons name="checkmark-circle" size={16} color="#059669" />
+                          <Text style={styles.selectedDateNoticeText}>
+                            Selected: <Text style={styles.boldText}>{appointmentDays[selectedDateIndex]?.fullLabel}</Text> at <Text style={styles.boldText}>{selectedTimeSlot}</Text>
+                          </Text>
+                        </View>
+                      ) : null}
+
                       {/* Step 2 Footer Actions */}
                       <View style={styles.wizardFooterBtnRow}>
                         <TouchableOpacity
@@ -2570,12 +2581,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     <View style={styles.wizardCard}>
                       <View style={styles.wizardStepTitleRow}>
                         <Ionicons name="checkmark-done-circle-outline" size={24} color="#00B894" />
-                        <View>
-                          <Text style={styles.wizardStepHeading}>Step 3: Review Booking Summary</Text>
-                          <Text style={styles.wizardStepSub}>
-                            Please verify all patient, test, and schedule details before proceeding to payment
-                          </Text>
-                        </View>
+                        <Text style={styles.wizardStepHeading}>Review Booking</Text>
                       </View>
 
                       {/* Summary Blocks */}
@@ -2583,64 +2589,83 @@ export default function ImagingScreenWeb({ navigation, route }) {
                         {/* Patient Block */}
                         <View style={styles.reviewCard}>
                           <View style={styles.reviewCardHeader}>
-                            <Ionicons name="person-outline" size={16} color="#1E3A8A" />
-                            <Text style={styles.reviewCardTitle}>Patient Information</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Ionicons name="person-outline" size={15} color="#00B894" />
+                              <Text style={styles.reviewCardTitle}>Patient</Text>
+                            </View>
                             <TouchableOpacity onPress={() => setBookingStep(1)}>
                               <Text style={styles.reviewEditLink}>Edit</Text>
                             </TouchableOpacity>
                           </View>
                           <Text style={styles.reviewMainText}>{selectedPatient?.name}</Text>
                           <Text style={styles.reviewSubText}>
-                            {selectedPatient?.relation} • {selectedPatient?.age} Years • {selectedPatient?.gender}
+                            {[selectedPatient?.relation, selectedPatient?.age ? `${selectedPatient.age} Yrs` : null, selectedPatient?.gender, selectedPatient?.phone].filter(Boolean).join(' • ')}
                           </Text>
-                          <Text style={styles.reviewSubText}>Phone: {selectedPatient?.phone}</Text>
                         </View>
 
-                        {/* Test & Provider Block */}
+                        {/* Scan & Centre Block */}
                         <View style={styles.reviewCard}>
                           <View style={styles.reviewCardHeader}>
-                            <Ionicons name="scan-outline" size={16} color="#00B894" />
-                            <Text style={styles.reviewCardTitle}>Scan & Diagnostic Centre</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Ionicons name="scan-outline" size={15} color="#00B894" />
+                              <Text style={styles.reviewCardTitle}>Scan & Diagnostic Centre</Text>
+                            </View>
                           </View>
                           <Text style={styles.reviewMainText}>{selectedTest.name}</Text>
-                          <Text style={styles.reviewSubText}>Modality: {selectedCategory?.name || 'Radiology'}</Text>
                           <View style={styles.dividerSubtle} />
-                          <Text style={styles.reviewMainText}>{selectedProvider.name}</Text>
+                          <Text style={styles.reviewSecondaryTitle}>{selectedProvider.name}</Text>
                           <Text style={styles.reviewSubText}>{selectedProvider.area}, {selectedProvider.city}</Text>
                         </View>
 
-                        {/* Appointment Time Block */}
+                        {/* Date & Time Block */}
                         <View style={styles.reviewCard}>
                           <View style={styles.reviewCardHeader}>
-                            <Ionicons name="time-outline" size={16} color="#D97706" />
-                            <Text style={styles.reviewCardTitle}>Appointment Schedule</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                              <Ionicons name="calendar-outline" size={15} color="#00B894" />
+                              <Text style={styles.reviewCardTitle}>Date & Time</Text>
+                            </View>
                             <TouchableOpacity onPress={() => setBookingStep(2)}>
-                              <Text style={styles.reviewEditLink}>Change</Text>
+                              <Text style={styles.reviewEditLink}>Edit</Text>
                             </TouchableOpacity>
                           </View>
                           <Text style={styles.reviewMainText}>{appointmentDays[selectedDateIndex]?.fullLabel}</Text>
-                          <Text style={styles.reviewSubText}>Time Slot: <Text style={styles.boldText}>{selectedTimeSlot}</Text></Text>
-                          <Text style={styles.reviewSubText}>Expected Report Turnaround: {selectedProvider.turnaroundTime}</Text>
+                          <Text style={styles.reviewSubText}>Slot: <Text style={styles.boldText}>{selectedTimeSlot}</Text></Text>
                         </View>
 
-                        {/* Clinical Prep Instructions */}
-                        <View style={styles.instructionsAlertBox}>
-                          <Ionicons name="alert-circle-outline" size={20} color="#1E3A8A" />
-                          <View style={styles.instructionsAlertCol}>
-                            <Text style={styles.instructionsAlertTitle}>Preparation Guidelines</Text>
-                            <Text style={styles.instructionsAlertText}>
-                              {selectedTest.preparation}
-                            </Text>
-                            {selectedTest.fastingRequired && (
-                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                                <Ionicons name="warning-outline" size={14} color="#D97706" />
-                                <Text style={styles.instructionsFastingWarning}>
-                                  Requires {selectedTest.fastingHours} hours fasting before the scan. Water is allowed unless specified.
-                                </Text>
+                        {/* Prescription Review Card (Only shown if attached) */}
+                        {prescriptionDoc ? (
+                          <View style={styles.reviewCard}>
+                            <View style={styles.reviewCardHeader}>
+                              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                                <Ionicons name="document-attach-outline" size={15} color="#00B894" />
+                                <Text style={styles.reviewCardTitle}>Prescription</Text>
                               </View>
-                            )}
+                              <TouchableOpacity onPress={() => setBookingStep(1)}>
+                                <Text style={styles.reviewEditLink}>Edit</Text>
+                              </TouchableOpacity>
+                            </View>
+                            <Text style={styles.reviewMainText}>{prescriptionDoc.name}</Text>
+                            <Text style={styles.reviewSubText}>{prescriptionDoc.size} • Attached</Text>
                           </View>
-                        </View>
+                        ) : null}
+
+                        {/* Clinical Prep Instructions */}
+                        {selectedTest.preparation ? (
+                          <View style={styles.instructionsAlertBox}>
+                            <Ionicons name="information-circle-outline" size={18} color="#1E3A8A" />
+                            <View style={styles.instructionsAlertCol}>
+                              <Text style={styles.instructionsAlertTitle}>Preparation Guidelines</Text>
+                              <Text style={styles.instructionsAlertText}>
+                                {selectedTest.preparation}
+                              </Text>
+                              {selectedTest.fastingRequired && (
+                                <Text style={styles.instructionsFastingWarning}>
+                                  Requires {selectedTest.fastingHours} hours fasting.
+                                </Text>
+                              )}
+                            </View>
+                          </View>
+                        ) : null}
                       </View>
 
                       {/* Step 3 Footer Actions */}
@@ -2659,7 +2684,9 @@ export default function ImagingScreenWeb({ navigation, route }) {
                           onPress={handleProceedToPayment}
                           activeOpacity={0.85}
                         >
-                          <Text style={styles.wizardNextBtnText}>Proceed to Payment</Text>
+                          <Text style={styles.wizardNextBtnText}>
+                            Confirm & Pay ₹{Math.round(selectedTest.typicalPrice * selectedProvider.discountMultiplier).toLocaleString('en-IN')}
+                          </Text>
                           <Ionicons name="lock-closed" size={15} color="#FFFFFF" />
                         </TouchableOpacity>
                       </View>
@@ -2668,42 +2695,41 @@ export default function ImagingScreenWeb({ navigation, route }) {
                 </View>
 
                 {/* Right Column: Persistent Order Summary Breakdown */}
-                <View style={[styles.bookingSummaryRightCol, isDesktop && { flex: 1 }]}>
+                <View style={[styles.bookingSummaryRightCol, isDesktop && { flex: 1, position: 'sticky', top: 90, alignSelf: 'flex-start' }]}>
                   <View style={styles.summaryCard}>
-                    <Text style={styles.summaryCardTitle}>Price Breakdown</Text>
+                    {/* Mini scan header */}
+                    <View style={styles.summaryScanHeader}>
+                      <Text style={styles.summaryScanName} numberOfLines={1}>{selectedTest.name}</Text>
+                      <Text style={styles.summaryCentreName} numberOfLines={1}>{selectedProvider.name}</Text>
+                    </View>
                     <View style={styles.summaryDivider} />
 
+                    <Text style={styles.summaryCardTitle}>Price Breakdown</Text>
+                    <View style={styles.summaryMiniDivider} />
+
                     <View style={styles.summaryRow}>
-                      <Text style={styles.summaryRowLabel}>Test Standard MRP</Text>
+                      <Text style={styles.summaryRowLabel}>MRP</Text>
                       <Text style={styles.summaryRowValue}>
                         ₹{selectedTest.mrp.toLocaleString('en-IN')}
                       </Text>
                     </View>
 
                     <View style={styles.summaryRow}>
-                      <Text style={styles.summaryDiscountLabel}>MediUnify Diagnostic Discount</Text>
+                      <Text style={styles.summaryDiscountLabel}>Discount</Text>
                       <Text style={styles.summaryDiscountValue}>
                         -₹{(selectedTest.mrp - Math.round(selectedTest.typicalPrice * selectedProvider.discountMultiplier)).toLocaleString('en-IN')}
                       </Text>
                     </View>
 
                     <View style={styles.summaryRow}>
-                      <Text style={styles.summaryRowLabel}>PACS Digital Archival</Text>
-                      <Text style={styles.summaryFreeValue}>FREE</Text>
-                    </View>
-
-                    <View style={styles.summaryRow}>
-                      <Text style={styles.summaryRowLabel}>Platform Convenience Fee</Text>
+                      <Text style={styles.summaryRowLabel}>Booking Fee</Text>
                       <Text style={styles.summaryFreeValue}>FREE</Text>
                     </View>
 
                     <View style={styles.summaryDivider} />
 
                     <View style={styles.summaryTotalRow}>
-                      <View>
-                        <Text style={styles.summaryTotalLabel}>Final Amount Payable</Text>
-                        <Text style={styles.summaryTaxesInc}>All taxes & film included</Text>
-                      </View>
+                      <Text style={styles.summaryTotalLabel}>Total Payable</Text>
                       <Text style={styles.summaryTotalValue}>
                         ₹{Math.round(selectedTest.typicalPrice * selectedProvider.discountMultiplier).toLocaleString('en-IN')}
                       </Text>
@@ -2711,9 +2737,9 @@ export default function ImagingScreenWeb({ navigation, route }) {
 
                     {/* Guarantee Box */}
                     <View style={styles.guaranteeBox}>
-                      <Ionicons name="shield-checkmark" size={18} color="#00B894" />
+                      <Ionicons name="shield-checkmark" size={16} color="#00B894" />
                       <Text style={styles.guaranteeText}>
-                        100% Refund Guarantee. Free cancellation up to 2 hours before the scheduled time slot.
+                        Free cancellation up to 2 hours before appointment.
                       </Text>
                     </View>
                   </View>
@@ -2732,9 +2758,9 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     <View style={styles.paymentHeaderRow}>
                       <Ionicons name="lock-closed" size={20} color="#00B894" />
                       <View>
-                        <Text style={styles.paymentHeading}>MediUnify Secure Payment Gateway</Text>
+                        <Text style={styles.paymentHeading}>Secure Payment</Text>
                         <Text style={styles.paymentSub}>
-                          Select your preferred payment method. 256-bit encrypted checkout.
+                          Select your preferred payment method
                         </Text>
                       </View>
                     </View>
@@ -2780,15 +2806,13 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     <View style={styles.paymentMethodFormArea}>
                       {paymentMethod === 'upi' && (
                         <View style={styles.upiFormWrap}>
-                          <Text style={styles.formLabelBold}>Pay via Instant UPI</Text>
-                          <Text style={styles.formSub}>
-                            Google Pay, PhonePe, Paytm, BHIM, or Enter any UPI ID
-                          </Text>
+                          <Text style={styles.formLabelBold}>Instant UPI</Text>
+                          <Text style={styles.formSub}>Enter your UPI ID</Text>
 
                           <View style={styles.upiInputRow}>
                             <TextInput
                               style={styles.upiTextInput}
-                              placeholder="Enter UPI ID (e.g. mobile@upi, name@okhdfcbank)"
+                              placeholder="Enter UPI ID (e.g. mobile@upi)"
                               placeholderTextColor="#94A3B8"
                               value={upiId}
                               onChangeText={setUpiId}
@@ -2809,7 +2833,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                               <Text style={styles.upiAppBadgeText}>PhonePe</Text>
                             </View>
                             <View style={styles.upiAppBadge}>
-                              <Text style={styles.upiAppBadgeText}>Paytm UPI</Text>
+                              <Text style={styles.upiAppBadgeText}>Paytm</Text>
                             </View>
                             <View style={styles.upiAppBadge}>
                               <Text style={styles.upiAppBadgeText}>BHIM</Text>
@@ -2820,8 +2844,8 @@ export default function ImagingScreenWeb({ navigation, route }) {
 
                       {paymentMethod === 'card' && (
                         <View style={styles.cardFormWrap}>
-                          <Text style={styles.formLabelBold}>Enter Card Details</Text>
-                          <Text style={styles.formSub}>All major Visa, MasterCard, RuPay, and Maestro accepted</Text>
+                          <Text style={styles.formLabelBold}>Card Details</Text>
+                          <Text style={styles.formSub}>Visa, MasterCard, RuPay accepted</Text>
 
                           <View style={styles.formInputGroup}>
                             <Text style={styles.inputLabel}>Card Number</Text>
@@ -2838,7 +2862,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
 
                           <View style={styles.formRow}>
                             <View style={styles.formInputGroup}>
-                              <Text style={styles.inputLabel}>Valid Thru (MM/YY)</Text>
+                              <Text style={styles.inputLabel}>Expiry (MM/YY)</Text>
                               <TextInput
                                 style={styles.textInputBox}
                                 placeholder="MM/YY"
@@ -2849,7 +2873,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                               />
                             </View>
                             <View style={styles.formInputGroup}>
-                              <Text style={styles.inputLabel}>CVV / CVC</Text>
+                              <Text style={styles.inputLabel}>CVV</Text>
                               <TextInput
                                 style={styles.textInputBox}
                                 placeholder="3 digits"
@@ -2867,8 +2891,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
 
                       {paymentMethod === 'netbanking' && (
                         <View style={styles.netbankingFormWrap}>
-                          <Text style={styles.formLabelBold}>Select Your Bank</Text>
-                          <Text style={styles.formSub}>Direct secure internet banking gateway</Text>
+                          <Text style={styles.formLabelBold}>Select Bank</Text>
                           <View style={styles.bankPillsGrid}>
                             {['SBI', 'HDFC Bank', 'ICICI Bank', 'Axis Bank', 'Kotak Bank', 'Canara Bank'].map((b) => (
                               <TouchableOpacity key={b} style={styles.bankPill}>
@@ -2883,13 +2906,13 @@ export default function ImagingScreenWeb({ navigation, route }) {
                       {paymentMethod === 'pay_at_centre' && (
                         <View style={styles.payAtCentreBox}>
                           <Ionicons name="cash" size={32} color="#00B894" />
-                          <Text style={styles.payAtCentreHeading}>Pay Cash / Card at Centre Reception</Text>
+                          <Text style={styles.payAtCentreHeading}>Pay at Centre</Text>
                           <Text style={styles.payAtCentreText}>
-                            Your scan slot will be reserved immediately. You can settle the bill of{' '}
+                            Slot reserved immediately. Settle{' '}
                             <Text style={styles.boldText}>
                               ₹{Math.round(selectedTest.typicalPrice * selectedProvider.discountMultiplier).toLocaleString('en-IN')}
                             </Text>{' '}
-                            upon arrival at the diagnostic centre desk.
+                            at the reception desk upon arrival.
                           </Text>
                         </View>
                       )}
@@ -2923,8 +2946,8 @@ export default function ImagingScreenWeb({ navigation, route }) {
                             <Ionicons name="lock-closed" size={16} color="#FFFFFF" />
                             <Text style={styles.executePayBtnText}>
                               {paymentMethod === 'pay_at_centre'
-                                ? 'Confirm Slot & Pay at Centre'
-                                : `Pay ₹${Math.round(selectedTest.typicalPrice * selectedProvider.discountMultiplier).toLocaleString('en-IN')} Securely`}
+                                ? 'Confirm Booking'
+                                : `Pay ₹${Math.round(selectedTest.typicalPrice * selectedProvider.discountMultiplier).toLocaleString('en-IN')}`}
                             </Text>
                           </>
                         )}
@@ -2936,7 +2959,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                 {/* Right: Payment Recap */}
                 <View style={[styles.paymentRecapCol, isDesktop && { flex: 1 }]}>
                   <View style={styles.recapCard}>
-                    <Text style={styles.recapCardTitle}>Appointment Details</Text>
+                    <Text style={styles.recapCardTitle}>Booking Summary</Text>
                     <View style={styles.summaryDivider} />
 
                     <View style={styles.recapItem}>
@@ -2945,12 +2968,12 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     </View>
 
                     <View style={styles.recapItem}>
-                      <Text style={styles.recapLabel}>Scan Test</Text>
+                      <Text style={styles.recapLabel}>Scan</Text>
                       <Text style={styles.recapVal}>{selectedTest.name}</Text>
                     </View>
 
                     <View style={styles.recapItem}>
-                      <Text style={styles.recapLabel}>Diagnostic Centre</Text>
+                      <Text style={styles.recapLabel}>Centre</Text>
                       <Text style={styles.recapVal}>{selectedProvider.name}</Text>
                     </View>
 
@@ -2964,7 +2987,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     <View style={styles.summaryDivider} />
 
                     <View style={styles.summaryRow}>
-                      <Text style={styles.summaryRowLabel}>Base Price</Text>
+                      <Text style={styles.summaryRowLabel}>MRP</Text>
                       <Text style={styles.summaryRowValue}>₹{selectedTest.mrp.toLocaleString('en-IN')}</Text>
                     </View>
 
@@ -2976,7 +2999,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     </View>
 
                     <View style={styles.summaryTotalRow}>
-                      <Text style={styles.summaryTotalLabel}>Net Payable</Text>
+                      <Text style={styles.summaryTotalLabel}>Total Payable</Text>
                       <Text style={styles.summaryTotalValue}>
                         ₹{Math.round(selectedTest.typicalPrice * selectedProvider.discountMultiplier).toLocaleString('en-IN')}
                       </Text>
@@ -2995,9 +3018,9 @@ export default function ImagingScreenWeb({ navigation, route }) {
                 <View style={styles.confirmIconWrap}>
                   <Ionicons name="checkmark-done" size={44} color="#FFFFFF" />
                 </View>
-                <Text style={styles.confirmTitle}>Appointment Confirmed!</Text>
+                <Text style={styles.confirmTitle}>Booking Confirmed</Text>
                 <Text style={styles.confirmSubtitle}>
-                  Your scan appointment is confirmed. Please arrive 15 minutes before your time slot.
+                  Your scan appointment has been confirmed.
                 </Text>
 
                 <View style={styles.bookingIdBadge}>
@@ -3008,19 +3031,19 @@ export default function ImagingScreenWeb({ navigation, route }) {
                 {/* Appointment Card Summary */}
                 <View style={styles.confirmDetailsBox}>
                   <View style={styles.confirmDetailRow}>
-                    <Text style={styles.confirmDetailLabel}>Patient Name:</Text>
+                    <Text style={styles.confirmDetailLabel}>Patient:</Text>
                     <Text style={styles.confirmDetailVal}>{latestBooking.patientName}</Text>
                   </View>
                   <View style={styles.confirmDetailRow}>
-                    <Text style={styles.confirmDetailLabel}>Scan / Test:</Text>
+                    <Text style={styles.confirmDetailLabel}>Scan:</Text>
                     <Text style={styles.confirmDetailVal}>{latestBooking.testName}</Text>
                   </View>
                   <View style={styles.confirmDetailRow}>
-                    <Text style={styles.confirmDetailLabel}>Diagnostic Centre:</Text>
+                    <Text style={styles.confirmDetailLabel}>Centre:</Text>
                     <Text style={styles.confirmDetailVal}>{latestBooking.providerName}</Text>
                   </View>
                   <View style={styles.confirmDetailRow}>
-                    <Text style={styles.confirmDetailLabel}>Centre Address:</Text>
+                    <Text style={styles.confirmDetailLabel}>Address:</Text>
                     <Text style={styles.confirmDetailVal}>{latestBooking.providerAddress}</Text>
                   </View>
                   <View style={styles.confirmDetailRow}>
@@ -3030,16 +3053,22 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     </Text>
                   </View>
                   <View style={styles.confirmDetailRow}>
-                    <Text style={styles.confirmDetailLabel}>Amount Paid:</Text>
+                    <Text style={styles.confirmDetailLabel}>Amount:</Text>
                     <Text style={styles.confirmDetailVal}>
                       ₹{latestBooking.paidAmount.toLocaleString('en-IN')} ({latestBooking.paymentStatus})
                     </Text>
                   </View>
                   <View style={styles.confirmDetailRow}>
-                    <Text style={styles.confirmDetailLabel}>Booking Status:</Text>
+                    <Text style={styles.confirmDetailLabel}>Status:</Text>
                     <View style={styles.confirmedStatusPill}>
                       <Text style={styles.confirmedStatusText}>{latestBooking.bookingStatus}</Text>
                     </View>
+                  </View>
+                  <View style={styles.confirmDetailRow}>
+                    <Text style={styles.confirmDetailLabel}>Prescription:</Text>
+                    <Text style={styles.confirmDetailVal}>
+                      {latestBooking.prescriptionAttached ? latestBooking.prescriptionFileName : 'Carry original'}
+                    </Text>
                   </View>
                 </View>
 
@@ -3047,7 +3076,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                 <View style={styles.patientArrivalNotice}>
                   <Ionicons name="information-circle" size={18} color="#1E3A8A" />
                   <Text style={styles.patientArrivalNoticeText}>
-                    Please arrive 15 minutes before your scheduled time slot. Carry doctor's prescription and a valid government ID proof.
+                    Please arrive 15 minutes early with your prescription and valid ID.
                   </Text>
                 </View>
 
@@ -3115,9 +3144,9 @@ export default function ImagingScreenWeb({ navigation, route }) {
             <View style={styles.sectionWrap}>
               <View style={styles.myBookingsHeaderRow}>
                 <View>
-                  <Text style={styles.sectionTitle}>My Radiology Bookings</Text>
+                  <Text style={styles.sectionTitle}>My Bookings</Text>
                   <Text style={styles.sectionSubtitle}>
-                    Track upcoming appointments, reschedule, download receipts and view certified PACS reports
+                    Track appointments, download receipts, and view reports
                   </Text>
                 </View>
 
@@ -3161,13 +3190,13 @@ export default function ImagingScreenWeb({ navigation, route }) {
                   <Ionicons name="calendar-outline" size={48} color="#94A3B8" />
                   <Text style={styles.emptyStateTitle}>No {myBookingsTab} Appointments</Text>
                   <Text style={styles.emptyStateSubtitle}>
-                    You do not have any {myBookingsTab.toLowerCase()} radiology scans at this moment.
+                    No {myBookingsTab.toLowerCase()} appointments found.
                   </Text>
                   <TouchableOpacity
                     style={styles.emptyExploreBtn}
                     onPress={() => navigateToView('categories')}
                   >
-                    <Text style={styles.emptyExploreBtnText}>Browse Radiology Scans</Text>
+                    <Text style={styles.emptyExploreBtnText}>Browse Scans</Text>
                   </TouchableOpacity>
                 </View>
               ) : (
@@ -3224,7 +3253,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                         <View style={styles.bookingMetaRow}>
                           <Ionicons name="cash-outline" size={14} color="#64748B" />
                           <Text style={styles.bookingMetaText}>
-                            Amount: ₹{b.paidAmount.toLocaleString('en-IN')} • {b.paymentStatus}
+                            ₹{b.paidAmount.toLocaleString('en-IN')} • {b.paymentStatus}
                           </Text>
                         </View>
                         <View style={styles.bookingMetaRow}>
@@ -3322,9 +3351,9 @@ export default function ImagingScreenWeb({ navigation, route }) {
         <View style={styles.modalBackdrop}>
           <View style={styles.modalContentCard}>
             <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalHeaderBadge}>Clinical Test Details & Guidelines</Text>
-                <Text style={styles.modalHeaderTitle}>{testDetailsModal?.name}</Text>
+              <View style={{ flex: 1 }}>
+                <Text style={styles.modalHeaderBadge}>Scan Details</Text>
+                <Text style={styles.modalHeaderTitle} numberOfLines={1}>{testDetailsModal?.name}</Text>
               </View>
               <TouchableOpacity
                 onPress={() => setTestDetailsModal(null)}
@@ -3335,58 +3364,62 @@ export default function ImagingScreenWeb({ navigation, route }) {
             </View>
 
             <ScrollView style={styles.modalScrollBody} showsVerticalScrollIndicator={false}>
-              {/* Purpose */}
+              {/* About the Scan */}
               <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>Purpose of the Test</Text>
-                <Text style={styles.modalSectionText}>{testDetailsModal?.purpose}</Text>
+                <Text style={styles.modalSectionTitle}>About the Scan</Text>
+                <Text style={styles.modalSectionText}>
+                  {testDetailsModal?.purpose || testDetailsModal?.summary || testDetailsModal?.description}
+                </Text>
               </View>
 
-              {/* Fasting & Preparation */}
+              {/* Preparation */}
               <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>Preparation Instructions</Text>
-                <Text style={styles.modalSectionText}>{testDetailsModal?.preparation}</Text>
+                <Text style={styles.modalSectionTitle}>Preparation</Text>
+                <Text style={styles.modalSectionText}>
+                  {testDetailsModal?.preparation || 'No specific preparation needed. Wear comfortable clothing.'}
+                </Text>
                 {testDetailsModal?.fastingRequired && (
                   <View style={styles.fastingAlert}>
-                    <Ionicons name="alert-circle" size={18} color="#D97706" />
+                    <Ionicons name="alert-circle" size={16} color="#D97706" />
                     <Text style={styles.fastingAlertText}>
-                      Strict fasting required: {testDetailsModal?.fastingHours} hours prior to appointment.
+                      Fasting required: {testDetailsModal?.fastingHours || '4-6'} hours prior to appointment.
+                    </Text>
+                  </View>
+                )}
+                {testDetailsModal?.contrastUsed && (
+                  <View style={[styles.fastingAlert, { backgroundColor: '#EFF6FF', borderColor: '#BFDBFE', marginTop: 8 }]}>
+                    <Ionicons name="information-circle" size={16} color="#1E3A8A" />
+                    <Text style={[styles.fastingAlertText, { color: '#1E3A8A' }]}>
+                      Contrast scan: Please inform the centre if you have kidney conditions or dye allergies.
                     </Text>
                   </View>
                 )}
               </View>
 
-              {/* Procedure Details */}
+              {/* Centre & Location */}
               <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>Procedure Information</Text>
-                <Text style={styles.modalSectionText}>{testDetailsModal?.procedure}</Text>
+                <Text style={styles.modalSectionTitle}>Centre & Location</Text>
+                <Text style={styles.modalSectionText}>
+                  {testDetailsModal?.provider
+                    ? `${testDetailsModal.provider.name} • ${testDetailsModal.provider.area}, ${testDetailsModal.provider.city}`
+                    : `Available at certified radiology centres in ${selectedCity}.`}
+                </Text>
               </View>
 
-              {/* Key Clinical Parameters */}
+              {/* Price & Appointment Parameters */}
               <View style={styles.modalParamsGrid}>
                 <View style={styles.modalParamBox}>
-                  <Text style={styles.modalParamLabel}>Typical Duration</Text>
-                  <Text style={styles.modalParamVal}>{testDetailsModal?.duration}</Text>
+                  <Text style={styles.modalParamLabel}>Duration</Text>
+                  <Text style={styles.modalParamVal}>{testDetailsModal?.duration || '15-30 mins'}</Text>
                 </View>
                 <View style={styles.modalParamBox}>
                   <Text style={styles.modalParamLabel}>Report Turnaround</Text>
-                  <Text style={styles.modalParamVal}>{testDetailsModal?.reportTime}</Text>
+                  <Text style={styles.modalParamVal}>{testDetailsModal?.reportTime || 'Within 24 hours'}</Text>
                 </View>
                 <View style={styles.modalParamBox}>
-                  <Text style={styles.modalParamLabel}>Contrast Used?</Text>
-                  <Text style={styles.modalParamVal}>{testDetailsModal?.contrastUsed ? 'Yes (CECT/Contrast)' : 'No (Plain)'}</Text>
-                </View>
-                <View style={styles.modalParamBox}>
-                  <Text style={styles.modalParamLabel}>Pricing</Text>
+                  <Text style={styles.modalParamLabel}>Price</Text>
                   <Text style={styles.modalParamVal}>Starts at ₹{testDetailsModal?.typicalPrice?.toLocaleString('en-IN')}</Text>
                 </View>
-              </View>
-
-              {/* Cancellation Policy */}
-              <View style={styles.modalSection}>
-                <Text style={styles.modalSectionTitle}>Cancellation & Rescheduling</Text>
-                <Text style={styles.modalSectionText}>
-                  Free cancellation and 100% instant refund up to 2 hours prior to scheduled appointment. Rescheduling is complimentary across available dates and slots.
-                </Text>
               </View>
             </ScrollView>
 
@@ -3401,7 +3434,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                   activeOpacity={0.8}
                 >
                   <Ionicons name="navigate" size={15} color="#00B894" style={{ marginRight: 6 }} />
-                  <Text style={styles.modalDirectionsBtnText}>Get Directions</Text>
+                  <Text style={styles.modalDirectionsBtnText}>Directions</Text>
                 </TouchableOpacity>
               )}
 
@@ -3424,7 +3457,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                   }
                 }}
               >
-                <Text style={styles.modalBookCtaBtnText}>Compare Centres & Book Scan</Text>
+                <Text style={styles.modalBookCtaBtnText}>Book Now</Text>
                 <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
               </TouchableOpacity>
             </View>
@@ -4253,6 +4286,17 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#1E3A8A',
   },
+  cityLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    marginBottom: 6,
+  },
+  cityLocationText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#00B894',
+  },
   heroHeading: {
     fontSize: 28,
     fontWeight: '800',
@@ -4431,6 +4475,12 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     marginBottom: 2,
   },
+  catCardSubText: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '600',
+    marginTop: 2,
+  },
   catCardTagline: {
     fontSize: 11.5,
     fontWeight: '700',
@@ -4460,6 +4510,13 @@ const styles = StyleSheet.create({
     fontSize: 11.5,
     color: '#64748B',
     fontWeight: '600',
+  },
+  cardActionsRowSingle: {
+    paddingHorizontal: 14,
+    paddingBottom: 14,
+    paddingTop: 8,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
   },
   cardActionsRow: {
     flexDirection: 'row',
@@ -4641,16 +4698,20 @@ const styles = StyleSheet.create({
   },
   testCard: {
     backgroundColor: '#FFFFFF',
+    backgroundImage: 'linear-gradient(180deg, #FFFFFF 0%, #FAFCFF 70%, #F0FDF9 100%)',
     borderRadius: 16,
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
+    borderTopWidth: 3.5,
+    borderTopColor: '#00B894',
     overflow: 'hidden',
     marginBottom: 16,
-    shadowColor: '#0F172A',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
-    elevation: 2,
+    shadowColor: '#1E3A8A',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 3,
+    boxShadow: '0 8px 24px -3px rgba(30, 58, 138, 0.08), 0 2px 6px rgba(0, 184, 148, 0.04)',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
@@ -4988,21 +5049,27 @@ const styles = StyleSheet.create({
   filterChipTextActive: {
     color: '#FFFFFF',
   },
+  sortBarContainer: {
+    width: '100%',
+    paddingVertical: 2,
+    marginBottom: 6,
+  },
   sortSelectorWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginLeft: 10,
+    gap: 8,
+    paddingVertical: 4,
   },
   sortLabel: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
     color: '#64748B',
+    marginRight: 2,
   },
   sortOptionBtn: {
-    paddingHorizontal: 8,
-    paddingVertical: 5,
-    borderRadius: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -5012,12 +5079,13 @@ const styles = StyleSheet.create({
     borderColor: '#1E3A8A',
   },
   sortOptionText: {
-    fontSize: 10,
-    fontWeight: '700',
+    fontSize: 11,
+    fontWeight: '600',
     color: '#64748B',
   },
   sortOptionTextActive: {
     color: '#FFFFFF',
+    fontWeight: '700',
   },
 
   providersListingHeader: {
@@ -5034,260 +5102,229 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // Provider Card
+  // Provider Card List & Compact Centre Cards
   providersList: {
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    marginHorizontal: -4,
+    width: '100%',
   },
-  providerCard: {
+  compactCentreCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
+    backgroundImage: 'linear-gradient(145deg, #FFFFFF 0%, #F8FAFC 60%, #F0FDF9 100%)',
+    borderRadius: 14,
     padding: 16,
     marginBottom: 16,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#64748B',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
-    shadowOffset: { width: 0, height: 2 },
+    borderWidth: 1.5,
+    borderColor: '#D1FAE5',
+    borderTopWidth: 3.5,
+    borderTopColor: '#00B894',
+    shadowColor: '#1E3A8A',
+    shadowOpacity: 0.06,
+    shadowRadius: 10,
+    shadowOffset: { width: 0, height: 4 },
+    boxShadow: '0 6px 20px -2px rgba(0, 184, 148, 0.07)',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
+    minHeight: 145,
   },
-  providerCardHeader: {
+  compactCardTopRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'flex-start',
-    marginBottom: 12,
-    flexWrap: 'wrap',
-    gap: 10,
-  },
-  providerIdentity: {
-    flex: 1,
-    minWidth: 260,
-  },
-  providerNameRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
-    marginBottom: 4,
-  },
-  providerName: {
-    fontSize: 17,
-    fontWeight: '800',
-    color: '#1E3A8A',
-  },
-  providerAccredPill: {
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#A7F3D0',
-  },
-  providerAccredText: {
-    fontSize: 9,
-    fontWeight: '800',
-    color: '#00B894',
-  },
-  providerLocationRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-    flexWrap: 'wrap',
-  },
-  providerAddressText: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
-  },
-  providerDot: {
-    fontSize: 12,
-    color: '#94A3B8',
-  },
-  providerDistanceText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1E3A8A',
-  },
-  providerTypeText: {
-    fontSize: 11,
-    color: '#475569',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-  },
-  providerRatingBox: {
-    alignItems: 'flex-end',
-  },
-  ratingNumberRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#FFFBEB',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#FDE68A',
-  },
-  ratingScore: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#B45309',
-  },
-  reviewsCountText: {
-    fontSize: 10,
-    color: '#94A3B8',
-    marginTop: 2,
-  },
-  providerFacilitiesRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    flexWrap: 'wrap',
-    marginBottom: 12,
-  },
-  facilityChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 8,
-  },
-  facilityChipText: {
-    fontSize: 11,
-    color: '#475569',
-    fontWeight: '500',
-  },
-  providerSlotsBlock: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    padding: 10,
-    marginBottom: 14,
-  },
-  slotsLabelRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
     marginBottom: 6,
   },
-  slotsLabelText: {
+  compactLocationRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    marginBottom: 14,
+  },
+  compactNameContainer: {
+    flex: 1,
+    marginRight: 10,
+  },
+  compactCentreName: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#0F172A',
+    lineHeight: 22,
+  },
+  compactRatingWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3,
+    backgroundColor: '#FFFBEB',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+    alignSelf: 'flex-start',
+  },
+  compactRatingScore: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#B45309',
+  },
+  compactReviewsCount: {
+    fontSize: 11,
+    color: '#64748B',
+  },
+  compactMetaList: {
+    display: 'flex',
+    flexDirection: 'column',
+    gap: 4,
+    marginBottom: 12,
+  },
+  compactMetaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  compactMetaIcon: {
+    width: 14,
+  },
+  compactMetaText: {
+    fontSize: 12,
+    color: '#64748B',
+    lineHeight: 18,
+    flex: 1,
+  },
+  compactSlotsContainer: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 8,
+    padding: 10,
+    marginBottom: 12,
+  },
+  compactSlotsHeaderRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  compactSlotsHeading: {
     fontSize: 11,
     fontWeight: '700',
     color: '#475569',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
   },
-  slotsPillsRow: {
+  moreTimesLinkText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#00B894',
+  },
+  compactSlotsWrap: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
     flexWrap: 'wrap',
   },
-  miniSlotPill: {
+  compactSlotChip: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 8,
+    paddingHorizontal: 9,
+    paddingVertical: 5,
+    borderRadius: 6,
+    flexDirection: 'row',
+    alignItems: 'center',
   },
-  miniSlotText: {
+  compactSlotChipSelected: {
+    backgroundColor: '#00B894',
+    borderColor: '#00B894',
+  },
+  compactSlotChipDisabled: {
+    backgroundColor: '#F1F5F9',
+    borderColor: '#E2E8F0',
+    opacity: 0.55,
+  },
+  compactSlotChipText: {
     fontSize: 11,
     fontWeight: '600',
     color: '#1E293B',
   },
-  providerCardFooter: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingTop: 12,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  reportDeliveryNote: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 5,
-  },
-  reportDeliveryNoteText: {
-    fontSize: 12,
-    color: '#64748B',
-  },
-  reportDeliveryBold: {
+  compactSlotChipTextSelected: {
+    color: '#FFFFFF',
     fontWeight: '700',
-    color: '#1E3A8A',
   },
-  providerPriceBlock: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  discountBadgeWrap: {
-    backgroundColor: '#E6F8F2',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
-  },
-  discountBadgeWrapText: {
-    fontSize: 11,
-    fontWeight: '800',
-    color: '#00B894',
-  },
-  priceNumbersCol: {
-    alignItems: 'flex-start',
-  },
-  providerFinalPrice: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#00B894',
-  },
-  providerMrpPrice: {
-    fontSize: 11,
+  compactSlotChipTextDisabled: {
     color: '#94A3B8',
     textDecorationLine: 'line-through',
   },
-  providerActionButtons: {
+  compactPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    marginBottom: 12,
+    flexWrap: 'wrap',
+  },
+  compactCurrentPrice: {
+    fontSize: 20,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  compactDiscountText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  compactStrikeMrp: {
+    fontSize: 12,
+    color: '#94A3B8',
+    textDecorationLine: 'line-through',
+    marginLeft: 6,
+  },
+  compactCardActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    marginTop: 'auto',
   },
-  providerDetailsBtn: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+  compactSecondaryBtn: {
+    flex: 1,
+    height: 40,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
-    backgroundColor: '#F0F9FF',
-  },
-  providerDetailsBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#1E3A8A',
-  },
-  providerBookBtn: {
+    borderColor: '#CBD5E1',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#00B894',
-    paddingHorizontal: 16,
-    paddingVertical: 9,
-    borderRadius: 8,
+    justifyContent: 'center',
+    gap: 5,
+    paddingHorizontal: 10,
   },
-  providerBookBtnText: {
-    fontSize: 12,
+  compactSecondaryBtnText: {
+    fontSize: 13,
     fontWeight: '700',
+    color: '#00B894',
+  },
+  compactPrimaryBtn: {
+    flex: 1.6,
+    height: 40,
+    backgroundColor: '#00B894',
+    borderRadius: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+  },
+  compactPrimaryBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
     color: '#FFFFFF',
+  },
+
+  // Legacy providerCard fallback
+  providerCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
 
   // VIEW 4: BOOKING FLOW CONTAINER
@@ -5296,13 +5333,19 @@ const styles = StyleSheet.create({
   },
   stepperHeader: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    paddingVertical: 12,
-    paddingHorizontal: 10,
+    borderRadius: 16,
+    paddingVertical: 14,
+    paddingHorizontal: 24,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    marginBottom: 16,
+    marginBottom: 20,
     width: '100%',
+    maxWidth: 680,
+    alignSelf: 'center',
+    shadowColor: '#64748B',
+    shadowOpacity: 0.04,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
   stepperProgressRow: {
     flexDirection: 'row',
@@ -5313,45 +5356,50 @@ const styles = StyleSheet.create({
   stepItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 5,
+    gap: 8,
     flexShrink: 1,
   },
   stepCircle: {
-    width: 22,
-    height: 22,
-    borderRadius: 11,
+    width: 28,
+    height: 28,
+    borderRadius: 14,
     backgroundColor: '#F1F5F9',
     alignItems: 'center',
     justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
   },
   stepCircleActive: {
     backgroundColor: '#00B894',
+    borderColor: '#00B894',
   },
   stepCircleCompleted: {
     backgroundColor: '#059669',
+    borderColor: '#059669',
   },
   stepCircleNum: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '700',
     color: '#64748B',
   },
   stepCircleNumActive: {
     color: '#FFFFFF',
+    fontWeight: '800',
   },
   stepLabel: {
-    fontSize: 11,
+    fontSize: 13,
     fontWeight: '600',
     color: '#64748B',
   },
   stepLabelActive: {
     fontWeight: '800',
-    color: '#1E3A8A',
+    color: '#0F172A',
   },
   stepConnector: {
     flex: 1,
     height: 2,
     backgroundColor: '#E2E8F0',
-    marginHorizontal: 6,
+    marginHorizontal: 12,
   },
   stepConnectorActive: {
     backgroundColor: '#00B894',
@@ -5372,8 +5420,8 @@ const styles = StyleSheet.create({
   },
   wizardCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 16,
+    borderRadius: 16,
+    padding: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
     shadowColor: '#64748B',
@@ -5409,36 +5457,52 @@ const styles = StyleSheet.create({
   patientCard: {
     flexDirection: 'row',
     alignItems: 'center',
-    padding: 12,
-    borderRadius: 12,
+    padding: 14,
+    borderRadius: 14,
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    backgroundColor: '#FAFCFD',
-    gap: 10,
+    backgroundColor: '#FFFFFF',
+    gap: 12,
     width: '100%',
+    shadowColor: '#64748B',
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
   },
   patientCardSelected: {
     borderColor: '#00B894',
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F0FDF9',
+    shadowOpacity: 0.08,
+    shadowColor: '#00B894',
+    shadowRadius: 8,
   },
-  patientRadioWrap: {},
-  radioOuter: {
-    width: 18,
-    height: 18,
-    borderRadius: 9,
+  patientAvatarWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  patientAvatarWrapSelected: {
+    backgroundColor: '#E6F8F3',
+    borderColor: '#A7F3D0',
+  },
+  patientSelectIndicator: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
     borderWidth: 2,
     borderColor: '#CBD5E1',
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#FFFFFF',
   },
-  radioOuterSelected: {
-    borderColor: '#00B894',
-  },
-  radioInner: {
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+  patientSelectIndicatorSelected: {
     backgroundColor: '#00B894',
+    borderColor: '#00B894',
   },
   patientInfoCol: {
     flex: 1,
@@ -5448,7 +5512,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     flexWrap: 'wrap',
-    gap: 6,
+    gap: 8,
   },
   patientNameText: {
     fontSize: 15,
@@ -5457,31 +5521,31 @@ const styles = StyleSheet.create({
   },
   relationBadge: {
     backgroundColor: '#E0F2FE',
-    paddingHorizontal: 6,
+    paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 6,
   },
   relationBadgeText: {
-    fontSize: 10,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#1E3A8A',
+    color: '#0369A1',
   },
   patientMetaText: {
     fontSize: 12,
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 3,
   },
   addNewPatientBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 12,
+    paddingVertical: 13,
     borderWidth: 1.5,
     borderStyle: 'dashed',
     borderColor: '#00B894',
     borderRadius: 12,
-    gap: 6,
-    backgroundColor: '#F0FDF4',
+    gap: 8,
+    backgroundColor: '#F0FDF9',
   },
   addNewPatientBtnText: {
     fontSize: 13,
@@ -5592,21 +5656,21 @@ const styles = StyleSheet.create({
     paddingTop: 16,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
-    gap: 10,
+    gap: 12,
     width: '100%',
   },
   wizardBackBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 5,
-    paddingHorizontal: 14,
-    paddingVertical: 11,
+    gap: 6,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     borderRadius: 10,
     borderWidth: 1,
     borderColor: '#CBD5E1',
     backgroundColor: '#FFFFFF',
-    minWidth: 80,
+    minWidth: 88,
   },
   wizardBackBtnText: {
     fontSize: 13,
@@ -5618,17 +5682,155 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 8,
     backgroundColor: '#00B894',
-    paddingHorizontal: 16,
-    paddingVertical: 11,
+    paddingHorizontal: 18,
+    paddingVertical: 12,
     borderRadius: 10,
-    minHeight: 44,
+    minHeight: 46,
+    shadowColor: '#00B894',
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
   wizardNextBtnText: {
-    fontSize: 13,
+    fontSize: 14,
     fontWeight: '800',
     color: '#FFFFFF',
+  },
+
+  // Prescription Upload Component Styles
+  prescriptionUploadCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 14,
+    padding: 16,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  prescriptionCardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  prescriptionIconWrap: {
+    width: 40,
+    height: 40,
+    borderRadius: 10,
+    backgroundColor: '#E6F8F3',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  prescriptionTitle: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  prescriptionSubtitle: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  prescriptionAttachPillBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 8,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#00B894',
+    backgroundColor: '#FFFFFF',
+  },
+  prescriptionAttachPillText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#00B894',
+  },
+  prescriptionRemoveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 6,
+    backgroundColor: '#FEE2E2',
+  },
+  prescriptionRemoveText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  attachedFilePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 8,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  attachedFileName: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#065F46',
+    flexShrink: 1,
+  },
+  attachedFileSize: {
+    fontSize: 11,
+    color: '#047857',
+  },
+
+  // Step 2 Summary Banner & Slot Header
+  stepSummaryBanner: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    marginBottom: 18,
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  stepSummaryItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  stepSummaryMain: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#065F46',
+  },
+  stepSummaryDivider: {
+    color: '#86EFAC',
+    fontWeight: '700',
+  },
+  stepSummarySub: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#1E3A8A',
+  },
+  slotSectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginTop: 20,
+    marginBottom: 10,
+    flexWrap: 'wrap',
+  },
+  reviewSecondaryTitle: {
+    fontSize: 14,
+    fontWeight: '700',
+    color: '#1E3A8A',
   },
 
   // STEP 2: DATES & SLOTS
@@ -5644,8 +5846,8 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   datePillCard: {
-    width: 72,
-    paddingVertical: 10,
+    width: 74,
+    paddingVertical: 12,
     borderRadius: 12,
     backgroundColor: '#F8FAFC',
     borderWidth: 1.5,
@@ -5656,6 +5858,10 @@ const styles = StyleSheet.create({
   datePillCardActive: {
     backgroundColor: '#00B894',
     borderColor: '#00B894',
+    shadowColor: '#00B894',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 2 },
   },
   datePillDayName: {
     fontSize: 11,
@@ -5686,9 +5892,11 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     gap: 6,
     backgroundColor: '#ECFDF5',
-    padding: 10,
-    borderRadius: 8,
-    marginTop: 10,
+    padding: 12,
+    borderRadius: 10,
+    marginTop: 12,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
   },
   selectedDateNoticeText: {
     fontSize: 12,
@@ -5698,7 +5906,7 @@ const styles = StyleSheet.create({
     fontWeight: '700',
   },
   slotCategoryGroup: {
-    marginBottom: 16,
+    marginBottom: 18,
   },
   slotCategoryHeader: {
     flexDirection: 'row',
@@ -5719,7 +5927,7 @@ const styles = StyleSheet.create({
   timeSlotBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 6,
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 8,
@@ -5730,11 +5938,14 @@ const styles = StyleSheet.create({
   timeSlotBtnActive: {
     backgroundColor: '#00B894',
     borderColor: '#00B894',
+    shadowColor: '#00B894',
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
   },
   timeSlotBtnDisabled: {
-    backgroundColor: '#F1F5F9',
+    backgroundColor: '#F8FAFC',
     borderColor: '#E2E8F0',
-    opacity: 0.65,
+    opacity: 0.7,
   },
   timeSlotText: {
     fontSize: 12,
@@ -5749,8 +5960,8 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   slotStatusBadge: {
-    backgroundColor: '#FEE2E2',
-    paddingHorizontal: 5,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 6,
     paddingVertical: 2,
     borderRadius: 4,
     marginLeft: 2,
@@ -5758,7 +5969,7 @@ const styles = StyleSheet.create({
   slotStatusBadgeText: {
     fontSize: 9,
     fontWeight: '700',
-    color: '#DC2626',
+    color: '#64748B',
     textTransform: 'uppercase',
   },
 
@@ -5767,51 +5978,59 @@ const styles = StyleSheet.create({
     gap: 12,
   },
   reviewCard: {
-    backgroundColor: '#F8FAFC',
-    borderRadius: 12,
-    padding: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    shadowColor: '#64748B',
+    shadowOpacity: 0.03,
+    shadowRadius: 4,
+    shadowOffset: { width: 0, height: 1 },
   },
   reviewCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   reviewCardTitle: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '800',
     color: '#475569',
     textTransform: 'uppercase',
-    letterSpacing: 0.5,
+    letterSpacing: 0.6,
   },
   reviewEditLink: {
     fontSize: 12,
     fontWeight: '700',
     color: '#00B894',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 4,
   },
   reviewMainText: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#1E3A8A',
+    color: '#0F172A',
   },
   reviewSubText: {
     fontSize: 12,
     color: '#64748B',
-    marginTop: 2,
+    marginTop: 4,
+    lineHeight: 18,
   },
   dividerSubtle: {
     height: 1,
-    backgroundColor: '#E2E8F0',
-    marginVertical: 8,
+    backgroundColor: '#F1F5F9',
+    marginVertical: 10,
   },
   instructionsAlertBox: {
     flexDirection: 'row',
     backgroundColor: '#F0F9FF',
     borderWidth: 1,
     borderColor: '#BFDBFE',
-    borderRadius: 12,
+    borderRadius: 14,
     padding: 14,
     gap: 10,
   },
@@ -5839,16 +6058,40 @@ const styles = StyleSheet.create({
   // Right Column Price Breakdown Card
   summaryCard: {
     backgroundColor: '#FFFFFF',
+    backgroundImage: 'linear-gradient(135deg, #FFFFFF 0%, #FAFCFF 60%, #F0FDF9 100%)',
     borderRadius: 16,
-    padding: 18,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#64748B',
-    shadowOpacity: 0.05,
-    shadowRadius: 8,
+    padding: 20,
+    borderWidth: 1.5,
+    borderColor: '#D1FAE5',
+    borderTopWidth: 3.5,
+    borderTopColor: '#00B894',
+    shadowColor: '#1E3A8A',
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    boxShadow: '0 8px 24px -2px rgba(0, 184, 148, 0.08)',
+  },
+  summaryScanHeader: {
+    paddingBottom: 6,
+  },
+  summaryScanName: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 3,
+  },
+  summaryCentreName: {
+    fontSize: 12,
+    color: '#64748B',
+    fontWeight: '500',
+  },
+  summaryMiniDivider: {
+    height: 1,
+    backgroundColor: '#F1F5F9',
+    marginTop: 6,
+    marginBottom: 10,
   },
   summaryCardTitle: {
-    fontSize: 16,
+    fontSize: 15,
     fontWeight: '800',
     color: '#1E3A8A',
   },
@@ -5860,7 +6103,7 @@ const styles = StyleSheet.create({
   summaryRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginBottom: 10,
     gap: 8,
     width: '100%',
@@ -5869,7 +6112,6 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     color: '#64748B',
-    lineHeight: 18,
   },
   summaryRowValue: {
     fontSize: 13,
@@ -5882,7 +6124,6 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
     color: '#00B894',
-    lineHeight: 18,
   },
   summaryDiscountValue: {
     fontSize: 13,
@@ -5910,10 +6151,6 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#1E3A8A',
   },
-  summaryTaxesInc: {
-    fontSize: 10,
-    color: '#94A3B8',
-  },
   summaryTotalValue: {
     fontSize: 22,
     fontWeight: '800',
@@ -5921,6 +6158,7 @@ const styles = StyleSheet.create({
   },
   guaranteeBox: {
     flexDirection: 'row',
+    alignItems: 'center',
     backgroundColor: '#ECFDF5',
     padding: 10,
     borderRadius: 8,

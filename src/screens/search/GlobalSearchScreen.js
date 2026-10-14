@@ -22,6 +22,8 @@ import { useTheme } from '../../context/ThemeContext';
 import WebFooter from '../../components/web/WebFooter';
 import { useCart } from '../../context/CartContext';
 import { isDesktopLayout } from '../../utils/responsiveLayoutHelper';
+import GuestLeadModal from '../../components/common/GuestLeadModal';
+import { shouldShowGuestLeadPopup } from '../../services/guestLeadService';
 
 // Real Data Sources for Search
 import { doctors } from '../../data/doctors';
@@ -275,7 +277,20 @@ const GlobalSearchScreen = ({ navigation, route }) => {
   const [searchDebounceQuery, setSearchDebounceQuery] = useState(route?.params?.query || '');
   const [isSearching, setIsSearching] = useState(false);
   const [toastMsg, setToastMsg] = useState(null);
+  const [showLeadModal, setShowLeadModal] = useState(false);
+  const [pendingSearchQuery, setPendingSearchQuery] = useState('');
   const searchInputRef = useRef(null);
+
+  const handleSearchSubmit = async () => {
+    const q = query.trim() || 'All Healthcare Services';
+    const shouldShow = await shouldShowGuestLeadPopup();
+    if (shouldShow) {
+      setPendingSearchQuery(q);
+      setShowLeadModal(true);
+      return;
+    }
+    Keyboard.dismiss();
+  };
 
   // Cart Context & City Awareness
   const cartContext = useCart();
@@ -289,7 +304,7 @@ const GlobalSearchScreen = ({ navigation, route }) => {
       .catch(() => {});
   }, []);
 
-  const currentCity = cartContext?.selectedCity || storedCity || 'Mysuru';
+  const currentCity = route?.params?.city || cartContext?.selectedCity || storedCity || 'Mysuru';
 
   // Sync route query if passed
   useEffect(() => {
@@ -321,14 +336,13 @@ const GlobalSearchScreen = ({ navigation, route }) => {
 
   // Debounce input (120ms) for ultra-fast typing response without stutter
   useEffect(() => {
-    if (isDesktopWeb) return;
     setIsSearching(true);
     const handler = setTimeout(() => {
       setSearchDebounceQuery(query);
       setIsSearching(false);
     }, 120);
     return () => clearTimeout(handler);
-  }, [query, isDesktopWeb]);
+  }, [query]);
 
   // Voice Search Simulation
   const handleVoiceSearch = () => {
@@ -493,8 +507,8 @@ const GlobalSearchScreen = ({ navigation, route }) => {
           results.push({
             id: `rad-${scan.id}`,
             name: scan.name,
-            category: 'Scans & X-Ray',
-            subtitle: `Scans & X-Ray • ${scan.modality || scan.categoryName || 'Radiology'}`,
+            category: 'Scan & X-Ray',
+            subtitle: `Scan & X-Ray • ${scan.modality || scan.categoryName || 'Radiology'}`,
             badge: scan.price ? `₹${scan.price}` : (scan.mrp ? `₹${scan.mrp}` : ''),
             icon: 'scan-outline',
             iconType: 'ionicons',
@@ -708,9 +722,13 @@ const GlobalSearchScreen = ({ navigation, route }) => {
   }, [mobileSearchResults, selectedCategory]);
 
   // ============================================================
-  // DESKTOP WEB ENGINE (Preserved for Web view)
+  // DESKTOP WEB ENGINE (Utilizing Real Multi-Service Catalog)
   // ============================================================
   const desktopWebResults = useMemo(() => {
+    if (mobileSearchResults && mobileSearchResults.length > 0) {
+      if (selectedCategory === 'All') return mobileSearchResults;
+      return mobileSearchResults.filter((item) => item.category === selectedCategory);
+    }
     const text = query.trim().toLowerCase();
     return searchData.filter((item) => {
       const categoryMatch = selectedCategory === 'All' || item.category === selectedCategory;
@@ -719,43 +737,60 @@ const GlobalSearchScreen = ({ navigation, route }) => {
       const searchableText = `${item.title} ${item.description} ${item.keywords} ${item.category}`.toLowerCase();
       return searchableText.includes(text);
     });
-  }, [query, selectedCategory]);
+  }, [query, selectedCategory, mobileSearchResults]);
 
   const openScreen = (screenRoute) => {
     navigation.navigate(screenRoute);
   };
 
   const renderWebItem = ({ item }) => {
+    const title = item.title || item.name;
+    const desc = item.description || item.subtitle;
+    const badge = item.badgeText || item.badge;
+    const iconName = item.icon || 'medkit';
+    const bg = item.backgroundColor || item.iconBg || '#F0FDFA';
+    const fg = item.iconColor || colors.primary;
+
     return (
       <TouchableOpacity
         style={styles.card}
         activeOpacity={0.88}
-        onPress={() => openScreen(item.route)}
+        onPress={() => {
+          if (typeof item.onPress === 'function') {
+            item.onPress();
+          } else if (item.route) {
+            openScreen(item.route);
+          }
+        }}
       >
-        <View style={[styles.iconContainer, { backgroundColor: item.backgroundColor }]}>
-          <Ionicons name={item.icon} size={24} color={item.iconColor} />
+        <View style={[styles.iconContainer, { backgroundColor: bg }]}>
+          {item.iconType === 'material' ? (
+            <MaterialCommunityIcons name={iconName} size={24} color={fg} />
+          ) : (
+            <Ionicons name={iconName} size={24} color={fg} />
+          )}
         </View>
 
         <View style={styles.info}>
           <View style={styles.titleRow}>
             <Text style={styles.itemTitle} numberOfLines={1}>
-              {item.title}
+              {title}
             </Text>
-            {item.badgeText && (
+            {badge ? (
               <View style={[styles.badge, { backgroundColor: item.badgeColor || '#F1F5F9' }]}>
-                <Text style={[styles.badgeText, { color: item.iconColor }]}>{item.badgeText}</Text>
+                <Text style={[styles.badgeText, { color: fg }]}>{badge}</Text>
               </View>
-            )}
+            ) : null}
           </View>
 
           <Text style={styles.itemDescription} numberOfLines={2}>
-            {item.description}
+            {desc}
           </Text>
 
           <View style={styles.categoryTagRow}>
             <Text style={styles.categoryTagText}>{item.category}</Text>
             <View style={styles.actionPrompt}>
-              <Text style={styles.actionPromptText}>Open Service</Text>
+              <Text style={styles.actionPromptText}>Book / View</Text>
               <Ionicons name="arrow-forward" size={12} color={colors.primary} />
             </View>
           </View>
@@ -802,6 +837,7 @@ const GlobalSearchScreen = ({ navigation, route }) => {
                 }
               }}
               returnKeyType="search"
+              onSubmitEditing={handleSearchSubmit}
               autoCorrect={false}
               autoCapitalize="none"
               clearButtonMode="never"
@@ -1025,8 +1061,16 @@ const GlobalSearchScreen = ({ navigation, route }) => {
                   <TouchableOpacity
                     key={item.id}
                     style={styles.searchResultRow}
+                    onPress={async () => {
+                      const shouldShow = await shouldShowGuestLeadPopup();
+                      if (shouldShow) {
+                        setPendingSearchQuery(item.name || query || 'Service');
+                        setShowLeadModal(true);
+                        return;
+                      }
+                      item.onPress();
+                    }}
                     activeOpacity={0.7}
-                    onPress={item.onPress}
                   >
                     <View style={[styles.resultIconBox, { backgroundColor: item.iconBg }]}>
                       {item.iconType === 'material' ? (
@@ -1063,6 +1107,21 @@ const GlobalSearchScreen = ({ navigation, route }) => {
           <View style={{ height: 110 }} />
         </ScrollView>
       )}
+
+      {/* Guest Lead-Generation Popup */}
+      <GuestLeadModal
+        visible={showLeadModal}
+        searchQuery={pendingSearchQuery}
+        selectedCity={currentCity}
+        onSuccess={() => {
+          setShowLeadModal(false);
+          Keyboard.dismiss();
+        }}
+        onClose={() => {
+          setShowLeadModal(false);
+          Keyboard.dismiss();
+        }}
+      />
     </SafeAreaView>
   );
 };

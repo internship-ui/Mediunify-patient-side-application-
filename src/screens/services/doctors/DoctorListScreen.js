@@ -35,6 +35,8 @@ import WebFooter from '../../../components/web/WebFooter';
 import DoctorBookingModal from '../../../components/booking/DoctorBookingModal';
 import { isDesktopLayout } from '../../../utils/responsiveLayoutHelper';
 import Pagination from '../../../components/common/Pagination';
+import GuestLeadModal from '../../../components/common/GuestLeadModal';
+import { shouldShowGuestLeadPopup } from '../../../services/guestLeadService';
 
 export const POPULAR_LOCALITIES = [
   { id: '1', name: 'Kuvempunagar', city: 'Mysore', full: 'Kuvempunagar, Mysore', latitude: 12.2858, longitude: 76.6341 },
@@ -73,6 +75,54 @@ export const TOP_QUICK_SPECIALTIES = [
   { id: 'Neurology', label: 'Neurology', icon: 'pulse-outline' },
   { id: 'Gastroenterology', label: 'Gastroenterology', icon: 'flask-outline' },
   { id: 'Ophthalmology', label: 'Eye Care', icon: 'eye-outline' },
+];
+
+// ATTRACTIVE LIGHT CARD PALETTE (Soft, Professional & Vibrant - Fully Coloured Cards)
+const DOCTOR_CARD_THEMES = [
+  {
+    // 1. Soft Emerald / Mint
+    bgColor: '#E6F8F2',
+    cardBg: 'linear-gradient(135deg, #ECFDF5 0%, #E2F8F0 50%, #D1F4E8 100%)',
+    borderColor: '#86EFAC',
+    accentColor: '#00B894',
+    feeColor: '#007D69',
+    badgeBorder: '#A7F3D0',
+    btnBg: 'linear-gradient(135deg, #00B894 0%, #009677 100%)',
+    shadowColor: 'rgba(0, 184, 148, 0.16)',
+  },
+  {
+    // 2. Soft Sky Ice Blue
+    bgColor: '#E0F2FE',
+    cardBg: 'linear-gradient(135deg, #EFF6FF 0%, #E0F2FE 50%, #BAE6FD 100%)',
+    borderColor: '#93C5FD',
+    accentColor: '#0284C7',
+    feeColor: '#0369A1',
+    badgeBorder: '#BAE6FD',
+    btnBg: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
+    shadowColor: 'rgba(2, 132, 199, 0.16)',
+  },
+  {
+    // 3. Soft Lilac / Lavender
+    bgColor: '#F3E8FF',
+    cardBg: 'linear-gradient(135deg, #FAF5FF 0%, #F3E8FF 50%, #E9D5FF 100%)',
+    borderColor: '#C4B5FD',
+    accentColor: '#7C3AED',
+    feeColor: '#6D28D9',
+    badgeBorder: '#DDD6FE',
+    btnBg: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
+    shadowColor: 'rgba(124, 58, 237, 0.16)',
+  },
+  {
+    // 4. Soft Sunset Coral / Peach
+    bgColor: '#FFEDD5',
+    cardBg: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 50%, #FED7AA 100%)',
+    borderColor: '#FDBA74',
+    accentColor: '#EA580C',
+    feeColor: '#C2410C',
+    badgeBorder: '#FED7AA',
+    btnBg: 'linear-gradient(135deg, #FF7F50 0%, #EA580C 100%)',
+    shadowColor: 'rgba(255, 127, 80, 0.16)',
+  },
 ];
 
 const DoctorAvatar = ({ image, name }) => {
@@ -131,6 +181,19 @@ const DoctorListScreen = ({ navigation, route }) => {
   const DOCTORS_PER_PAGE = 6;
 
   const [search, setSearch] = useState(route?.params?.query || route?.params?.search || '');
+  const [showLeadModal, setShowLeadModal] = useState(false);
+  const [pendingSearchQuery, setPendingSearchQuery] = useState('');
+
+  const handleSearchSubmit = async () => {
+    const q = search.trim() || 'Doctors & Specialists';
+    const shouldShow = await shouldShowGuestLeadPopup();
+    if (shouldShow) {
+      setPendingSearchQuery(q);
+      setShowLeadModal(true);
+      return;
+    }
+    Keyboard.dismiss();
+  };
   const [selectedSpecialty, setSelectedSpecialty] = useState(route?.params?.specialty || route?.params?.categoryId || 'all');
   const [sidebarSpecSearch, setSidebarSpecSearch] = useState('');
   const [modalSpecSearch, setModalSpecSearch] = useState('');
@@ -447,9 +510,22 @@ const DoctorListScreen = ({ navigation, route }) => {
     setDirectionsDoctor(doc);
   };
 
-  const renderDoctor = ({ item }) => {
+  const renderDoctor = ({ item, index = 0 }) => {
+    const theme = DOCTOR_CARD_THEMES[index % DOCTOR_CARD_THEMES.length];
+
     return (
-      <View style={[styles.card, isDesktopWeb && styles.cardDesktop]}>
+      <View
+        style={[
+          styles.card,
+          isDesktopWeb && styles.cardDesktop,
+          {
+            backgroundColor: theme.bgColor,
+            backgroundImage: theme.cardBg,
+            borderColor: theme.borderColor,
+            boxShadow: `0 8px 24px -2px ${theme.shadowColor}, 0 2px 6px rgba(0, 0, 0, 0.04)`,
+          },
+        ]}
+      >
         {/* Doctor Main Details */}
         <TouchableOpacity
           style={styles.doctorMainRow}
@@ -465,15 +541,15 @@ const DoctorListScreen = ({ navigation, route }) => {
           <View style={styles.doctorInfoCol}>
             <View style={styles.nameBadgeRow}>
               <Text style={styles.doctorName} numberOfLines={1}>{item.name}</Text>
-              <Ionicons name="checkmark-circle" size={15} color="#00B894" />
+              <Ionicons name="checkmark-circle" size={15} color={theme.accentColor} />
             </View>
 
             <Text style={styles.specialtyText} numberOfLines={1}>
               {item.specialty} • {item.experienceYears || '10+'} yrs exp
             </Text>
 
-            <View style={styles.clinicLocationWrap}>
-              <Ionicons name="business-outline" size={12} color="#0D9488" />
+            <View style={[styles.clinicLocationWrap, { borderColor: theme.badgeBorder }]}>
+              <Ionicons name="business-outline" size={12} color={theme.accentColor} />
               <Text style={styles.clinicNameText} numberOfLines={1}>
                 {item.clinicName}
               </Text>
@@ -482,15 +558,15 @@ const DoctorListScreen = ({ navigation, route }) => {
 
             {/* Ratings & Slot Badges */}
             <View style={styles.metricsRow}>
-              <View style={styles.ratingChip}>
+              <View style={[styles.ratingChip, { borderColor: theme.badgeBorder }]}>
                 <Ionicons name="star" size={11} color="#FFA000" />
                 <Text style={styles.ratingChipText}>{item.rating}</Text>
                 <Text style={styles.reviewsCountText}>({item.reviewCount})</Text>
               </View>
 
-              <View style={styles.slotBadge}>
-                <Ionicons name="flash-outline" size={11} color="#0D9488" />
-                <Text style={styles.slotBadgeText}>{item.nextSlot}</Text>
+              <View style={[styles.slotBadge, { borderColor: theme.badgeBorder }]}>
+                <Ionicons name="flash-outline" size={11} color={theme.accentColor} />
+                <Text style={[styles.slotBadgeText, { color: theme.accentColor }]}>{item.nextSlot}</Text>
               </View>
             </View>
           </View>
@@ -498,14 +574,14 @@ const DoctorListScreen = ({ navigation, route }) => {
 
         {/* BOTTOM FOOTER: FEE & SIDE-BY-SIDE ACTIONS */}
         <View style={[styles.cardFooterRow, isDesktopWeb && styles.cardFooterRowDesktop]}>
-          <View style={styles.feeWrap}>
-            <Text style={styles.feeLabel}>Fee</Text>
-            <Text style={styles.feeAmount}>₹{item.fee}</Text>
+          <View style={[styles.feeWrap, { borderColor: theme.badgeBorder }]}>
+            <Text style={[styles.feeLabel, { color: theme.feeColor }]}>Fee</Text>
+            <Text style={[styles.feeAmount, { color: theme.feeColor }]}>₹{item.fee}</Text>
           </View>
 
           <View style={styles.cardActionsWrap}>
             <TouchableOpacity
-              style={styles.navigateButton}
+              style={[styles.navigateButton, { borderColor: theme.badgeBorder }]}
               activeOpacity={0.82}
               onPress={() => handleOpenDirectionsModal(item)}
             >
@@ -514,7 +590,10 @@ const DoctorListScreen = ({ navigation, route }) => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={styles.bookAppointmentButton}
+              style={[
+                styles.bookAppointmentButton,
+                { backgroundImage: theme.btnBg, backgroundColor: theme.accentColor },
+              ]}
               activeOpacity={0.88}
               onPress={() => setSelectedDoctorForBooking(item)}
             >
@@ -1075,6 +1154,8 @@ const DoctorListScreen = ({ navigation, route }) => {
               placeholderTextColor="#94A3B8"
               value={search}
               onChangeText={setSearch}
+              onSubmitEditing={handleSearchSubmit}
+              returnKeyType="search"
             />
             {search.length > 0 && (
               <TouchableOpacity onPress={() => setSearch('')} style={{ padding: 4, marginRight: 4 }}>
@@ -1102,6 +1183,7 @@ const DoctorListScreen = ({ navigation, route }) => {
               <TouchableOpacity
                 style={styles.consoleSearchActionBtn}
                 activeOpacity={0.85}
+                onPress={handleSearchSubmit}
               >
                 <Ionicons name="search" size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
                 <Text style={styles.consoleSearchActionBtnText}>Search</Text>
@@ -1204,9 +1286,9 @@ const DoctorListScreen = ({ navigation, route }) => {
             ) : (
               <>
                 <View style={styles.doctorsCardsList}>
-                  {paginatedDoctors.map((doc) => (
+                  {paginatedDoctors.map((doc, idx) => (
                     <View key={doc.id}>
-                      {renderDoctor({ item: doc })}
+                      {renderDoctor({ item: doc, index: idx })}
                     </View>
                   ))}
                 </View>
@@ -1859,15 +1941,28 @@ const DoctorListScreen = ({ navigation, route }) => {
         </View>
       </Modal>
 
-      {/* ==================================================
-          IN-CLINIC DOCTOR BOOKING MODAL (MATCHING POPUP DESIGN)
-      ================================================== */}
+      {/* In-Clinic Doctor Booking Modal */}
       <DoctorBookingModal
         visible={!!selectedDoctorForBooking}
         onClose={() => setSelectedDoctorForBooking(null)}
         doctor={selectedDoctorForBooking}
         consultationType="In-Person"
         navigation={navigation}
+      />
+
+      {/* Guest Lead-Generation Popup */}
+      <GuestLeadModal
+        visible={showLeadModal}
+        searchQuery={pendingSearchQuery}
+        selectedCity={userLocality || 'Mysore'}
+        onSuccess={() => {
+          setShowLeadModal(false);
+          Keyboard.dismiss();
+        }}
+        onClose={() => {
+          setShowLeadModal(false);
+          Keyboard.dismiss();
+        }}
       />
     </SafeAreaView>
   );
@@ -2168,14 +2263,16 @@ const styles = StyleSheet.create({
     gap: 16,
   },
   standaloneLocationCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#E6F8F3',
+    backgroundImage: 'linear-gradient(135deg, #ECFDF5 0%, #E0F7F0 100%)',
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
+    borderColor: '#86EFAC',
+    shadowColor: '#00B894',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
+    shadowOpacity: 0.08,
+    shadowRadius: 8,
+    boxShadow: '0 4px 14px rgba(0, 184, 148, 0.08)',
     elevation: 2,
     flexDirection: 'row',
     alignItems: 'center',
@@ -2190,14 +2287,16 @@ const styles = StyleSheet.create({
     paddingVertical: 7,
   },
   standaloneSearchCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0F9FF',
+    backgroundImage: 'linear-gradient(135deg, #F8FAFC 0%, #E0F2FE 100%)',
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
+    borderColor: '#93C5FD',
+    shadowColor: '#1E3A8A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
+    shadowOpacity: 0.06,
+    shadowRadius: 8,
+    boxShadow: '0 4px 14px rgba(2, 132, 199, 0.08)',
     elevation: 2,
     flexDirection: 'row',
     alignItems: 'center',
@@ -2573,16 +2672,18 @@ const styles = StyleSheet.create({
 
   // DESKTOP SIDEBAR CARD
   desktopSidebarCard: {
-    backgroundColor: '#FFFFFF',
+    backgroundColor: '#F0FDF9',
+    backgroundImage: 'linear-gradient(180deg, #F4FDF9 0%, #E8F9F3 50%, #EFF6FF 100%)',
     borderRadius: 16,
     padding: 18,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
+    borderWidth: 1.5,
+    borderColor: '#86EFAC',
+    shadowColor: '#1E3A8A',
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.06,
     shadowRadius: 14,
     elevation: 3,
+    boxShadow: '0 8px 28px -4px rgba(0, 184, 148, 0.10)',
   },
   sidebarHeader: {
     flexDirection: 'row',
@@ -2946,22 +3047,34 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
     paddingBottom: 110,
   },
+  cardGradientBarMulticolor: {
+    height: 4,
+    width: '100%',
+    backgroundImage: 'linear-gradient(90deg, #00B894 0%, #00C2CB 50%, #1E3A8A 100%)',
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    zIndex: 3,
+  },
   card: {
-    backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    padding: 12,
-    marginBottom: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
+    padding: 14,
+    paddingTop: 14,
+    marginBottom: 12,
+    borderWidth: 1.5,
+    position: 'relative',
+    overflow: 'hidden',
+    shadowColor: '#1E3A8A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.06,
+    shadowRadius: 12,
+    elevation: 3,
   },
   cardDesktop: {
     padding: 16,
-    marginBottom: 12,
+    paddingTop: 16,
+    marginBottom: 14,
   },
 
   // DOCTOR MAIN & AVATAR
@@ -3029,14 +3142,22 @@ const styles = StyleSheet.create({
   specialtyText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#64748B',
+    color: '#334155',
     marginTop: 1,
   },
   clinicLocationWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 3,
+    marginTop: 5,
     gap: 4,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 7,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    boxShadow: '0 2px 5px rgba(0, 0, 0, 0.04)',
+    alignSelf: 'flex-start',
   },
   clinicNameText: {
     fontSize: 11.5,
@@ -3047,27 +3168,28 @@ const styles = StyleSheet.create({
   distanceBadgeText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#94A3B8',
+    color: '#64748B',
   },
 
   // METRICS & BADGES
   metricsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 6,
-    gap: 6,
+    marginTop: 8,
+    gap: 8,
     flexWrap: 'wrap',
   },
   ratingChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFBEB',
-    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
     borderColor: '#FEF3C7',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 7,
+    gap: 4,
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
   },
   ratingChipText: {
     fontSize: 11,
@@ -3081,13 +3203,14 @@ const styles = StyleSheet.create({
   slotBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#F0FDFA',
-    borderWidth: 1,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
     borderColor: '#CCFBF1',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 6,
-    gap: 3,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 7,
+    gap: 4,
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
   },
   slotBadgeText: {
     fontSize: 10.5,
@@ -3100,27 +3223,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 10,
-    marginTop: 10,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  cardFooterRowDesktop: {
     paddingTop: 12,
     marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(15, 23, 42, 0.06)',
+  },
+  cardFooterRowDesktop: {
+    paddingTop: 14,
+    marginTop: 14,
   },
   feeWrap: {
-    flexDirection: 'column',
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 6,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1.5,
+    borderColor: '#CCFBF1',
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
   },
   feeLabel: {
     fontSize: 10,
-    color: '#94A3B8',
-    fontWeight: '600',
+    color: '#0D9488',
+    fontWeight: '700',
+    textTransform: 'uppercase',
   },
   feeAmount: {
     fontSize: 16,
     fontWeight: '900',
-    color: '#00B894',
+    color: '#0D9488',
   },
   cardActionsWrap: {
     flexDirection: 'row',
@@ -3131,13 +3264,14 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#EFF6FF',
-    borderWidth: 1,
-    borderColor: '#DBEAFE',
-    paddingHorizontal: 10,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: '#BFDBFE',
+    paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
     gap: 4,
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
   },
   navigateButtonText: {
     fontSize: 12,
@@ -3149,10 +3283,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#00B894',
-    paddingHorizontal: 12,
+    backgroundImage: 'linear-gradient(135deg, #00B894 0%, #009677 100%)',
+    paddingHorizontal: 14,
     paddingVertical: 7,
     borderRadius: 8,
     gap: 4,
+    boxShadow: '0 4px 12px rgba(0, 184, 148, 0.28)',
   },
   bookAppointmentButtonText: {
     fontSize: 12,

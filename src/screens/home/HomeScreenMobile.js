@@ -35,6 +35,8 @@ import colors from '../../theme/colors';
 import { useTheme } from '../../context/ThemeContext';
 import { useCart } from '../../context/CartContext';
 import { saveTransaction } from '../../services/transactionService';
+import GuestLeadModal from '../../components/common/GuestLeadModal';
+import { shouldShowGuestLeadPopup } from '../../services/guestLeadService';
 
 // Real Data Sources for Search
 import { doctors } from '../../data/doctors';
@@ -54,10 +56,10 @@ const SPECIALIZED_PROGRAMS = [
     pillText: 'ZERO HIDDEN COSTS',
     pillBg: '#EFF6FF',
     pillColor: '#1E3A8A',
-    title: 'Surgical Care & Hospitalization',
-    subtitle: 'NABH Accredited Hospitals • Free Second Opinion & Quotes',
+    title: 'Surgical Care',
+    subtitle: 'Accredited Hospitals • Free Quotes',
     priceText: 'Cashless TPA',
-    badgeText: 'Explore Surgeries',
+    badgeText: 'Explore',
     bgColor: '#F0F9FF',
     borderColor: '#BAE6FD',
     route: 'HospitalCare',
@@ -67,10 +69,10 @@ const SPECIALIZED_PROGRAMS = [
     pillText: 'FLAT 50% OFF',
     pillBg: '#E0F2FE',
     pillColor: '#0284C7',
-    title: 'Executive Health Checkup',
-    subtitle: '68 Vital Tests • Free Home Sample Pickup',
+    title: 'Health Checkup',
+    subtitle: '68 Vital Tests • Free Pickup',
     priceText: 'From ₹999*',
-    badgeText: 'Book Test',
+    badgeText: 'Book',
     bgColor: '#F0F9FF',
     borderColor: '#BAE6FD',
     route: 'LabTests',
@@ -80,10 +82,10 @@ const SPECIALIZED_PROGRAMS = [
     pillText: 'AYUSH CERTIFIED',
     pillBg: '#DCFCE7',
     pillColor: '#16A34A',
-    title: 'Ayurveda & Panchakarma',
-    subtitle: 'Nadi Pariksha, Shirodhara & Dosha Balancing',
+    title: 'Ayurveda Care',
+    subtitle: 'Certified Consultations & Therapies',
     priceText: 'From ₹400',
-    badgeText: 'Consult Vaidya',
+    badgeText: 'Consult',
     bgColor: '#F2FBF4',
     borderColor: '#BBF7D0',
     route: 'AyurvedaWellness',
@@ -93,10 +95,10 @@ const SPECIALIZED_PROGRAMS = [
     pillText: 'FREE SETUP IN 4H',
     pillBg: '#E0F7F4',
     pillColor: '#0F766E',
-    title: 'ICU Beds & Oxygen Rental',
-    subtitle: 'Electric Hospital Beds & 10L Concentrators',
+    title: 'Medical Equipment',
+    subtitle: 'Hospital Beds & Concentrators',
     priceText: 'From ₹80/day',
-    badgeText: 'Rent Equipment',
+    badgeText: 'Rent',
     bgColor: '#F0FDFB',
     borderColor: '#99F6E4',
     route: 'EquipmentRental',
@@ -163,7 +165,24 @@ const HomeScreen = ({ navigation, route }) => {
   const [selectedSearchCategory, setSelectedSearchCategory] = useState('All');
   const [searchDebounceQuery, setSearchDebounceQuery] = useState(route?.params?.searchQuery || '');
   const [isSearching, setIsSearching] = useState(false);
+  const [showLeadModal, setShowLeadModal] = useState(false);
+  const [pendingSearchQuery, setPendingSearchQuery] = useState('');
+  const [pendingAction, setPendingAction] = useState(null);
   const searchInputRef = useRef(null);
+
+  const handleSearchSubmit = async () => {
+    const q = searchQuery.trim() || 'All Services';
+    const shouldShow = await shouldShowGuestLeadPopup();
+    if (shouldShow) {
+      setPendingSearchQuery(q);
+      setPendingAction(() => () => {
+        Keyboard.dismiss();
+      });
+      setShowLeadModal(true);
+      return;
+    }
+    Keyboard.dismiss();
+  };
 
   const POPULAR_SEARCHES = [
     'CBC Test',
@@ -376,8 +395,8 @@ const HomeScreen = ({ navigation, route }) => {
           results.push({
             id: `rad-${scan.id}`,
             name: scan.name,
-            category: 'Scans & X-Ray',
-            subtitle: `Scans & X-Ray • ${scan.modality || scan.categoryName || 'Radiology'}`,
+            category: 'Scan & X-Ray',
+            subtitle: `Scan & X-Ray • ${scan.modality || scan.categoryName || 'Radiology'}`,
             badge: scan.price ? `₹${scan.price}` : (scan.mrp ? `₹${scan.mrp}` : ''),
             icon: 'scan-outline',
             iconType: 'ionicons',
@@ -895,9 +914,9 @@ const HomeScreen = ({ navigation, route }) => {
                 <Ionicons name="sparkles" size={11} color="#007D69" />
                 <Text style={styles.aiPillText}>AI ASSISTANT</Text>
               </View>
-              <Text style={styles.aiBannerTitle}>Ask MediUnify AI</Text>
+              <Text style={styles.aiBannerTitle}>MediUnify AI</Text>
               <Text style={styles.aiBannerSubtitle}>
-                Get instant answers to your symptoms, medications & medical reports.
+                Ask about symptoms, medicines & reports.
               </Text>
               <TouchableOpacity
                 style={styles.aiChatButton}
@@ -936,7 +955,14 @@ const HomeScreen = ({ navigation, route }) => {
                 <Ionicons name="arrow-back" size={20} color="#0F172A" />
               </TouchableOpacity>
             ) : (
-              <Ionicons name="search-outline" size={19} color="#64748B" />
+              <TouchableOpacity
+                onPress={handleSearchSubmit}
+                style={{ padding: 4 }}
+                activeOpacity={0.7}
+                accessibilityLabel="Submit Search"
+              >
+                <Ionicons name="search-outline" size={19} color="#007D69" />
+              </TouchableOpacity>
             )}
 
             <TextInput
@@ -953,6 +979,7 @@ const HomeScreen = ({ navigation, route }) => {
               }}
               onFocus={() => setIsSearchActive(true)}
               returnKeyType="search"
+              onSubmitEditing={handleSearchSubmit}
               autoCorrect={false}
               autoCapitalize="none"
               clearButtonMode="never"
@@ -969,6 +996,17 @@ const HomeScreen = ({ navigation, route }) => {
                 accessibilityLabel="Clear Search"
               >
                 <Ionicons name="close-circle" size={19} color="#94A3B8" />
+              </TouchableOpacity>
+            )}
+
+            {searchQuery.trim().length > 0 && (
+              <TouchableOpacity
+                onPress={handleSearchSubmit}
+                style={styles.mobileSearchBtn}
+                activeOpacity={0.8}
+                accessibilityLabel="Search"
+              >
+                <Text style={styles.mobileSearchBtnText}>Search</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -1010,8 +1048,17 @@ const HomeScreen = ({ navigation, route }) => {
                         key={idx}
                         style={styles.popularChip}
                         activeOpacity={0.75}
-                        onPress={() => {
+                        onPress={async () => {
                           setSearchQuery(chip);
+                          const shouldShow = await shouldShowGuestLeadPopup();
+                          if (shouldShow) {
+                            setPendingSearchQuery(chip);
+                            setPendingAction(() => () => {
+                              searchInputRef.current?.focus();
+                            });
+                            setShowLeadModal(true);
+                            return;
+                          }
                           searchInputRef.current?.focus();
                         }}
                       >
@@ -1090,7 +1137,16 @@ const HomeScreen = ({ navigation, route }) => {
                       key={item.id}
                       style={styles.searchResultRow}
                       activeOpacity={0.7}
-                      onPress={item.onPress}
+                      onPress={async () => {
+                        const shouldShow = await shouldShowGuestLeadPopup();
+                        if (shouldShow) {
+                          setPendingSearchQuery(item.name || searchQuery || 'Service');
+                          setPendingAction(() => item.onPress);
+                          setShowLeadModal(true);
+                          return;
+                        }
+                        item.onPress();
+                      }}
                     >
                       <View style={[styles.resultIconBox, { backgroundColor: item.iconBg }]}>
                         {item.iconType === 'material' ? (
@@ -1317,17 +1373,17 @@ const HomeScreen = ({ navigation, route }) => {
               </Text>
             </TouchableOpacity>
 
-            {/* Tile 3: Scans & X-Ray */}
+            {/* Tile 3: Scan & X-Ray */}
             <TouchableOpacity
               style={[styles.billTile, isTablet && styles.billTileTablet]}
               activeOpacity={0.82}
-              onPress={() => navigation.navigate('RadiologyLabs')}
+              onPress={() => navigation.navigate('RadiologyLabs', { city: selectedCity })}
             >
               <View style={styles.billTileIconBox}>
                 <Ionicons name="scan-outline" size={25} color="#007D69" />
               </View>
               <Text style={[styles.billTileText, isIndic && { fontSize: 11, lineHeight: 15 }]}>
-                {t('card_scans_xray', 'Scans & X-Ray')}
+                {t('card_scans_xray', 'Scan & X-Ray')}
               </Text>
             </TouchableOpacity>
 
@@ -1413,7 +1469,7 @@ const HomeScreen = ({ navigation, route }) => {
         ============================================================ */}
         <View style={styles.programsSection}>
           <View style={styles.programsHeaderRow}>
-            <Text style={styles.programsTitle}>{t('specialized_care_programs', 'Specialized Care & Programs')}</Text>
+            <Text style={styles.programsTitle}>{t('specialized_care_programs', 'Featured Care')}</Text>
           </View>
 
           <FlatList
@@ -1605,29 +1661,6 @@ const HomeScreen = ({ navigation, route }) => {
               Verified clinics, labs & home delivery available across Karnataka
             </Text>
 
-            {/* USE PHONE GPS BUTTON */}
-            <TouchableOpacity
-              style={styles.cityGpsOption}
-              onPress={handleDetectGPSLocation}
-              disabled={loadingLocation}
-              activeOpacity={0.8}
-            >
-              {loadingLocation ? (
-                <ActivityIndicator size="small" color="#007D69" style={{ marginRight: 6 }} />
-              ) : (
-                <Ionicons name="navigate-circle" size={20} color="#007D69" style={{ marginRight: 6 }} />
-              )}
-              <Text style={styles.cityGpsOptionText}>
-                {loadingLocation ? 'Detecting GPS Location...' : 'Use Current Location (Phone GPS)'}
-              </Text>
-            </TouchableOpacity>
-
-            <View style={{ flexDirection: 'row', alignItems: 'center', marginVertical: 10 }}>
-              <View style={{ flex: 1, height: 1, backgroundColor: '#F1F5F9' }} />
-              <Text style={{ marginHorizontal: 8, fontSize: 10, fontWeight: '700', color: '#94A3B8', letterSpacing: 0.5 }}>OR SELECT CITY</Text>
-              <View style={{ flex: 1, height: 1, backgroundColor: '#F1F5F9' }} />
-            </View>
-
             <View style={styles.cityList}>
               {CITIES.map((city) => {
                 const isSelected = selectedCity === city || locationName === city;
@@ -1736,6 +1769,32 @@ const HomeScreen = ({ navigation, route }) => {
         </View>
       </Modal>
 
+      {/* Guest Lead-Generation Popup */}
+      <GuestLeadModal
+        visible={showLeadModal}
+        searchQuery={pendingSearchQuery}
+        selectedCity={selectedCity}
+        onSuccess={() => {
+          setShowLeadModal(false);
+          if (pendingAction) {
+            const act = pendingAction;
+            setPendingAction(null);
+            act();
+          } else {
+            Keyboard.dismiss();
+          }
+        }}
+        onClose={() => {
+          setShowLeadModal(false);
+          if (pendingAction) {
+            const act = pendingAction;
+            setPendingAction(null);
+            act();
+          } else {
+            Keyboard.dismiss();
+          }
+        }}
+      />
     </SafeAreaView>
   );
 };
@@ -2017,6 +2076,20 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
+  },
+  mobileSearchBtn: {
+    backgroundColor: '#007D69',
+    borderRadius: 8,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    justifyContent: 'center',
+    alignItems: 'center',
+    flexShrink: 0,
+  },
+  mobileSearchBtnText: {
+    color: '#FFFFFF',
+    fontSize: 12,
+    fontWeight: '700',
   },
   searchPlaceholder: {
     flex: 1,
