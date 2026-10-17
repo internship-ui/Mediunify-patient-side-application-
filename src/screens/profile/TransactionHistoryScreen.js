@@ -763,7 +763,7 @@ const TransactionHistoryScreen = ({ navigation }) => {
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[S.listContent, S.listContentTablet]}>
           <View style={Platform.OS === 'web' ? S.webInnerContainer : null}>
             {sections.length === 0
-              ? <EmptyState onExplore={() => navigation.goBack()} isRefund={selectedTab === 'refund'} t={t} />
+              ? <EmptyState onExplore={() => navigation.goBack()} isRefund={selectedTab === 'refund'} t={t} S={S} />
               : sections.map((sec) => (
                   <View key={sec.title}>
                     {renderSectionHeader({ section: sec })}
@@ -785,7 +785,7 @@ const TransactionHistoryScreen = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={S.listContent}
           stickySectionHeadersEnabled={false}
-          ListEmptyComponent={<EmptyState onExplore={() => navigation.goBack()} isRefund={selectedTab === 'refund'} t={t} />}
+          ListEmptyComponent={<EmptyState onExplore={() => navigation.goBack()} isRefund={selectedTab === 'refund'} t={t} S={S} />}
           ListFooterComponent={Platform.OS === 'web' ? <WebFooter navigation={navigation} /> : null}
         />
       )}
@@ -837,12 +837,12 @@ const TransactionHistoryScreen = ({ navigation }) => {
 
                 {/* Info rows */}
                 <View style={S.infoBox}>
-                  <InfoRow label={t('Date')}           value={selectedTxn.date} />
-                  <InfoRow label={t('Transaction ID')} value={selectedTxn.id} mono />
-                  <InfoRow label={t('Payment Mode')}   value={selectedTxn.paymentMode} />
-                  <InfoRow label={t('Facility')}       value={selectedTxn.facility} />
+                  <InfoRow label={t('Date')}           value={selectedTxn.date} S={S} />
+                  <InfoRow label={t('Transaction ID')} value={selectedTxn.id} mono S={S} />
+                  <InfoRow label={t('Payment Mode')}   value={selectedTxn.paymentMode} S={S} />
+                  <InfoRow label={t('Facility')}       value={selectedTxn.facility} S={S} />
                   {selectedTxn.mrp > selectedTxn.amount && !selectedTxn.status?.toLowerCase().includes('refund') && (
-                    <InfoRow label={t('You saved')} value={`₹${(selectedTxn.mrp - selectedTxn.amount).toLocaleString('en-IN')}`} green />
+                    <InfoRow label={t('You saved')} value={`₹${(selectedTxn.mrp - selectedTxn.amount).toLocaleString('en-IN')}`} green S={S} />
                   )}
                 </View>
 
@@ -898,32 +898,38 @@ const TransactionHistoryScreen = ({ navigation }) => {
 // ─────────────────────────────────────────────
 // INFO ROW
 // ─────────────────────────────────────────────
-const InfoRow = ({ label, value, mono, green }) => (
-  <View style={S.infoRow}>
-    <Text style={S.infoLabel}>{label}</Text>
-    <Text
-      style={[S.infoValue, mono && S.infoMono, green && { color: '#059669' }]}
-      numberOfLines={2}
-    >
-      {value}
-    </Text>
-  </View>
-);
+const InfoRow = ({ label, value, mono, green, S: propS }) => {
+  const S = propS || useThemedStyles(baseStyles);
+  return (
+    <View style={S.infoRow}>
+      <Text style={S.infoLabel}>{label}</Text>
+      <Text
+        style={[S.infoValue, mono && S.infoMono, green && { color: '#059669' }]}
+        numberOfLines={2}
+      >
+        {value}
+      </Text>
+    </View>
+  );
+};
 
 // ─────────────────────────────────────────────
 // EMPTY STATE
 // ─────────────────────────────────────────────
-const EmptyState = ({ onExplore, isRefund, t = (k) => k }) => (
-  <View style={S.empty}>
-    <Ionicons name={isRefund ? 'arrow-undo-outline' : 'receipt-outline'} size={46} color="#CBD5E1" />
-    <Text style={S.emptyTitle}>
-      {isRefund ? t('No refund records found') : t('No transactions yet')}
-    </Text>
-    <TouchableOpacity style={S.exploreBtn} onPress={onExplore} activeOpacity={0.85}>
-      <Text style={S.exploreBtnText}>{t('Explore Healthcare Services')}</Text>
-    </TouchableOpacity>
-  </View>
-);
+const EmptyState = ({ onExplore, isRefund, t = (k) => k, S: propS }) => {
+  const S = propS || useThemedStyles(baseStyles);
+  return (
+    <View style={S.empty}>
+      <Ionicons name={isRefund ? 'arrow-undo-outline' : 'receipt-outline'} size={46} color="#CBD5E1" />
+      <Text style={S.emptyTitle}>
+        {isRefund ? t('No refund records found') : t('No transactions yet')}
+      </Text>
+      <TouchableOpacity style={S.exploreBtn} onPress={onExplore} activeOpacity={0.85}>
+        <Text style={S.exploreBtnText}>{t('Explore Healthcare Services')}</Text>
+      </TouchableOpacity>
+    </View>
+  );
+};
 
 export default TransactionHistoryScreen;
 

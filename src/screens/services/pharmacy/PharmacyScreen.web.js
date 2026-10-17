@@ -23,6 +23,7 @@ import {
   normalizePharmacyCity,
 } from '../../../data/pharmacyStores';
 import WebFooter from '../../../components/web/WebFooter';
+import WebBackButton from '../../../components/web/WebBackButton';
 import { useTheme } from '../../../context/ThemeContext';
 import { useThemedStyles } from '../../../utils/themeStyles';
 import OptimizedImage from '../../../components/common/OptimizedImage';

@@ -28,6 +28,7 @@ import { isGuestUser, promptLoginRequired } from '../../../utils/authHelper';
 import { isDesktopLayout } from '../../../utils/responsiveLayoutHelper';
 import { useTheme } from '../../../context/ThemeContext';
 import { useThemedStyles } from '../../../utils/themeStyles';
+import WebFooter from '../../../components/web/WebFooter';
 
 const VideoBookingScreen = ({ route, navigation }) => {
   const { isDarkMode, theme, t, isIndic } = useTheme();

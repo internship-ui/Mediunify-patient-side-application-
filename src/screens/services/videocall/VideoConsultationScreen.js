@@ -84,6 +84,7 @@ const DoctorCardItem = ({
   onSelectDoctor,
   onBook,
 }) => {
+  const styles = useThemedStyles(baseStyles);
   const [isHovered, setIsHovered] = useState(false);
 
   return (
