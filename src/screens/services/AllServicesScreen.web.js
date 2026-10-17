@@ -13,7 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext';
-import AllServicesScreenMobile from './AllServicesScreenMobile';
+import AllServicesScreenMobile from './AllServicesScreen.js';
 import WebBackButton from '../../components/web/WebBackButton';
 import { isDesktopLayout } from '../../utils/responsiveLayoutHelper';
 
@@ -198,7 +198,7 @@ const ALL_SERVICES = [
 // ─────────────────────────────────────────────────
 const AllServicesScreenWeb = ({ navigation, route }) => {
   const { width } = useWindowDimensions();
-  const { t, language } = useTheme();
+  const { t, language, isDarkMode, theme } = useTheme();
 
   const isDesktop = width >= 992;
 
@@ -275,9 +275,9 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
       : { width: 'calc(50% - 8px)' };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, isDarkMode && { backgroundColor: theme.background }]}>
       {/* ─── PAGE HEADER ─── */}
-      <View style={styles.pageHeader}>
+      <View style={[styles.pageHeader, isDarkMode && { backgroundColor: theme.headerBg, borderBottomColor: theme.border }]}>
         <View style={[styles.pageHeaderInner, { maxWidth: maxContentWidth }]}>
           <WebBackButton
             onPress={() => navigation.goBack()}
@@ -285,19 +285,19 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
           />
 
           <View style={styles.headerTitleBlock}>
-            <Text style={styles.pageTitle}>{t('all_services', 'All Services')}</Text>
-            <View style={styles.locationRow}>
-              <Ionicons name="location" size={13} color={PALETTE.tealDark} />
-              <Text style={styles.locationText}>{activeCity}</Text>
+            <Text style={[styles.pageTitle, isDarkMode && { color: theme.text }]}>{t('all_services', 'All Services')}</Text>
+            <View style={[styles.locationRow, isDarkMode && { backgroundColor: theme.card, borderColor: theme.border, borderWidth: 1, paddingHorizontal: 8, paddingVertical: 2, borderRadius: 12 }]}>
+              <Ionicons name="location" size={13} color="#00B894" />
+              <Text style={[styles.locationText, isDarkMode && { color: theme.textSecondary }]}>{activeCity}</Text>
             </View>
           </View>
 
-          <View style={styles.searchBar}>
-            <Ionicons name="search" size={17} color={PALETTE.slate} style={{ marginRight: 8 }} />
+          <View style={[styles.searchBar, isDarkMode && { backgroundColor: theme.card, borderColor: theme.border }]}>
+            <Ionicons name="search" size={17} color={isDarkMode ? '#94A3B8' : PALETTE.slate} style={{ marginRight: 8 }} />
             <TextInput
-              style={styles.searchInput}
+              style={[styles.searchInput, isDarkMode && { color: theme.text }]}
               placeholder={t('search_services', 'Search all services...')}
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={isDarkMode ? theme.inputPlaceholder : "#94A3B8"}
               value={searchQuery}
               onChangeText={setSearchQuery}
               autoCapitalize="none"
@@ -308,7 +308,7 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
                 onPress={() => setSearchQuery('')}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
               >
-                <Ionicons name="close-circle" size={17} color="#94A3B8" />
+                <Ionicons name="close-circle" size={17} color={isDarkMode ? '#94A3B8' : "#94A3B8"} />
               </TouchableOpacity>
             )}
           </View>
@@ -373,7 +373,12 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
               {filteredServices.map((service) => (
                 <TouchableOpacity
                   key={service.id}
-                  style={[styles.serviceCard, isDesktop ? styles.serviceCardDesktop : styles.serviceCardTablet, cardWidthStyle]}
+                  style={[
+                    styles.serviceCard,
+                    isDesktop ? styles.serviceCardDesktop : styles.serviceCardTablet,
+                    cardWidthStyle,
+                    isDarkMode && { backgroundColor: theme.card, borderColor: theme.border },
+                  ]}
                   // @ts-ignore
                   className="svc-card-web"
                   onPress={() => handleServicePress(service)}
@@ -383,7 +388,7 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
                 >
                   {/* Card Header */}
                   <View style={styles.cardHeader}>
-                    <View style={[styles.iconBox, { backgroundColor: service.iconBg }]}>
+                    <View style={[styles.iconBox, { backgroundColor: isDarkMode ? '#162032' : service.iconBg }]}>
                       {service.iconFamily === 'MaterialCommunityIcons' ? (
                         <MaterialCommunityIcons
                           name={service.icon}
@@ -402,8 +407,8 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
                       style={[
                         styles.serviceBadge,
                         {
-                          borderColor: service.accentColor + '33',
-                          backgroundColor: service.iconBg,
+                          borderColor: isDarkMode ? '#334155' : service.accentColor + '33',
+                          backgroundColor: isDarkMode ? '#162032' : service.iconBg,
                         },
                       ]}
                     >
@@ -415,8 +420,8 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
 
                   {/* Card Body */}
                   <View style={styles.cardContent}>
-                    <Text style={styles.cardTitle}>{t(service.title, service.title)}</Text>
-                    <Text style={styles.cardSubtitle} numberOfLines={2}>
+                    <Text style={[styles.cardTitle, isDarkMode && { color: theme.text }]}>{t(service.title, service.title)}</Text>
+                    <Text style={[styles.cardSubtitle, isDarkMode && { color: theme.textSecondary }]} numberOfLines={2}>
                       {t(service.subtitle, service.subtitle)}
                     </Text>
                   </View>
@@ -427,8 +432,8 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
                       style={[
                         styles.bookBtn,
                         {
-                          backgroundColor: service.iconBg,
-                          borderColor: service.accentColor + '33',
+                          backgroundColor: isDarkMode ? '#162032' : service.iconBg,
+                          borderColor: isDarkMode ? '#334155' : service.accentColor + '33',
                         },
                       ]}
                     >

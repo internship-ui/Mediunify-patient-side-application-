@@ -1,90 +1,103 @@
+/**
+ * dataSyncService.js
+ *
+ * MediUnify Patient Data Synchronization Service
+ * 
+ * Note: Legacy mock server (syncServer.js / database.json) has been decoupled.
+ * This service operates reliably on local storage (AsyncStorage) with zero network
+ * timeouts, ready to be wired up to your upcoming Node.js + MongoDB/PostgreSQL backend.
+ */
+
 import { Platform } from 'react-native';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import Constants from 'expo-constants';
 import { saveTransaction } from './transactionService';
 
-const DEFAULT_PORT = 5000;
-const CURRENT_LAN_IP = '192.168.29.61';
-
-let cachedWorkingUrl = null;
+// Target backend URL configuration (to be configured when the new Node.js backend is active)
+export const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || null;
 
 /**
- * Generates priority candidate URLs based on runtime platform and network context
+ * Returns the configured backend URL if available
  */
+export const getBackendUrl = () => API_BASE_URL;
+
 export const getCandidateUrls = () => {
-  const candidates = [];
-
-  if (cachedWorkingUrl) {
-    candidates.push(cachedWorkingUrl);
-  }
-
-  if (Platform.OS === 'web') {
-    if (typeof window !== 'undefined' && window.location?.hostname) {
-      candidates.push(`http://${window.location.hostname}:${DEFAULT_PORT}`);
-    }
-    candidates.push(`http://localhost:${DEFAULT_PORT}`);
-    candidates.push(`http://127.0.0.1:${DEFAULT_PORT}`);
-    candidates.push(`http://${CURRENT_LAN_IP}:${DEFAULT_PORT}`);
-  } else {
-    // On Mobile (Expo Go / physical device), extract Metro bundler host IP
-    const hostUri =
-      Constants.expoConfig?.hostUri ||
-      Constants.manifest?.debuggerHost ||
-      Constants.manifest2?.extra?.expoGo?.debuggerHost;
-
-    if (hostUri) {
-      const ip = hostUri.split(':')[0];
-      if (ip) {
-        candidates.push(`http://${ip}:${DEFAULT_PORT}`);
-      }
-    }
-    candidates.push(`http://${CURRENT_LAN_IP}:${DEFAULT_PORT}`);
-    candidates.push(`http://10.0.2.2:${DEFAULT_PORT}`); // Android emulator loopback
-    candidates.push(`http://localhost:${DEFAULT_PORT}`);
-  }
-
-  return Array.from(new Set(candidates));
-};
-
-export const getBackendUrl = () => {
-  return getCandidateUrls()[0] || `http://localhost:${DEFAULT_PORT}`;
+  return API_BASE_URL ? [API_BASE_URL] : [];
 };
 
 /**
- * Low-level HTTP helper with automatic multi-host candidate failover
+ * Pre-seeded accounts for instant local authentication
  */
-const apiRequest = async (endpoint, options = {}, timeoutMs = 2500) => {
-  const candidates = getCandidateUrls();
-  let lastError = null;
-
-  for (const baseUrl of candidates) {
-    const url = `${baseUrl}${endpoint}`;
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => controller.abort(), timeoutMs);
-
-    try {
-      const response = await fetch(url, {
-        ...options,
-        headers: {
-          'Content-Type': 'application/json',
-          ...(options.headers || {}),
-        },
-        signal: controller.signal,
-      });
-      clearTimeout(timeoutId);
-
-      cachedWorkingUrl = baseUrl;
-      const data = await response.json().catch(() => ({}));
-      return { ok: response.ok, status: response.status, data };
-    } catch (err) {
-      clearTimeout(timeoutId);
-      lastError = err.message;
-      // Continue to next candidate
-    }
-  }
-
-  console.log(`[DataSync] All candidate endpoints failed for ${endpoint}:`, lastError);
-  return { ok: false, error: lastError || 'Connection failed' };
+const PRE_SEEDED_CREDENTIALS = {
+  'user@mediunify.com': {
+    password: 'password123',
+    userData: {
+      id: 'PAT-1002',
+      name: 'Demo Patient',
+      email: 'user@mediunify.com',
+      phone: '+91 98765 43210',
+      gender: 'Male',
+      bloodGroup: 'O+ Positive',
+      age: '29 Yrs',
+      city: 'Mysore',
+      walletBalance: 1250,
+      walletTransactions: [
+        { id: 'TXN-001', title: 'Welcome Bonus', type: 'credit', amount: 1000, date: '2026-10-01', status: 'Success' },
+        { id: 'TXN-002', title: 'Cashback', type: 'credit', amount: 250, date: '2026-10-05', status: 'Success' },
+      ],
+      familyMembers: [
+        { id: 'self', name: 'Demo Patient (Self)', displayName: 'Demo', relation: 'Self', age: '29 Yrs', gender: 'Male', bloodGroup: 'O+', allergies: 'None', conditions: 'None', icon: 'person', themeColor: '#00B894', bgLight: '#E6F8F4', isPrimary: true },
+      ],
+    },
+  },
+  '9876543210': {
+    password: 'password123',
+    userData: {
+      id: 'PAT-1002',
+      name: 'Demo Patient',
+      email: 'user@mediunify.com',
+      phone: '+91 98765 43210',
+      gender: 'Male',
+      bloodGroup: 'O+ Positive',
+      age: '29 Yrs',
+      city: 'Mysore',
+      walletBalance: 1250,
+      walletTransactions: [
+        { id: 'TXN-001', title: 'Welcome Bonus', type: 'credit', amount: 1000, date: '2026-10-01', status: 'Success' },
+        { id: 'TXN-002', title: 'Cashback', type: 'credit', amount: 250, date: '2026-10-05', status: 'Success' },
+      ],
+      familyMembers: [
+        { id: 'self', name: 'Demo Patient (Self)', displayName: 'Demo', relation: 'Self', age: '29 Yrs', gender: 'Male', bloodGroup: 'O+', allergies: 'None', conditions: 'None', icon: 'person', themeColor: '#00B894', bgLight: '#E6F8F4', isPrimary: true },
+      ],
+    },
+  },
+  'admin@unnathi.com': {
+    password: 'password123',
+    userData: {
+      id: 'PAT-1001',
+      name: 'Dr. Unnathi Admin',
+      email: 'admin@unnathi.com',
+      phone: '+91 98450 12345',
+      gender: 'Female',
+      bloodGroup: 'A+ Positive',
+      age: '34 Yrs',
+      city: 'Mysore',
+      walletBalance: 2500,
+    },
+  },
+  '9845012345': {
+    password: 'password123',
+    userData: {
+      id: 'PAT-1001',
+      name: 'Dr. Unnathi Admin',
+      email: 'admin@unnathi.com',
+      phone: '+91 98450 12345',
+      gender: 'Female',
+      bloodGroup: 'A+ Positive',
+      age: '34 Yrs',
+      city: 'Mysore',
+      walletBalance: 2500,
+    },
+  },
 };
 
 /**
@@ -95,7 +108,7 @@ export const saveUserToLocalStorage = async (user) => {
 
   try {
     const primaryData = {
-      id: user.id,
+      id: user.id || `PAT-${Date.now().toString().slice(-4)}`,
       name: user.name,
       email: user.email,
       phone: user.phone,
@@ -112,7 +125,10 @@ export const saveUserToLocalStorage = async (user) => {
     await AsyncStorage.setItem('user', JSON.stringify(primaryData));
     if (user.name) await AsyncStorage.setItem('userName', user.name);
     if (user.email) await AsyncStorage.setItem('userEmail', user.email);
-    if (user.phone) await AsyncStorage.setItem('userPhone', user.phone);
+    if (user.phone) {
+      await AsyncStorage.setItem('userPhone', user.phone);
+      await AsyncStorage.setItem('@unnathi_user_phone', user.phone);
+    }
     if (user.id) await AsyncStorage.setItem('userId', user.id);
 
     // 2. Wallet
@@ -125,7 +141,6 @@ export const saveUserToLocalStorage = async (user) => {
 
     // 3. Appointments & Bookings
     if (user.appointments && Array.isArray(user.appointments)) {
-      // Merge with existing local appointments so any locally created bookings are preserved
       let localAppts = [];
       try {
         const localApptStr = await AsyncStorage.getItem('@unnathi_appointments');
@@ -133,11 +148,9 @@ export const saveUserToLocalStorage = async (user) => {
       } catch (e) {}
 
       const apptMap = new Map();
-      // Server appointments first
       user.appointments.forEach((a) => {
         if (a && a.id) apptMap.set(a.id, a);
       });
-      // Keep any local bookings not yet synced to server
       localAppts.forEach((a) => {
         if (a && a.id && !apptMap.has(a.id)) {
           apptMap.set(a.id, a);
@@ -145,64 +158,69 @@ export const saveUserToLocalStorage = async (user) => {
       });
       const consolidatedAppts = Array.from(apptMap.values());
 
-      // 3a. Video Consultations (Online Consultant)
-      const vidAppts = consolidatedAppts.filter((a) =>
-        a.serviceType === 'video' ||
-        a.type === 'Video Consultation' ||
-        a.type === 'Video' ||
-        a.type === 'TeleConsultation' ||
-        Boolean(a.videoRoomLink) ||
-        (typeof a.type === 'string' && a.type.toLowerCase().includes('video'))
-      );
-      if (vidAppts.length > 0) {
-        await AsyncStorage.setItem('@videoBookings', JSON.stringify(vidAppts));
-        await AsyncStorage.setItem('@mediunify_patient_online_consultations', JSON.stringify(vidAppts));
-      }
-
-      // 3b. Physical Clinic / Hospital Appointments (My Appointments)
-      const physAppts = consolidatedAppts.filter((a) =>
-        !(
+      // Video Consultations
+      const vidAppts = consolidatedAppts.filter(
+        (a) =>
           a.serviceType === 'video' ||
           a.type === 'Video Consultation' ||
           a.type === 'Video' ||
           a.type === 'TeleConsultation' ||
           Boolean(a.videoRoomLink) ||
           (typeof a.type === 'string' && a.type.toLowerCase().includes('video'))
-        )
+      );
+      if (vidAppts.length > 0) {
+        await AsyncStorage.setItem('@videoBookings', JSON.stringify(vidAppts));
+        await AsyncStorage.setItem('@mediunify_patient_online_consultations', JSON.stringify(vidAppts));
+      }
+
+      // Physical Clinic Appointments
+      const physAppts = consolidatedAppts.filter(
+        (a) =>
+          !(
+            a.serviceType === 'video' ||
+            a.type === 'Video Consultation' ||
+            a.type === 'Video' ||
+            a.type === 'TeleConsultation' ||
+            Boolean(a.videoRoomLink) ||
+            (typeof a.type === 'string' && a.type.toLowerCase().includes('video'))
+          )
       );
       await AsyncStorage.setItem('@unnathi_appointments', JSON.stringify(physAppts));
       await AsyncStorage.setItem('@mediunify_patient_physical_appointments', JSON.stringify(physAppts));
 
-      // 3b. Diagnostic Lab Tests
-      const labAppts = consolidatedAppts.filter((a) =>
-        a.serviceType === 'lab' ||
-        a.type === 'Lab Test' ||
-        a.type === 'Diagnostic Lab Test' ||
-        a.type === 'Lab' ||
-        (Array.isArray(a.tests) && a.tests.length > 0 && a.type !== 'Radiology')
+      // Lab Tests
+      const labAppts = consolidatedAppts.filter(
+        (a) =>
+          a.serviceType === 'lab' ||
+          a.type === 'Lab Test' ||
+          a.type === 'Diagnostic Lab Test' ||
+          a.type === 'Lab' ||
+          (Array.isArray(a.tests) && a.tests.length > 0 && a.type !== 'Radiology')
       );
       if (labAppts.length > 0) {
         await AsyncStorage.setItem('@labBookings', JSON.stringify(labAppts));
       }
 
-      // 3c. Radiology Scans
-      const radAppts = consolidatedAppts.filter((a) =>
-        a.serviceType === 'radiology' ||
-        a.type === 'Radiology' ||
-        a.type === 'Radiology Scan' ||
-        a.bookingType === 'Radiology'
+      // Radiology Scans
+      const radAppts = consolidatedAppts.filter(
+        (a) =>
+          a.serviceType === 'radiology' ||
+          a.type === 'Radiology' ||
+          a.type === 'Radiology Scan' ||
+          a.bookingType === 'Radiology'
       );
       if (radAppts.length > 0) {
         await AsyncStorage.setItem('@radiologyBookings', JSON.stringify(radAppts));
       }
 
-      // 3d. Home Nurse Care
-      const nurseAppts = consolidatedAppts.filter((a) =>
-        a.serviceType === 'nurse' ||
-        a.type === 'Home Nurse Care' ||
-        a.type === 'Nurse' ||
-        a.assignedNurse !== undefined ||
-        (typeof a.serviceName === 'string' && a.serviceName.includes('Staff'))
+      // Home Nurse Care
+      const nurseAppts = consolidatedAppts.filter(
+        (a) =>
+          a.serviceType === 'nurse' ||
+          a.type === 'Home Nurse Care' ||
+          a.type === 'Nurse' ||
+          a.assignedNurse !== undefined ||
+          (typeof a.serviceName === 'string' && a.serviceName.includes('Staff'))
       );
       if (nurseAppts.length > 0) {
         await AsyncStorage.setItem('@unnathi_nurse_bookings', JSON.stringify(nurseAppts));
@@ -226,7 +244,7 @@ export const saveUserToLocalStorage = async (user) => {
       await AsyncStorage.setItem('@unnathi_prescriptions', JSON.stringify(user.prescriptions));
     }
 
-    // 6. Cache credential locally for offline fallback
+    // 6. Save credentials locally
     if (user.phone || user.email) {
       const regCredsStr = await AsyncStorage.getItem('@unnathi_registered_credentials');
       let registeredCreds = {};
@@ -247,201 +265,100 @@ export const saveUserToLocalStorage = async (user) => {
 
       await AsyncStorage.setItem('@unnathi_registered_credentials', JSON.stringify(registeredCreds));
     }
-
-    console.log('[DataSync] Successfully saved synced user data to AsyncStorage');
   } catch (err) {
-    console.error('[DataSync] Error saving user to AsyncStorage:', err);
+    console.warn('[DataSync] Error saving user to AsyncStorage:', err);
   }
 };
 
 /**
- * Login via Central Data Server
+ * Authenticates against local credential stores
  */
 export const syncLogin = async (identifier, password) => {
-  const res = await apiRequest('/api/auth/login', {
-    method: 'POST',
-    body: JSON.stringify({ identifier, password }),
-  });
+  try {
+    const inputVal = (identifier || '').trim();
+    const cleanPhone = inputVal.replace(/[^0-9]/g, '');
+    const cleanPhone10 = cleanPhone.length >= 10 ? cleanPhone.slice(-10) : cleanPhone;
+    const lowerEmail = inputVal.toLowerCase();
 
-  if (res.ok && res.data && res.data.success && res.data.user) {
-    await saveUserToLocalStorage(res.data.user);
-    return { success: true, user: res.data.user, source: 'server' };
+    // Check registered credentials
+    const regCredsStr = await AsyncStorage.getItem('@unnathi_registered_credentials');
+    let registeredCreds = {};
+    if (regCredsStr) {
+      try {
+        registeredCreds = JSON.parse(regCredsStr);
+      } catch (e) {}
+    }
+
+    const allCreds = { ...PRE_SEEDED_CREDENTIALS, ...registeredCreds };
+    const matchingCred = allCreds[lowerEmail] || (cleanPhone10.length === 10 ? allCreds[cleanPhone10] : null);
+
+    if (matchingCred) {
+      if (matchingCred.password && matchingCred.password !== password) {
+        return { success: false, status: 401, message: 'Incorrect password' };
+      }
+      const user = matchingCred.userData || {
+        name: lowerEmail.includes('@') ? lowerEmail.split('@')[0] : `Patient ${cleanPhone10.slice(-4)}`,
+        email: lowerEmail.includes('@') ? lowerEmail : 'patient@mediunify.com',
+        phone: cleanPhone10.length === 10 ? `+91 ${cleanPhone10}` : '+91 98765 43210',
+      };
+      await saveUserToLocalStorage(user);
+      return { success: true, user, source: 'local' };
+    }
+
+    return { success: false, status: 404, message: 'Account not found. Please register.' };
+  } catch (err) {
+    return { success: false, message: err.message };
   }
-
-  return {
-    success: false,
-    message: res.data?.message || res.error || 'Server login failed',
-    status: res.status,
-  };
 };
 
 /**
- * Register via Central Data Server
+ * Registers user into local storage
  */
 export const syncRegister = async (userData, password) => {
-  const res = await apiRequest('/api/auth/register', {
-    method: 'POST',
-    body: JSON.stringify({ ...userData, password }),
-  });
+  try {
+    if (!userData) return { success: false, message: 'No user data provided' };
 
-  if (res.ok && res.data && res.data.success && res.data.user) {
-    await saveUserToLocalStorage(res.data.user);
-    return { success: true, user: res.data.user, source: 'server' };
+    await saveUserToLocalStorage({ ...userData, password });
+    return { success: true, user: userData, source: 'local' };
+  } catch (err) {
+    return { success: false, message: err.message };
   }
-
-  return {
-    success: false,
-    message: res.data?.message || res.error || 'Server registration failed',
-  };
 };
 
 /**
- * Pull latest user data from Central Data Server
+ * Pull latest user data from local storage
  */
 export const pullUserData = async (userId) => {
-  if (!userId) return null;
-
-  const res = await apiRequest(`/api/user/${encodeURIComponent(userId)}`, {
-    method: 'GET',
-  });
-
-  if (res.ok && res.data && res.data.success && res.data.user) {
-    await saveUserToLocalStorage(res.data.user);
-    return res.data.user;
+  try {
+    const userStr = await AsyncStorage.getItem('@unnathi_primary_user');
+    if (userStr) {
+      return JSON.parse(userStr);
+    }
+    return null;
+  } catch {
+    return null;
   }
-  return null;
 };
 
 /**
- * Bidirectional sync: sends local updates and receives the consolidated server state
+ * Synchronize local user state across stores
  */
 export const syncActiveUser = async () => {
   try {
     const userStr = await AsyncStorage.getItem('@unnathi_primary_user');
     if (!userStr) return null;
-
-    const user = JSON.parse(userStr);
-    const userId = user.phone || user.email || user.id;
-    if (!userId) return null;
-
-    // Gather local state to sync
-    const appointmentsStr = await AsyncStorage.getItem('@unnathi_appointments');
-    const appointments = appointmentsStr ? JSON.parse(appointmentsStr) : [];
-
-    const walletBalStr = await AsyncStorage.getItem('@unnathi_wallet_balance');
-    const walletBalance = walletBalStr ? Number(walletBalStr) : undefined;
-
-    const walletTxStr = await AsyncStorage.getItem('@unnathi_wallet_transactions');
-    const walletTransactions = walletTxStr ? JSON.parse(walletTxStr) : [];
-
-    const familyStr = await AsyncStorage.getItem('@unnathi_family_members');
-    const familyMembers = familyStr ? JSON.parse(familyStr) : [];
-
-    // Read pharmacy orders from both keys
-    const pharmOrdersStr = await AsyncStorage.getItem('@unnathi_pharmacy_orders');
-    const genOrdersStr = await AsyncStorage.getItem('@orders');
-    const localPharmOrders = pharmOrdersStr ? JSON.parse(pharmOrdersStr) : [];
-    const localGenOrders = genOrdersStr ? JSON.parse(genOrdersStr) : [];
-    
-    // Combine uniquely
-    const ordersMap = new Map();
-    [...localPharmOrders, ...localGenOrders].forEach((o) => {
-      if (o && o.id) ordersMap.set(o.id, o);
-    });
-    const orders = Array.from(ordersMap.values());
-
-    // Also include lab, video, radiology, and nurse bookings from local storage
-    const labBookingsStr = await AsyncStorage.getItem('@labBookings');
-    const localLabBookings = labBookingsStr ? JSON.parse(labBookingsStr) : [];
-
-    const vidBookingsStr = await AsyncStorage.getItem('@videoBookings');
-    const localVidBookings = vidBookingsStr ? JSON.parse(vidBookingsStr) : [];
-
-    const radBookingsStr = await AsyncStorage.getItem('@radiologyBookings');
-    const localRadBookings = radBookingsStr ? JSON.parse(radBookingsStr) : [];
-
-    const nurseBookingsStr = await AsyncStorage.getItem('@unnathi_nurse_bookings');
-    const localNurseBookings = nurseBookingsStr ? JSON.parse(nurseBookingsStr) : [];
-
-    const apptMap = new Map();
-    [
-      ...appointments,
-      ...localVidBookings,
-      ...localLabBookings,
-      ...localRadBookings,
-      ...localNurseBookings,
-    ].forEach((a) => {
-      if (a && a.id) apptMap.set(a.id, a);
-    });
-    const allAppointments = Array.from(apptMap.values());
-
-    const res = await apiRequest(`/api/user/${encodeURIComponent(userId)}/sync`, {
-      method: 'POST',
-      body: JSON.stringify({
-        ...user,
-        appointments: allAppointments,
-        walletBalance,
-        walletTransactions,
-        familyMembers,
-        orders,
-      }),
-    });
-
-    if (res.ok && res.data && res.data.success && res.data.user) {
-      await saveUserToLocalStorage(res.data.user);
-      return res.data.user;
-    }
-  } catch (err) {
-    console.warn('[DataSync] syncActiveUser failed:', err.message);
+    return JSON.parse(userStr);
+  } catch {
+    return null;
   }
-  return null;
 };
 
 /**
- * Add a new appointment to central server and local storage
+ * Add a new appointment to local storage with automated categorization
  */
 export const pushAppointment = async (appointmentData) => {
   if (!appointmentData || !appointmentData.id) return { success: false, error: 'Invalid appointment' };
 
-  try {
-    const userStr = await AsyncStorage.getItem('@unnathi_primary_user');
-    let userId = '';
-    if (userStr) {
-      const user = JSON.parse(userStr);
-      userId = user.phone || user.email || user.id;
-    }
-    if (!userId) {
-      userId =
-        (await AsyncStorage.getItem('userPhone')) ||
-        (await AsyncStorage.getItem('userEmail')) ||
-        (await AsyncStorage.getItem('userId'));
-    }
-    if (!userId) {
-      const rawUser = await AsyncStorage.getItem('user');
-      if (rawUser) {
-        try {
-          const u = JSON.parse(rawUser);
-          userId = u.phone || u.email || u.id;
-        } catch (e) {}
-      }
-    }
-
-    if (userId) {
-      const res = await apiRequest(`/api/user/${encodeURIComponent(userId)}/appointment`, {
-        method: 'POST',
-        body: JSON.stringify(appointmentData),
-      });
-
-      if (res.ok && res.data && res.data.user) {
-        await saveUserToLocalStorage(res.data.user);
-        return { success: true, user: res.data.user };
-      }
-    }
-  } catch (err) {
-    console.warn('[DataSync] pushAppointment failed:', err.message);
-  }
-
-  // Fallback: save to local storage
   try {
     const isVid =
       appointmentData.type === 'Video Consultation' ||
@@ -450,14 +367,12 @@ export const pushAppointment = async (appointmentData) => {
       Boolean(appointmentData.videoRoomLink);
 
     if (isVid) {
-      // 1. Save strictly to video consultations storage
       const vStr = await AsyncStorage.getItem('@videoBookings');
       const vList = vStr ? JSON.parse(vStr).filter((a) => a.id !== appointmentData.id) : [];
       const updatedV = [appointmentData, ...vList];
       await AsyncStorage.setItem('@videoBookings', JSON.stringify(updatedV));
       await AsyncStorage.setItem('@mediunify_patient_online_consultations', JSON.stringify(updatedV));
 
-      // Remove from physical appointments if present
       const existingStr = await AsyncStorage.getItem('@unnathi_appointments');
       if (existingStr) {
         const existing = JSON.parse(existingStr).filter((a) => a.id !== appointmentData.id);
@@ -469,7 +384,6 @@ export const pushAppointment = async (appointmentData) => {
         window.dispatchEvent(new CustomEvent('mediunify_consultations_updated', { detail: { consultation: appointmentData } }));
       }
     } else {
-      // 2. Save strictly to physical appointments storage
       const existingStr = await AsyncStorage.getItem('@unnathi_appointments');
       const existing = existingStr ? JSON.parse(existingStr).filter((a) => a.id !== appointmentData.id) : [];
       const updated = [appointmentData, ...existing];
@@ -512,7 +426,7 @@ export const pushAppointment = async (appointmentData) => {
       await AsyncStorage.setItem('@unnathi_nurse_bookings', JSON.stringify([appointmentData, ...nList]));
     }
 
-    // ── Auto-save to payment history ──────────────────────────────────
+    // Auto-save to payment history
     try {
       const appt = appointmentData;
       const isVidAppt = appt.type === 'Video Consultation' || appt.serviceType === 'video' || Boolean(appt.videoRoomLink);
@@ -522,40 +436,39 @@ export const pushAppointment = async (appointmentData) => {
 
       let svcType = 'consultation';
       let svcName = appt.type || 'Healthcare Service';
-      let title   = appt.doctor?.name || appt.doctorName || appt.type || 'Appointment';
+      let title = appt.doctor?.name || appt.doctorName || appt.type || 'Appointment';
       let facility = appt.doctor?.clinicName || appt.labCenter?.name || appt.labName || appt.facility || 'MediUnify';
 
-      if (isLabAppt)   { svcType = 'lab';      svcName = 'Lab Test';       title = appt.tests?.map(t => t.name).join(', ') || 'Lab Tests'; }
-      if (isRadAppt)   { svcType = 'radiology'; svcName = 'Radiology Scan'; title = appt.tests?.map(t => t.name).join(', ') || 'Radiology Scan'; facility = appt.labName || facility; }
-      if (isNurseAppt) { svcType = 'nursing';   svcName = 'Home Nursing'; }
-      if (isVidAppt)   { svcType = 'consultation'; svcName = 'Video Consultation'; title = appt.doctor?.name || 'Video Consultation'; }
+      if (isLabAppt) { svcType = 'lab'; svcName = 'Lab Test'; title = appt.tests?.map((t) => t.name).join(', ') || 'Lab Tests'; }
+      if (isRadAppt) { svcType = 'radiology'; svcName = 'Radiology Scan'; title = appt.tests?.map((t) => t.name).join(', ') || 'Radiology Scan'; facility = appt.labName || facility; }
+      if (isNurseAppt) { svcType = 'nursing'; svcName = 'Home Nursing'; }
+      if (isVidAppt) { svcType = 'consultation'; svcName = 'Video Consultation'; title = appt.doctor?.name || 'Video Consultation'; }
 
       const paidAmount = Number(appt.paidAmount || appt.totalAmount || appt.amount || 0);
 
       if (paidAmount > 0 || appt.paymentStatus === 'Paid' || appt.paymentMode === 'Paid') {
         await saveTransaction({
-          id:          `TXN-${appt.id}`,
-          refId:       appt.id,
-          service:     svcName,
+          id: `TXN-${appt.id}`,
+          refId: appt.id,
+          service: svcName,
           serviceType: svcType,
           title,
           facility,
-          date:        appt.date ? `${appt.date}${appt.time ? ', ' + appt.time : ''}` : undefined,
-          rawDate:     appt.date ? new Date(appt.date).toISOString() : new Date().toISOString(),
-          amount:      paidAmount,
-          mrp:         Number(appt.mrpAmount || appt.mrp || paidAmount),
-          status:      'Paid',
+          date: appt.date ? `${appt.date}${appt.time ? ', ' + appt.time : ''}` : undefined,
+          rawDate: appt.date ? new Date(appt.date).toISOString() : new Date().toISOString(),
+          amount: paidAmount,
+          mrp: Number(appt.mrpAmount || appt.mrp || paidAmount),
+          status: 'Paid',
           paymentMode: appt.paymentMethod || appt.paymentMode || appt.paymentStatus || 'Online',
-          gstin:       '29AABCU9603R1ZX',
-          items:       Array.isArray(appt.tests)
-                         ? appt.tests.map(t => ({ name: t.name, qty: 1, price: t.price || 0 }))
-                         : [{ name: svcName, qty: 1, price: paidAmount }],
+          gstin: '29AABCU9603R1ZX',
+          items: Array.isArray(appt.tests)
+            ? appt.tests.map((t) => ({ name: t.name, qty: 1, price: t.price || 0 }))
+            : [{ name: svcName, qty: 1, price: paidAmount }],
         });
       }
     } catch (_txErr) {
-      // Never block appointment save because of transaction log failure
+      // Non-blocking
     }
-    // ─────────────────────────────────────────────────────────────────
 
     return { success: true, localOnly: true };
   } catch (e) {
@@ -564,139 +477,68 @@ export const pushAppointment = async (appointmentData) => {
 };
 
 /**
- * Automatically sync any existing local accounts from device to central database
+ * Migration helper stub
  */
 export const autoMigrateLocalAccountsToServer = async () => {
-  try {
-    const credsStr = await AsyncStorage.getItem('@unnathi_registered_credentials');
-    const usersStr = await AsyncStorage.getItem('@unnathi_registered_users');
-    const primaryStr = await AsyncStorage.getItem('@unnathi_primary_user');
-
-    const credentials = credsStr ? JSON.parse(credsStr) : {};
-    const users = usersStr ? JSON.parse(usersStr) : {};
-    const primaryUser = primaryStr ? JSON.parse(primaryStr) : null;
-
-    if (Object.keys(credentials).length > 0 || Object.keys(users).length > 0 || primaryUser) {
-      await apiRequest('/api/sync/batch-users', {
-        method: 'POST',
-        body: JSON.stringify({ credentials, users, primaryUser }),
-      });
-    }
-  } catch (e) {
-    // Silent background migration
-  }
+  return { success: true, migrated: 0 };
 };
 
 /**
- * Synchronize Family Members list across Web & Mobile
+ * Synchronize Family Members list in local storage
  */
 export const syncSaveFamilyMembers = async (updatedMembers) => {
   try {
     if (!Array.isArray(updatedMembers)) return false;
 
-    // 1. Save locally to standard key
     await AsyncStorage.setItem('@unnathi_family_members', JSON.stringify(updatedMembers));
 
-    // 2. Save locally to account-specific key
     const userStr = await AsyncStorage.getItem('@unnathi_primary_user');
-    let userId = '';
     let userKey = 'default';
     if (userStr) {
       try {
         const u = JSON.parse(userStr);
-        userId = u.phone || u.email || u.id;
         const effectiveName = u.name || 'User';
         userKey = (u.email || u.phone || effectiveName).toLowerCase().replace(/[^a-z0-9]/g, '_');
       } catch (e) {}
     }
     await AsyncStorage.setItem(`@unnathi_family_members_${userKey}`, JSON.stringify(updatedMembers));
-
-    // 3. Push to central server
-    if (userId) {
-      const res = await apiRequest(`/api/user/${encodeURIComponent(userId)}/family`, {
-        method: 'PUT',
-        body: JSON.stringify({ familyMembers: updatedMembers }),
-      });
-      if (res.ok && res.data && res.data.success) {
-        console.log(`[DataSync] Successfully synced ${updatedMembers.length} family members to server.`);
-        return true;
-      }
-    }
     return true;
   } catch (err) {
-    console.warn('[DataSync] syncSaveFamilyMembers failed:', err.message);
+    console.warn('[DataSync] syncSaveFamilyMembers error:', err.message);
     return false;
   }
 };
 
 /**
- * Fetch latest Family Members from Central Server
+ * Fetch latest Family Members from local storage
  */
 export const syncFetchFamilyMembers = async () => {
   try {
-    const userStr = await AsyncStorage.getItem('@unnathi_primary_user');
-    let userId = '';
-    let userKey = 'default';
-    if (userStr) {
-      try {
-        const u = JSON.parse(userStr);
-        userId = u.phone || u.email || u.id;
-        const effectiveName = u.name || 'User';
-        userKey = (u.email || u.phone || effectiveName).toLowerCase().replace(/[^a-z0-9]/g, '_');
-      } catch (e) {}
-    }
-
-    if (userId) {
-      const res = await apiRequest(`/api/user/${encodeURIComponent(userId)}/family`, {
-        method: 'GET',
-      });
-      if (res.ok && res.data && res.data.success && Array.isArray(res.data.familyMembers)) {
-        await AsyncStorage.setItem('@unnathi_family_members', JSON.stringify(res.data.familyMembers));
-        await AsyncStorage.setItem(`@unnathi_family_members_${userKey}`, JSON.stringify(res.data.familyMembers));
-        return res.data.familyMembers;
-      }
-    }
-  } catch (err) {
-    console.warn('[DataSync] syncFetchFamilyMembers failed:', err.message);
+    const stored = await AsyncStorage.getItem('@unnathi_family_members');
+    return stored ? JSON.parse(stored) : [];
+  } catch {
+    return [];
   }
-  return null;
 };
 
 /**
- * Delete a family member from Central Server and Local Storage
+ * Delete a family member from local storage
  */
 export const syncDeleteFamilyMember = async (memberId) => {
   try {
-    const userStr = await AsyncStorage.getItem('@unnathi_primary_user');
-    let userId = '';
-    let userKey = 'default';
-    if (userStr) {
-      try {
-        const u = JSON.parse(userStr);
-        userId = u.phone || u.email || u.id;
-        const effectiveName = u.name || 'User';
-        userKey = (u.email || u.phone || effectiveName).toLowerCase().replace(/[^a-z0-9]/g, '_');
-      } catch (e) {}
-    }
-
-    if (userId && memberId) {
-      const res = await apiRequest(`/api/user/${encodeURIComponent(userId)}/family/${encodeURIComponent(memberId)}`, {
-        method: 'DELETE',
-      });
-      if (res.ok && res.data && res.data.success && Array.isArray(res.data.familyMembers)) {
-        await AsyncStorage.setItem('@unnathi_family_members', JSON.stringify(res.data.familyMembers));
-        await AsyncStorage.setItem(`@unnathi_family_members_${userKey}`, JSON.stringify(res.data.familyMembers));
-        return res.data.familyMembers;
-      }
-    }
-  } catch (err) {
-    console.warn('[DataSync] syncDeleteFamilyMember failed:', err.message);
+    const stored = await AsyncStorage.getItem('@unnathi_family_members');
+    const list = stored ? JSON.parse(stored) : [];
+    const updated = list.filter((m) => m.id !== memberId);
+    await syncSaveFamilyMembers(updated);
+    return updated;
+  } catch {
+    return null;
   }
-  return null;
 };
 
 export default {
   getBackendUrl,
+  getCandidateUrls,
   syncLogin,
   syncRegister,
   pullUserData,

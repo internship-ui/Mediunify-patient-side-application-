@@ -14,75 +14,46 @@ import { Ionicons } from '@expo/vector-icons';
 import WebFooter from '../../../components/web/WebFooter';
 import { useTheme } from '../../../context/ThemeContext';
 
+const service3dClinic = require('../../../../assets/icons/service_3d_clinic.jpg');
+const service3dVideo = require('../../../../assets/icons/service_3d_video.jpg');
+const service3dAyurveda = require('../../../../assets/icons/service_3d_ayurveda.jpg');
+
 const CONSULTATION_TYPES = [
   {
     id: 'in-clinic',
+    stepNumber: '01',
+    titleKey: 'card_clinic_visit',
     title: 'In-Clinic Visit',
-    tag: 'IN-PERSON CARE',
-    tagBg: '#EFF6FF',
-    tagColor: '#1E3A8A',
-    tagIcon: 'business-outline',
-    subtitle: 'Book confirmed appointment slots with verified doctors near you.',
-    image: 'https://images.unsplash.com/photo-1629909613654-28e377c37b09?w=800&auto=format&fit=crop&q=80',
-    cardBg: '#FFFFFF',
-    btnBg: '#1E3A8A',
-    btnText: 'Book In-Clinic Visit',
-    priceText: 'From ₹299',
+    subtitleKey: 'card_clinic_desc',
+    subtitle: 'Book confirmed appointment slots near you.',
+    accentColor: '#7C3AED',
     route: 'DoctorList',
     params: { mode: 'clinic' },
-    features: [
-      'In-person clinical examination',
-      'Confirmed slot & zero waiting queue',
-      '1,500+ verified partner clinics',
-      'Pay online or at clinic',
-    ],
-    popularBadge: 'Physical Care',
+    image: service3dClinic,
   },
   {
     id: 'video-call',
+    stepNumber: '02',
+    titleKey: 'card_video_consult',
     title: 'Video Consultation',
-    tag: 'ONLINE CONSULTATION',
-    tagBg: '#E6F8F4',
-    tagColor: '#00B894',
-    tagIcon: 'videocam-outline',
-    subtitle: 'Connect with specialist doctors online in 60 seconds.',
-    image: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=800&auto=format&fit=crop&q=80',
-    cardBg: '#FFFFFF',
-    btnBg: '#00B894',
-    btnText: 'Start Consultation',
-    priceText: 'From ₹199',
+    subtitleKey: 'card_video_desc',
+    subtitle: 'Consult doctors from home in 60 seconds.',
+    accentColor: '#0284C7',
     route: 'VideoConsultation',
     params: { mode: 'online' },
-    features: [
-      'Connect in 60 seconds (24/7 doctors)',
-      'Private encrypted HD video call',
-      'Instant verified digital prescription',
-      'Free 3-day follow-up chat included',
-    ],
-    popularBadge: '60 Secs Connect',
+    image: service3dVideo,
   },
   {
     id: 'ayurveda',
+    stepNumber: '03',
+    titleKey: 'card_ayurveda',
     title: 'Ayurveda & Wellness',
-    tag: 'NATURAL HEALING',
-    tagBg: '#EBF8E7',
-    tagColor: '#7BC96F',
-    tagIcon: 'leaf-outline',
-    subtitle: 'Consult certified Ayurvedic Vaidyas for natural healing and wellness.',
-    image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=800&auto=format&fit=crop&q=80',
-    cardBg: '#FFFFFF',
-    btnBg: '#7BC96F',
-    btnText: 'Consult Vaidya',
-    priceText: 'From ₹349',
+    subtitleKey: 'card_ayurveda_desc',
+    subtitle: 'Natural healing with certified Vaidyas.',
+    accentColor: '#00B894',
     route: 'AyurvedaWellness',
     params: { mode: 'ayurveda' },
-    features: [
-      'Certified BAMS & MD Specialists',
-      'Pulse diagnosis (Nadi Pariksha)',
-      '100% Pure herbal formulations',
-      'Diet, lifestyle & dosha balancing',
-    ],
-    popularBadge: 'Holistic Care',
+    image: service3dAyurveda,
   },
 ];
 
@@ -117,7 +88,7 @@ const FindDoctorsScreen = ({ navigation }) => {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 980;
   const isTablet = width >= 640 && width < 980;
-  const { t, isIndic } = useTheme();
+  const { t, isIndic, isDarkMode, theme } = useTheme();
 
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -129,21 +100,25 @@ const FindDoctorsScreen = ({ navigation }) => {
         document.head.appendChild(styleEl);
       }
       styleEl.innerHTML = `
-        .consult-choice-card {
-          transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.28s ease !important;
+        .service-card {
+          transition:
+            transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
+            box-shadow 0.32s cubic-bezier(0.16, 1, 0.3, 1) !important;
         }
-        .consult-choice-card:hover {
-          transform: translateY(-8px) !important;
-          box-shadow: 0 24px 44px -12px rgba(15, 23, 42, 0.14), 0 10px 20px -6px rgba(15, 23, 42, 0.08) !important;
-          border-color: #94A3B8 !important;
+        .service-card:hover {
+          transform: translateY(-10px) scale(1.015) !important;
+          box-shadow:
+            0 24px 48px -12px rgba(12, 59, 107, 0.14),
+            0 8px 20px -6px rgba(12, 59, 107, 0.07) !important;
         }
-        .consult-choice-btn {
-          transition: transform 0.2s ease, opacity 0.2s ease, box-shadow 0.2s ease !important;
+        .service-card:active {
+          transform: translateY(-4px) scale(1.005) !important;
         }
-        .consult-choice-btn:hover {
-          opacity: 0.95 !important;
-          transform: translateY(-2px) !important;
-          box-shadow: 0 8px 18px rgba(0, 0, 0, 0.18) !important;
+        .service-card-image {
+          transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .service-card:hover .service-card-image {
+          transform: scale(1.08) !important;
         }
       `;
     }
@@ -156,10 +131,10 @@ const FindDoctorsScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, isDarkMode && { backgroundColor: theme.background }]}>
       {/* MOBILE / TABLET HEADER */}
       {!isDesktop && (
-        <View style={styles.mobileHeader}>
+        <View style={[styles.mobileHeader, isDarkMode && { backgroundColor: theme.headerBg, borderBottomColor: theme.border }]}>
           <TouchableOpacity
             style={styles.headerBackBtn}
             onPress={() => {
@@ -172,9 +147,9 @@ const FindDoctorsScreen = ({ navigation }) => {
             activeOpacity={0.7}
             accessibilityLabel="Back"
           >
-            <Ionicons name="arrow-back" size={20} color="#0F172A" />
+            <Ionicons name="arrow-back" size={20} color={isDarkMode ? theme.text : "#0F172A"} />
           </TouchableOpacity>
-          <Text style={styles.mobileHeaderTitle}>{t('nav_find_doctors', 'Find Doctors')}</Text>
+          <Text style={[styles.mobileHeaderTitle, isDarkMode && { color: theme.text }]}>{t('nav_find_doctors', 'Find Doctors')}</Text>
           <View style={{ width: 40 }} />
         </View>
       )}
@@ -183,88 +158,102 @@ const FindDoctorsScreen = ({ navigation }) => {
         contentContainerStyle={[styles.scrollContent, { paddingBottom: 40 }]}
         showsVerticalScrollIndicator={false}
       >
-        {/* 3 Core Consultation Cards */}
-        <View style={[styles.cardsSection, { maxWidth: isDesktop ? 1280 : '96%' }]}>
-          <View
-            style={[
-              styles.cardsGrid,
-              isDesktop
-                ? styles.cardsGridDesktop
-                : isTablet
-                ? styles.cardsGridTablet
-                : styles.cardsGridMobile,
-            ]}
-          >
-            {CONSULTATION_TYPES.map((card) => (
-              <TouchableOpacity
-                key={card.id}
-                style={[
-                  styles.choiceCard,
-                  { flex: isDesktop ? 1 : undefined },
-                ]}
-                // @ts-ignore
-                className="consult-choice-card"
-                activeOpacity={0.92}
-                onPress={() => handleSelectOption(card)}
-              >
-                {/* Popularity Badge */}
-                <View style={styles.badgeTopWrap}>
-                  <Text style={styles.badgeTopText}>{t(card.popularBadge, card.popularBadge)}</Text>
-                </View>
-
-                {/* Hero Card Image */}
-                <View style={styles.cardImageWrap}>
-                  <Image
-                    source={{ uri: card.image }}
-                    style={styles.cardImage}
-                    resizeMode="cover"
+        {/* Healthcare Services — Exact Reference Design */}
+        <View style={[styles.cardsSection, { maxWidth: isDesktop ? 1160 : '96%' }]}>
+          <View style={styles.servicesCardsRowWrapper}>
+            {/* Journey Connecting Wave behind cards */}
+            {Platform.OS === 'web' && (
+              <View style={styles.journeyWaveContainer} pointerEvents="none">
+                {/* @ts-ignore */}
+                <svg
+                  style={{
+                    position: 'absolute',
+                    top: isDesktop ? 80 : 55,
+                    left: 0,
+                    width: '100%',
+                    height: 48,
+                    pointerEvents: 'none',
+                    zIndex: 0,
+                  }}
+                  viewBox="0 0 1000 48"
+                  fill="none"
+                  preserveAspectRatio="none"
+                >
+                  <path
+                    d="M 10 24 Q 160 6 320 26 T 620 20 T 900 26 T 995 24"
+                    stroke="rgba(0, 184, 148, 0.22)"
+                    strokeWidth="2"
+                    strokeDasharray="4 4"
+                    fill="none"
                   />
-                  <View style={styles.imageOverlay} />
-                  <View style={[styles.cardTagPill, { backgroundColor: card.tagBg }]}>
-                    <Ionicons name={card.tagIcon} size={13} color={card.tagColor} />
-                    <Text style={[styles.cardTagText, { color: card.tagColor }]}>
-                      {t(card.tag, card.tag)}
-                    </Text>
-                  </View>
-                </View>
+                </svg>
+              </View>
+            )}
 
-                {/* Card Main Body */}
-                <View style={styles.cardBody}>
-                  <View style={styles.cardTitleRow}>
-                    <Text style={[styles.cardTitle, isIndic && { lineHeight: 22 }]}>{t(card.title, card.title)}</Text>
-                    <Text style={styles.pricePill}>{t(card.priceText, card.priceText)}</Text>
-                  </View>
-
-                  <Text style={[styles.cardSubtitle, isIndic && { lineHeight: 18 }]}>
-                    {t(card.subtitle, card.subtitle)}
-                  </Text>
-
-                  {/* Feature Checkpoints */}
-                  <View style={styles.featuresList}>
-                    {card.features.map((feat, idx) => (
-                      <View key={idx} style={styles.featureItem}>
-                        <Ionicons name="checkmark-circle" size={16} color="#059669" style={{ marginTop: 2 }} />
-                        <Text style={[styles.featureItemText, isIndic && { lineHeight: 16 }]}>{t(feat, feat)}</Text>
-                      </View>
-                    ))}
-                  </View>
-
-                  {/* Action CTA Button */}
-                  <View style={styles.actionRow}>
-                    <TouchableOpacity
-                      style={[styles.actionBtn, { backgroundColor: card.btnBg }]}
+            <View
+              style={[
+                styles.cardsGrid,
+                isDesktop
+                  ? styles.cardsGridDesktop
+                  : isTablet
+                    ? styles.cardsGridTablet
+                    : styles.cardsGridMobile,
+              ]}
+            >
+              {CONSULTATION_TYPES.map((card) => (
+                <TouchableOpacity
+                  key={card.id}
+                  style={[
+                    styles.organicServiceCard,
+                    isDarkMode && { backgroundColor: theme.card, borderColor: theme.border },
+                    {
+                      borderBottomColor: card.accentColor,
+                      borderLeftColor: card.accentColor,
+                      borderTopColor: 'transparent',
+                      borderRightColor: 'transparent',
+                    },
+                  ]}
+                  // @ts-ignore
+                  className="service-card"
+                  activeOpacity={0.92}
+                  onPress={() => handleSelectOption(card)}
+                >
+                  {/* Organic Fluid 3D Card Illustration */}
+                  <View style={[styles.organicIllustrationWrap, isDarkMode && { backgroundColor: '#162032' }]}>
+                    <View style={[styles.stepNumberBadge, { backgroundColor: card.accentColor }]}>
+                      <Text style={styles.stepNumberText}>{card.stepNumber}</Text>
+                    </View>
+                    <Image
+                      source={card.image}
+                      style={[styles.organicIllustrationImage, isDarkMode && { mixBlendMode: 'normal' }]}
                       // @ts-ignore
-                      className="consult-choice-btn"
-                      activeOpacity={0.88}
-                      onPress={() => handleSelectOption(card)}
-                    >
-                      <Text style={[styles.actionBtnText, isIndic && { lineHeight: 18 }]}>{t(card.btnText, card.btnText)}</Text>
-                      <Ionicons name="arrow-forward" size={16} color="#FFFFFF" />
-                    </TouchableOpacity>
+                      className="service-card-image"
+                      resizeMode="contain"
+                    />
                   </View>
-                </View>
-              </TouchableOpacity>
-            ))}
+
+                  {/* Card Content */}
+                  <View style={styles.organicCardContent}>
+                    <Text style={[styles.organicCardTitle, isIndic && { lineHeight: 20 }, isDarkMode && { color: theme.text }]} numberOfLines={1}>
+                      {card.titleKey ? t(card.titleKey, card.title) : card.title}
+                    </Text>
+                    <Text style={[styles.organicCardSubtitle, isIndic && { lineHeight: 16 }, isDarkMode && { color: theme.textSecondary }]} numberOfLines={2}>
+                      {card.subtitleKey ? t(card.subtitleKey, card.subtitle) : card.subtitle}
+                    </Text>
+
+                    {/* Circular Arrow & Book Now CTA */}
+                    <View style={styles.organicCtaRow}>
+                      <View style={[styles.organicArrowCircle, { borderColor: card.accentColor }]}>
+                        <Ionicons name="arrow-forward" size={12} color={card.accentColor} />
+                      </View>
+                      <Text style={[styles.organicCtaText, { color: card.accentColor }]}>
+                        {t('book_now_btn', 'Book Now')}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              ))}
+            </View>
           </View>
         </View>
 
@@ -407,175 +396,144 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
     paddingHorizontal: 24,
-    marginTop: 32,
-    marginBottom: 56,
+    paddingTop: 28,
+    paddingBottom: 40,
+    ...(Platform.OS === 'web' ? {
+      minHeight: 'calc(100vh - 40px)',
+      display: 'flex',
+      flexDirection: 'column',
+      justifyContent: 'center',
+    } : {}),
   },
   cardsGrid: {
     width: '100%',
   },
   cardsGridDesktop: {
     flexDirection: 'row',
-    gap: 24,
+    gap: 18,
     alignItems: 'stretch',
   },
   cardsGridTablet: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 20,
+    gap: 16,
   },
   cardsGridMobile: {
     flexDirection: 'column',
-    gap: 20,
+    gap: 16,
   },
 
-  // Choice Card
-  choiceCard: {
+  // Services Cards Wrapper & Wave
+  servicesCardsRowWrapper: {
+    width: '100%',
+    position: 'relative',
+  },
+  journeyWaveContainer: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    bottom: 0,
+    zIndex: 0,
+  },
+
+  // Organic Service Card (Matching exact user reference design)
+  organicServiceCard: {
+    flex: 1,
     backgroundColor: '#FFFFFF',
-    borderRadius: 22,
+    borderRadius: 32,
     borderWidth: 1.5,
-    borderColor: '#E2E8F0',
+    borderTopColor: 'transparent',
+    borderRightColor: 'transparent',
+    padding: 12,
+    paddingBottom: 22,
     overflow: 'hidden',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 10 },
-    shadowOpacity: 0.08,
-    shadowRadius: 24,
+    shadowColor: '#1E3A8A',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.05,
+    shadowRadius: 20,
     elevation: 4,
-    position: 'relative',
-    display: 'flex',
-    flexDirection: 'column',
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
+    boxShadow: '0 12px 28px -6px rgba(15, 23, 42, 0.07), 0 2px 6px rgba(0, 0, 0, 0.02)',
+    minHeight: 410,
+    ...(Platform.OS === 'web' ? {
+      cursor: 'pointer',
+      transition: 'transform 0.24s ease, box-shadow 0.24s ease',
+    } : {}),
   },
-  badgeTopWrap: {
-    position: 'absolute',
-    top: 14,
-    right: 14,
-    zIndex: 20,
-    backgroundColor: 'rgba(15, 23, 42, 0.85)',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
-  },
-  badgeTopText: {
-    fontSize: 11,
-    fontWeight: '700',
-    color: '#FFFFFF',
-    letterSpacing: 0.3,
-  },
-  cardImageWrap: {
+  organicIllustrationWrap: {
     width: '100%',
-    height: 190,
-    position: 'relative',
-    overflow: 'hidden',
-  },
-  cardImage: {
-    width: '100%',
-    height: '100%',
-  },
-  imageOverlay: {
-    ...StyleSheet.absoluteFillObject,
-    backgroundColor: 'rgba(15, 23, 42, 0.15)',
-  },
-  cardTagPill: {
-    position: 'absolute',
-    bottom: 12,
-    left: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 8,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-  },
-  cardTagText: {
-    fontSize: 10.5,
-    fontWeight: '800',
-    letterSpacing: 0.4,
-  },
-  cardBody: {
-    padding: 22,
-    flex: 1,
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'space-between',
-  },
-  cardTitleRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    marginBottom: 8,
-  },
-  cardTitle: {
-    fontSize: 20,
-    fontWeight: '800',
-    color: '#0F172A',
-    letterSpacing: -0.3,
-  },
-  pricePill: {
-    fontSize: 12,
-    fontWeight: '800',
-    color: '#0F766E',
-    backgroundColor: '#F0FDFA',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
-    borderWidth: 1,
-    borderColor: '#CCFBF1',
-  },
-  cardSubtitle: {
-    fontSize: 13.5,
-    color: '#64748B',
-    lineHeight: 20,
-    marginBottom: 18,
-    minHeight: 40,
-  },
-  featuresList: {
-    gap: 10,
-    marginBottom: 24,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
-  },
-  featureItem: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 8,
-  },
-  featureItemText: {
-    fontSize: 12.5,
-    color: '#334155',
-    lineHeight: 18,
-    flex: 1,
-    fontWeight: '500',
-  },
-  actionRow: {
-    marginTop: 'auto',
-    paddingTop: 8,
-  },
-  actionBtn: {
-    flexDirection: 'row',
+    height: 220,
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 13,
-    paddingHorizontal: 18,
-    borderRadius: 12,
-    width: '100%',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 10,
-    elevation: 3,
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 26,
+    borderTopRightRadius: 26,
+    overflow: 'hidden',
+    position: 'relative',
   },
-  actionBtnText: {
-    fontSize: 14,
-    fontWeight: '700',
+  stepNumberBadge: {
+    position: 'absolute',
+    top: 9,
+    left: 9,
+    width: 27,
+    height: 27,
+    borderRadius: 13.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 5,
+    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.12)',
+  },
+  stepNumberText: {
     color: '#FFFFFF',
-    letterSpacing: -0.1,
+    fontSize: 11,
+    fontWeight: '800',
+  },
+  organicIllustrationImage: {
+    width: '100%',
+    height: '100%',
+    ...(Platform.OS === 'web' ? { mixBlendMode: 'multiply' } : {}),
+  },
+  organicCardContent: {
+    paddingHorizontal: 8,
+    paddingTop: 14,
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  organicCardTitle: {
+    fontSize: 17.5,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginBottom: 5,
+    letterSpacing: -0.2,
+  },
+  organicCardSubtitle: {
+    fontSize: 12.5,
+    fontWeight: '400',
+    color: '#64748B',
+    lineHeight: 18,
+    marginBottom: 14,
+    minHeight: 36,
+  },
+  organicCtaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginTop: 'auto',
+    paddingTop: 10,
+  },
+  organicArrowCircle: {
+    width: 26,
+    height: 26,
+    borderRadius: 13,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  organicCtaText: {
+    fontSize: 13,
+    fontWeight: '700',
+    letterSpacing: 0.1,
   },
 
   // Trust Metrics

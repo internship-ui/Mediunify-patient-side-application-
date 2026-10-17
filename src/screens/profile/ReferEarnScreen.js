@@ -1,4 +1,4 @@
-﻿import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 import {
   View,
   Text,
@@ -9,12 +9,16 @@ import {
   StatusBar,
   Linking,
   Share,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { showAlert } from '../../utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import colors from '../../theme/colors';
+import WebFooter from '../../components/web/WebFooter';
+import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 
 const REFERRAL_FRIENDS = [
   {
@@ -52,6 +56,8 @@ const REFERRAL_FRIENDS = [
 ];
 
 const ReferEarnScreen = ({ navigation }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const [referralCode, setReferralCode] = useState('MEDI250');
   const [copied, setCopied] = useState(false);
 
@@ -106,38 +112,41 @@ const ReferEarnScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? theme.headerBg : "#FFFFFF"} />
 
       {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.secondary} />
-        </TouchableOpacity>
+      <View style={[styles.header, Platform.OS === 'web' && { alignItems: 'center' }]}>
+        <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }, Platform.OS === 'web' && styles.webInnerContainer]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-back" size={22} color={isDarkMode ? theme.text : colors.secondary} />
+          </TouchableOpacity>
 
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>Refer & Earn ₹250</Text>
-          <Text style={styles.headerSubtitle}>
-            Share with friends & get ₹250 Health Cash
-          </Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>Refer & Earn ₹250</Text>
+            <Text style={styles.headerSubtitle}>
+              Share with friends & get ₹250 Health Cash
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.walletIconBtn}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Wallet')}
+          >
+            <Ionicons name="wallet-outline" size={20} color={colors.primary} />
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={styles.walletIconBtn}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('Wallet')}
-        >
-          <Ionicons name="wallet-outline" size={20} color={colors.primary} />
-        </TouchableOpacity>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        <View style={Platform.OS === 'web' ? styles.webInnerContainer : null}>
         {/* ==================================================
             REFERRAL HERO CARD
         ================================================== */}
@@ -294,6 +303,9 @@ const ReferEarnScreen = ({ navigation }) => {
             );
           })}
         </View>
+        </View>
+
+        {Platform.OS === 'web' && <WebFooter navigation={navigation} />}
       </ScrollView>
     </SafeAreaView>
   );
@@ -303,7 +315,7 @@ const ReferEarnScreen = ({ navigation }) => {
 // STYLES
 // ==================================================
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F8FAFC',
@@ -354,7 +366,14 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     padding: 16,
-    paddingBottom: 40,
+    paddingBottom: Platform.OS === 'web' ? 0 : 40,
+    paddingHorizontal: Platform.OS === 'web' ? 0 : 16,
+  },
+  webInnerContainer: {
+    maxWidth: 800,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: Platform.OS === 'web' ? 16 : 0,
   },
 
   // HERO CARD

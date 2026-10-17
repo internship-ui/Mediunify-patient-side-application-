@@ -16,6 +16,9 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import colors from '../../theme/colors';
+import WebFooter from '../../components/web/WebFooter';
+import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 
 const STORAGE_KEY = '@unnathi_health_vitals';
 
@@ -144,6 +147,8 @@ const PARAM_CONFIG = {
 };
 
 const HealthMonitorScreen = ({ navigation }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const [vitalsList, setVitalsList] = useState(INITIAL_VITALS);
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [modalVisible, setModalVisible] = useState(false);
@@ -517,35 +522,42 @@ const HealthMonitorScreen = ({ navigation }) => {
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-back" size={22} color="#FFFFFF" />
-        </TouchableOpacity>
+        <View style={styles.headerInner}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-back" size={20} color={isDarkMode ? theme.text : "#1E293B"} />
+          </TouchableOpacity>
 
-        <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Self Health Monitor</Text>
-          <Text style={styles.headerSubtitle}>Log & track your Sugar, BP, SpO2 & Vitals</Text>
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.headerTitle}>Self Health Monitor</Text>
+            <Text style={styles.headerSubtitle}>Log & track your Sugar, BP, SpO2 & Vitals</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.addHeaderBtn}
+            onPress={() => setModalVisible(true)}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" size={18} color="#FFFFFF" />
+            <Text style={styles.addHeaderBtnText}>Log Vital</Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={styles.addHeaderBtn}
-          onPress={() => setModalVisible(true)}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="add" size={18} color="#FFFFFF" />
-          <Text style={styles.addHeaderBtnText}>Log Vital</Text>
-        </TouchableOpacity>
       </View>
 
-      <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scrollContent}>
-        {/* PATIENT PROFILE CHIP */}
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        style={styles.scrollView}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <View style={styles.webContainer}>
+          {/* PATIENT PROFILE CHIP */}
         <View style={styles.patientBanner}>
           <View style={styles.patientInfo}>
             <View style={styles.patientAvatarIcon}>
-              <Ionicons name="person" size={16} color="#00B894" />
+              <Ionicons name="person" size={16} color="#13BE9C" />
             </View>
             <Text style={styles.patientText}>Monitoring for: <Text style={styles.patientBold}>{activePatient}</Text></Text>
           </View>
@@ -558,7 +570,7 @@ const HealthMonitorScreen = ({ navigation }) => {
             }}
             activeOpacity={0.8}
           >
-            <Ionicons name="swap-horizontal" size={13} color="#00B894" />
+            <Ionicons name="swap-horizontal" size={13} color="#13BE9C" />
             <Text style={styles.switchPatientText}>Switch Patient</Text>
           </TouchableOpacity>
         </View>
@@ -889,6 +901,10 @@ const HealthMonitorScreen = ({ navigation }) => {
             ))
           )}
         </View>
+        </View>
+
+        {/* WEB FOOTER */}
+        {Platform.OS === 'web' && <WebFooter navigation={navigation} />}
       </ScrollView>
 
       {/* ==================================================
@@ -1249,29 +1265,43 @@ const HealthMonitorScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+    width: '100%',
+  },
+  scrollView: {
+    flex: 1,
+    width: '100%',
   },
   header: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 4,
+    elevation: 2,
+    width: '100%',
+  },
+  headerInner: {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    backgroundColor: '#1E3A8A', // Brand Navy
-    borderBottomWidth: 1,
-    borderBottomColor: 'rgba(255, 255, 255, 0.12)',
-    shadowColor: '#1E3A8A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.18,
-    shadowRadius: 10,
-    elevation: 4,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
   },
   backBtn: {
-    padding: 6,
-    borderRadius: 8,
-    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   headerTitleWrap: {
     flex: 1,
@@ -1280,24 +1310,24 @@ const styles = StyleSheet.create({
   headerTitle: {
     fontSize: 18,
     fontWeight: '900',
-    color: '#FFFFFF',
+    color: '#0F172A',
     letterSpacing: -0.2,
   },
   headerSubtitle: {
     fontSize: 12,
-    color: '#00C2CB', // Aqua accent
+    color: '#64748B',
     marginTop: 2,
-    fontWeight: '600',
+    fontWeight: '500',
   },
   addHeaderBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 5,
-    backgroundColor: '#00B894', // Brand Teal
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    backgroundColor: '#13BE9C', // Brand Green
+    paddingHorizontal: 14,
+    paddingVertical: 8,
     borderRadius: 20,
-    shadowColor: '#00B894',
+    shadowColor: '#13BE9C',
     shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.25,
     shadowRadius: 4,
@@ -1309,8 +1339,17 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   scrollContent: {
-    padding: 16,
-    paddingBottom: 110,
+    flexGrow: 1,
+    width: '100%',
+    paddingBottom: Platform.OS === 'web' ? 0 : 110,
+  },
+  webContainer: {
+    maxWidth: 1200,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 20,
+    paddingTop: 20,
+    paddingBottom: 40,
   },
   patientBanner: {
     flexDirection: 'row',
@@ -1364,7 +1403,7 @@ const styles = StyleSheet.create({
   switchPatientText: {
     fontSize: 11.5,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#13BE9C',
   },
   sectionHeader: {
     marginBottom: 12,
@@ -1445,7 +1484,7 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
   },
   mainActionBtn: {
-    backgroundColor: colors.primary,
+    backgroundColor: '#13BE9C',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -1453,7 +1492,7 @@ const styles = StyleSheet.create({
     borderRadius: 14,
     gap: 8,
     marginBottom: 20,
-    shadowColor: colors.primary,
+    shadowColor: '#13BE9C',
     shadowOpacity: 0.25,
     shadowOffset: { width: 0, height: 4 },
     shadowRadius: 8,

@@ -17,10 +17,12 @@ import colors from '../../../theme/colors';
 import WebFooter from '../../../components/web/WebFooter';
 import DoctorBookingModal from '../../../components/booking/DoctorBookingModal';
 import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 import { isDesktopLayout } from '../../../utils/responsiveLayoutHelper';
 
 const DoctorDetailsScreen = ({ route, navigation }) => {
-  const { t, isIndic } = useTheme();
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isDesktopWeb = Platform.OS === 'web' && isDesktopLayout(width);
@@ -71,7 +73,7 @@ const DoctorDetailsScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? theme.headerBg : "#FFFFFF"} />
 
       {/* HEADER */}
       <View style={styles.header}>
@@ -80,7 +82,7 @@ const DoctorDetailsScreen = ({ route, navigation }) => {
           style={styles.headerButton}
           activeOpacity={0.8}
         >
-          <Ionicons name="arrow-back" size={22} color={colors.secondary} />
+          <Ionicons name="arrow-back" size={22} color={isDarkMode ? theme.text : colors.secondary} />
         </TouchableOpacity>
 
         <Text style={[styles.headerTitle, isIndic && { lineHeight: 22 }]}>{t('Doctor Profile')}</Text>
@@ -279,7 +281,7 @@ const DoctorDetailsScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',

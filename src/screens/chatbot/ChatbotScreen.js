@@ -94,7 +94,8 @@ const INITIAL_MESSAGES = [
 const ChatbotScreen = ({ navigation }) => {
   const { width } = useWindowDimensions();
   const isTablet = width >= 600;
-  const { t, isIndic } = useTheme();
+  const { t, isIndic, isDarkMode, theme } = useTheme();
+  const isDark = isDarkMode;
 
   const { addToCart } = useCart();
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
@@ -1044,7 +1045,7 @@ const ChatbotScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeContainer}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeContainer, isDark && { backgroundColor: theme.background }]}>
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : (Platform.OS === 'android' ? 'height' : undefined)}
@@ -1052,17 +1053,17 @@ const ChatbotScreen = ({ navigation }) => {
       >
         <View style={styles.mainLayout}>
           {/* 1. FIXED HEADER (FULL WIDTH) */}
-          <View style={[styles.header, isTablet && styles.tabletHeader]}>
+          <View style={[styles.header, isTablet && styles.tabletHeader, isDark && { backgroundColor: theme.headerBg, borderBottomColor: theme.border }]}>
             <View style={[styles.headerInner, isTablet && styles.tabletInnerConstraint]}>
               <TouchableOpacity
-                style={styles.backButton}
+                style={[styles.backButton, isDark && { backgroundColor: theme.card, borderColor: theme.border }]}
                 onPress={() => {
                   if (navigation?.canGoBack()) navigation.goBack();
                   else navigation?.navigate('Home');
                 }}
                 activeOpacity={0.8}
               >
-                <Ionicons name="chevron-back" size={22} color="#0F172A" />
+                <Ionicons name="chevron-back" size={22} color={isDark ? theme.text : '#0F172A'} />
               </TouchableOpacity>
 
               <View style={styles.headerAvatarWrap}>
@@ -1074,8 +1075,8 @@ const ChatbotScreen = ({ navigation }) => {
               </View>
 
               <View style={styles.headerTitleCol}>
-                <Text style={styles.headerTitle}>MediUnify AI</Text>
-                <Text style={styles.headerSubtitle}>{t('bot_subtitle', 'Your personal health assistant')}</Text>
+                <Text style={[styles.headerTitle, isDark && { color: theme.text }]}>MediUnify AI</Text>
+                <Text style={[styles.headerSubtitle, isDark && { color: theme.textSecondary }]}>{t('bot_subtitle', 'Your personal health assistant')}</Text>
               </View>
 
               <TouchableOpacity
@@ -1083,7 +1084,7 @@ const ChatbotScreen = ({ navigation }) => {
                 onPress={handleScanPrescription}
                 activeOpacity={0.85}
               >
-                <Ionicons name="ellipsis-vertical" size={18} color="#64748B" />
+                <Ionicons name="ellipsis-vertical" size={18} color={isDark ? theme.textSecondary : '#64748B'} />
               </TouchableOpacity>
             </View>
           </View>
@@ -1158,23 +1159,24 @@ const ChatbotScreen = ({ navigation }) => {
               styles.bottomDockContainer,
               !isKeyboardVisible && styles.bottomDockWithNavSpacer,
               isTablet && styles.tabletBottomDock,
+              isDark && { backgroundColor: theme.headerBg, borderTopColor: theme.border },
             ]}
           >
             <View style={[styles.bottomDockInner, isTablet && styles.tabletInnerConstraint]}>
               {/* Input Bar */}
-              <View style={styles.inputContainer}>
+              <View style={[styles.inputContainer, isDark && { backgroundColor: theme.card, borderColor: theme.border }]}>
                 <TouchableOpacity
                   style={styles.attachBtn}
                   onPress={handleScanPrescription}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="add" size={20} color="#007D69" />
+                  <Ionicons name="add" size={20} color={isDark ? '#00B894' : '#007D69'} />
                 </TouchableOpacity>
 
                 <TextInput
-                  style={[styles.textInput, isIndic && { fontSize: 13 }]}
+                  style={[styles.textInput, isIndic && { fontSize: 13 }, isDark && { color: theme.text }]}
                   placeholder={t('chat_placeholder_mobile', 'Ask MediUnify AI...')}
-                  placeholderTextColor="#94A3B8"
+                  placeholderTextColor={isDark ? '#64748B' : '#94A3B8'}
                   value={inputText}
                   onChangeText={setInputText}
                   onSubmitEditing={() => handleSend()}

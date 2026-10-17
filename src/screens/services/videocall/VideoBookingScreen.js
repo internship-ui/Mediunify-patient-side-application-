@@ -26,8 +26,12 @@ import { validateAndBookSlot, subscribeToSlotChanges } from '../../../services/s
 import { useAuthGuard } from '../../../context/AuthGuardContext';
 import { isGuestUser, promptLoginRequired } from '../../../utils/authHelper';
 import { isDesktopLayout } from '../../../utils/responsiveLayoutHelper';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 
 const VideoBookingScreen = ({ route, navigation }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const isDesktopWeb = Platform.OS === 'web' && isDesktopLayout(width);
   const doctor = route?.params?.doctor;
@@ -455,7 +459,7 @@ const VideoBookingScreen = ({ route, navigation }) => {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? theme.headerBg : "#FFFFFF"} />
 
       <KeyboardAvoidingView
         behavior={Platform.OS === 'ios' ? 'padding' : undefined}
@@ -909,7 +913,7 @@ const VideoBookingScreen = ({ route, navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: Platform.OS === 'web' ? 'rgba(15, 23, 42, 0.65)' : '#F8FAFC',

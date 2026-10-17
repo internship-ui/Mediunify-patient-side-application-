@@ -1,8 +1,10 @@
 import React from 'react';
-import { Platform, View, ActivityIndicator } from 'react-native';
+import { Platform, View, ActivityIndicator, StatusBar } from 'react-native';
 import {
   NavigationContainer,
   getStateFromPath,
+  DefaultTheme,
+  DarkTheme,
 } from '@react-navigation/native';
 import {
   createNativeStackNavigator,
@@ -12,6 +14,7 @@ import AuthNavigator from './AuthNavigator';
 import MainNavigator from './MainNavigator';
 import FloatingAiBotIcon from '../components/web/FloatingAiBotIcon';
 import { AuthGuardProvider } from '../context/AuthGuardContext';
+import { useTheme } from '../context/ThemeContext';
 import { navigationRef } from './navigationRef';
 
 export { navigationRef };
@@ -197,15 +200,21 @@ const linking = {
           MyFeedback: 'my-feedback',
           Settings: 'settings',
           Notifications: {
+            path: 'notifications',
+            alias: ['notifications', 'Notifications'],
+          },
+          Alerts: {
             path: 'alerts',
-            alias: ['alerts', 'Alerts', 'notifications', 'Notifications'],
+            alias: ['alerts', 'Alerts'],
           },
-          Alerts: 'alerts',
           TransactionHistory: {
-            path: 'history',
-            alias: ['history', 'History', 'transaction-history', 'TransactionHistory', 'payment-history'],
+            path: 'transaction-history',
+            alias: ['transaction-history', 'TransactionHistory', 'payment-history'],
           },
-          History: 'history',
+          History: {
+            path: 'history',
+            alias: ['history', 'History'],
+          },
         },
       },
     },
@@ -214,22 +223,63 @@ const linking = {
 
 
 const AppNavigator = () => {
+  const { isDarkMode, theme } = useTheme();
+
+  const baseTheme = isDarkMode ? DarkTheme : DefaultTheme;
+  const navigationTheme = {
+    ...baseTheme,
+    dark: isDarkMode,
+    colors: {
+      ...(baseTheme?.colors || {}),
+      primary: '#00B894',
+      background: isDarkMode ? '#0B1120' : '#FAFCFD',
+      card: isDarkMode ? '#0F172A' : '#FFFFFF',
+      text: isDarkMode ? '#F8FAFC' : '#1E3A8A',
+      border: isDarkMode ? '#334155' : '#E2E8F0',
+      notification: '#FF7F50',
+    },
+    fonts: baseTheme?.fonts || {
+      regular: {
+        fontFamily: 'System',
+        fontWeight: '400',
+      },
+      medium: {
+        fontFamily: 'System',
+        fontWeight: '500',
+      },
+      bold: {
+        fontFamily: 'System',
+        fontWeight: '700',
+      },
+      heavy: {
+        fontFamily: 'System',
+        fontWeight: '900',
+      },
+    },
+  };
+
   return (
     <NavigationContainer
       ref={navigationRef}
       linking={linking}
+      theme={navigationTheme}
       fallback={
-        <View style={{ flex: 1, backgroundColor: '#F8FAFC', justifyContent: 'center', alignItems: 'center' }}>
+        <View style={{ flex: 1, backgroundColor: isDarkMode ? '#0B1120' : '#F8FAFC', justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color="#00B894" />
         </View>
       }
     >
+      <StatusBar
+        barStyle={isDarkMode ? 'light-content' : 'dark-content'}
+        backgroundColor={isDarkMode ? '#0F172A' : '#FFFFFF'}
+      />
       <AuthGuardProvider>
-        <View style={{ flex: 1 }}>
+        <View style={{ flex: 1, backgroundColor: isDarkMode ? '#0B1120' : '#FAFCFD' }}>
           <Stack.Navigator
             initialRouteName={Platform.OS === 'web' ? 'MainApp' : 'Auth'}
             screenOptions={{
               headerShown: false,
+              contentStyle: { backgroundColor: isDarkMode ? '#0B1120' : '#FAFCFD' },
             }}
           >
             <Stack.Screen

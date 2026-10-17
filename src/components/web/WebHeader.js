@@ -251,7 +251,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
   const isTablet = !desktopSiteMode && width >= 600 && width < 1024;
   const isCompactDesktop = width >= 1024 && width < 1340;
 
-  const { language, changeLanguage, LANGUAGES, t, isIndic } = useTheme();
+  const { language, changeLanguage, LANGUAGES, t, isIndic, isDarkMode, toggleTheme, theme } = useTheme();
   const currentLangObj = LANGUAGES.find((l) => l.code === language) || LANGUAGES[0];
 
   const [infoModal, setInfoModal] = useState(null);
@@ -594,8 +594,8 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
     if (item.id === 'lab-tests' && currentRoute === 'LabTests') return true;
     if (item.id === 'radiology' && ['Imaging', 'RadiologyLabs'].includes(currentRoute)) return true;
     if (item.id === 'consultation' && ['VideoConsultation', 'VideoBooking', 'AyurvedaWellness'].includes(currentRoute)) return true;
-    if (item.id === 'pharmacy' && ['Pharmacy', 'PharmacyStoreDetail', 'Cart'].includes(currentRoute)) return true;
-    if (item.id === 'hospitals' && ['HospitalCare', 'HospitalSurgeryDetails'].includes(currentRoute)) return true;
+    if (item.id === 'pharmacy' && ['Pharmacy', 'Cart'].includes(currentRoute)) return true;
+    if (item.id === 'hospitals' && currentRoute === 'HospitalCare') return true;
     if (item.id === 'insurance' && currentRoute === 'HealthInsurance') return true;
     if (item.id === 'find-care' && ['DoctorList', 'DoctorDetails', 'FertilityIvf', 'EquipmentRental'].includes(currentRoute)) return true;
     if (item.id === 'more' && ['NurseBooking', 'AyurvedaWellness', 'FertilityIvf', 'EquipmentRental'].includes(currentRoute)) return true;
@@ -603,7 +603,15 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
   };
 
   return (
-    <View style={[styles.headerRoot, desktopSiteMode && { minWidth: 1200, width: '100%' }]} nativeID="mediunify-web-header">
+    <View
+      style={[
+        styles.headerRoot,
+        desktopSiteMode && { minWidth: 1200, width: '100%' },
+        (currentRoute === 'Cart' || currentRoute === 'CartScreen') && { borderBottomWidth: 0, borderBottomColor: 'transparent' },
+        isDarkMode && { backgroundColor: theme.headerBg, borderBottomColor: theme.border },
+      ]}
+      nativeID="mediunify-web-header"
+    >
       <View style={[styles.headerContainer, { paddingHorizontal: isDesktop ? 40 : 16 }, desktopSiteMode && { minWidth: 1200, width: '100%' }]}>
         {/* ============================================================
             LEFT GROUP: BRAND LOGO + NAV LINKS (PINNED TO LEFT EDGE)
@@ -946,6 +954,24 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
             )}
           </TouchableOpacity>
 
+          {/* Theme Toggle Button (Dark / Light Appearance) */}
+          <TouchableOpacity
+            style={[
+              styles.headerNotifBtn,
+              isDarkMode && { backgroundColor: '#1E293B', borderColor: '#334155' },
+              { marginRight: 8 },
+            ]}
+            onPress={toggleTheme}
+            activeOpacity={0.8}
+            accessibilityLabel={isDarkMode ? 'Switch to Light Appearance' : 'Switch to Dark Appearance'}
+          >
+            <Ionicons
+              name={isDarkMode ? 'sunny' : 'moon-outline'}
+              size={18}
+              color={isDarkMode ? '#F59E0B' : '#1E3A8A'}
+            />
+          </TouchableOpacity>
+
           {/* Auth Action Buttons */}
           {isLoggedIn ? (
             <View style={styles.userProfileWrapper} nativeID="mediunify-profile-wrap">
@@ -1057,6 +1083,16 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                       activeOpacity={0.7}
                     >
                       <Text style={styles.practoProfileMenuText}>{t('view_update_profile', 'View / Update Profile')}</Text>
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={styles.practoProfileMenuItem}
+                      // @ts-ignore
+                      className="practo-profile-item"
+                      onPress={() => handleNavigate('Settings')}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={styles.practoProfileMenuText}>{t('settings', 'Settings & Preferences')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity

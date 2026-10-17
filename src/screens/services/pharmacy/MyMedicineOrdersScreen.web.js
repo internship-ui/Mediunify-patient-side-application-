@@ -19,6 +19,8 @@ import WebFooter from '../../../components/web/WebFooter';
 import PaginationBar from '../../../components/web/PaginationBar';
 import PatientPageBanner from '../../../components/web/PatientPageBanner';
 import { useCart } from '../../../context/CartContext';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 import { isGuestUser } from '../../../utils/authHelper';
 import {
   getActivePatient,
@@ -113,9 +115,11 @@ const getShortStepTitle = (title) => {
   return title;
 };
 
-import MyMedicineOrdersScreenMobile from './MyMedicineOrdersScreenMobile';
+import MyMedicineOrdersScreenMobile from './MyMedicineOrdersScreen.js';
 
 const MyMedicineOrdersScreenWeb = ({ navigation, route }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const desktopSiteMode = isDesktopSiteRequested();
   const isDesktop = desktopSiteMode || width >= 1024;
@@ -542,25 +546,13 @@ const MyMedicineOrdersScreenWeb = ({ navigation, route }) => {
       ) : null}
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={true}>
-        {/* Breadcrumbs */}
-        <View style={styles.breadcrumbBar}>
-          <View style={[styles.innerContainer, styles.breadcrumbContent]}>
-            <TouchableOpacity onPress={() => navigation?.navigate('Home')} activeOpacity={0.7} style={styles.breadcrumbItem}>
-              <Ionicons name="home-outline" size={14} color={BRAND.SLATE} />
-              <Text style={styles.breadcrumbText}>Home</Text>
-            </TouchableOpacity>
-            <Ionicons name="chevron-forward" size={12} color="#94A3B8" />
-            <Text style={styles.breadcrumbActive}>My Medicine Orders</Text>
-          </View>
-        </View>
-
         {/* Page Hero Banner */}
         <View style={styles.innerContainer}>
           <PatientPageBanner
             onBack={() => navigation?.canGoBack?.() ? navigation.goBack() : navigation?.navigate('Home')}
             title="My Medicine Orders"
-            subtitle="Track live shipments, download tax invoices, and manage easy medicine returns."
-            badgeText="PRESCRIPTION & MEDICINE DELIVERIES"
+            subtitle="Track shipments, active deliveries, and invoices."
+            badgeText="Medicine Orders"
             badgeIcon="medkit"
             iconName="cart"
             theme="navy"
@@ -582,12 +574,14 @@ const MyMedicineOrdersScreenWeb = ({ navigation, route }) => {
             ]}
             rightContent={
               <TouchableOpacity
-                style={styles.orderMedsBtn}
+                style={styles.organicHeroBtn}
                 onPress={() => navigation?.navigate('Pharmacy')}
                 activeOpacity={0.85}
               >
-                <Ionicons name="cart" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.orderMedsBtnText}>Order Medicine</Text>
+                <View style={styles.organicHeroArrowCircle}>
+                  <Ionicons name="arrow-forward" size={13} color="#13BE9C" />
+                </View>
+                <Text style={styles.organicHeroBtnText}>Order Medicine</Text>
               </TouchableOpacity>
             }
           />
@@ -597,10 +591,10 @@ const MyMedicineOrdersScreenWeb = ({ navigation, route }) => {
           {/* Controls: Search & Tabs */}
           <View style={styles.controlsCard}>
             <View style={styles.searchBar}>
-              <Ionicons name="search-outline" size={18} color="#94A3B8" style={{ marginRight: 8 }} />
+              <Ionicons name="search-outline" size={18} color="#13BE9C" style={{ marginRight: 10 }} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search by medicine name or Order ID (#MU...)"
+                placeholder="Search medicines or Order ID (#UNC...)"
                 placeholderTextColor="#94A3B8"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -633,8 +627,13 @@ const MyMedicineOrdersScreenWeb = ({ navigation, route }) => {
                     activeOpacity={0.8}
                   >
                     <Text style={[styles.filterChipText, active && styles.filterChipTextActive]}>
-                      {filter} ({count})
+                      {filter}
                     </Text>
+                    <View style={[styles.statusChipCountBadge, active && styles.statusChipCountBadgeActive]}>
+                      <Text style={[styles.statusChipCountText, active && styles.statusChipCountTextActive]}>
+                        {count}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
                 );
               })}
@@ -806,7 +805,7 @@ const MyMedicineOrdersScreenWeb = ({ navigation, route }) => {
                       {/* Visual Tracking Stepper for Active / Delivered Orders */}
                       {order.trackingHistory && order.status !== 'Cancelled' && (() => {
                         const isOrderDelivered = ['delivered', 'returned', 'partially returned'].includes((order.status || '').toLowerCase());
-                        const activeTrackColor = isOrderDelivered ? '#047857' : '#1E3A8A';
+                        const activeTrackColor = '#13BE9C';
 
                         return (
                           <View style={styles.trackingStepperCard}>
@@ -902,146 +901,126 @@ const MyMedicineOrdersScreenWeb = ({ navigation, route }) => {
                         </View>
                       )}
 
-                      {/* Ordered Items Preview */}
-                      <View style={styles.medicinesPreview}>
-                        <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-                          <Text style={styles.medsHeading}>Ordered Items ({order.items?.length || 0})</Text>
-                          <Text style={{ fontSize: 11, color: '#64748B', fontWeight: '500' }}>
-                            Verified MediUnify Package
-                          </Text>
+                      {/* Compact Medicine Order Summary (Full tablets list available via Order Details) */}
+                      <TouchableOpacity
+                        style={styles.compactOrderSummaryBar}
+                        onPress={() => {
+                          setSelectedOrder(order);
+                          setActiveModal('details');
+                        }}
+                        activeOpacity={0.85}
+                      >
+                        <View style={styles.compactSummaryLeft}>
+                          <View style={styles.compactMedIconCircle}>
+                            <Ionicons name="medkit" size={13} color="#13BE9C" />
+                          </View>
+                          <View style={{ flex: 1 }}>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              <Text style={styles.compactItemCountText}>
+                                {order.items?.length || 0} {order.items?.length === 1 ? 'Item' : 'Items'} Ordered
+                              </Text>
+                              <Text style={styles.viewItemsLinkText}>• View in Details →</Text>
+                            </View>
+                            <Text style={styles.compactItemsPreviewText} numberOfLines={1}>
+                              {order.items?.map((item) => splitMedNameAndSpecs(item.name).name).filter(Boolean).join(', ')}
+                            </Text>
+                          </View>
                         </View>
 
-                        <View style={{ gap: 8 }}>
-                          {order.items?.map((item, idx) => {
-                            const isReturned = (item.returnedQuantity || 0) >= item.quantity;
-                            const isPartReturned = (item.returnedQuantity || 0) > 0 && !isReturned;
-                            const { name: medName, specs: medSpecs } = splitMedNameAndSpecs(item.name);
-                            const itemSpecs = item.strength || medSpecs;
-
-                            return (
-                              <View key={item.id || idx} style={styles.medicineItemRow}>
-                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                                  <View style={[styles.pillIconSmall, isReturned && { backgroundColor: '#FFF7ED' }]}>
-                                    <Ionicons
-                                      name={isReturned ? 'arrow-undo' : 'medkit-outline'}
-                                      size={12}
-                                      color={isReturned ? '#EA580C' : '#1E3A8A'}
-                                    />
-                                  </View>
-                                  <View style={{ flex: 1 }}>
-                                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                                      <Text style={[styles.medItemName, isReturned && { textDecorationLine: 'line-through', color: '#94A3B8' }]}>
-                                        {medName}
-                                      </Text>
-
-                                      {/* Item Return Status Badge */}
-                                      {isReturned ? (
-                                        <View style={styles.itemReturnedBadge}>
-                                          <Text style={styles.itemReturnedBadgeText}>Returned ({item.returnedQuantity})</Text>
-                                        </View>
-                                      ) : isPartReturned ? (
-                                        <View style={[styles.itemReturnedBadge, { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }]}>
-                                          <Text style={[styles.itemReturnedBadgeText, { color: '#C2410C' }]}>
-                                            Partial Return ({item.returnedQuantity}/{item.quantity})
-                                          </Text>
-                                        </View>
-                                      ) : null}
-                                    </View>
-
-                                    <Text style={styles.medItemQty}>
-                                      Qty: <Text style={{ fontWeight: '600', color: '#334155' }}>{item.quantity}</Text> • ₹{item.price} each{itemSpecs ? ` • ${itemSpecs}` : ''}
-                                    </Text>
-                                  </View>
-                                </View>
-                                <Text style={styles.medItemPrice}>
-                                  ₹{item.total || Number(item.price || 0) * Number(item.quantity || 1)}
-                                </Text>
-                              </View>
-                            );
-                          })}
+                        <View style={styles.compactSummaryRight}>
+                          <Text style={styles.compactTotalLabel}>Total Paid</Text>
+                          <Text style={styles.compactTotalAmount}>₹{order.totalAmount || order.total}</Text>
                         </View>
-
-                        {/* Total Amount Row */}
-                        <View style={styles.totalRow}>
-                          <Text style={styles.totalLabel}>Total Amount (Paid):</Text>
-                          <Text style={styles.totalAmount}>₹{order.totalAmount || order.total}</Text>
-                        </View>
-                      </View>
+                      </TouchableOpacity>
 
                       {/* Action Buttons Row */}
                       <View style={styles.orderActionsRow}>
-                        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                        <View style={{ flexDirection: 'row', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
                           {/* View Details Button */}
                           <TouchableOpacity
-                            style={styles.detailsBtn}
+                            style={styles.organicActionBtn}
                             onPress={() => {
                               setSelectedOrder(order);
                               setActiveModal('details');
                             }}
                             activeOpacity={0.8}
                           >
-                            <Ionicons name="receipt-outline" size={14} color="#1E293B" style={{ marginRight: 5 }} />
-                            <Text style={styles.detailsBtnText}>Details</Text>
+                            <View style={styles.organicArrowCircle}>
+                              <Ionicons name="arrow-forward" size={12} color="#13BE9C" />
+                            </View>
+                            <Text style={styles.organicPrimaryActionText}>Order Details ({order.items?.length || 0})</Text>
                           </TouchableOpacity>
 
+                          {/* Invoice Button */}
                           <TouchableOpacity
-                            style={styles.invoiceBtn}
+                            style={styles.organicActionBtn}
                             onPress={() => {
                               setSelectedOrder(order);
                               setActiveModal('invoice');
                             }}
                             activeOpacity={0.8}
                           >
-                            <Ionicons name="document-text-outline" size={14} color="#1E3A8A" style={{ marginRight: 5 }} />
-                            <Text style={styles.invoiceBtnText}>Invoice</Text>
+                            <View style={styles.organicActionIconCircle}>
+                              <Ionicons name="document-text-outline" size={12} color="#13BE9C" />
+                            </View>
+                            <Text style={styles.organicActionText}>Invoice</Text>
                           </TouchableOpacity>
 
+                          {/* Support Button */}
                           <TouchableOpacity
-                            style={styles.contactBtn}
+                            style={styles.organicActionBtn}
                             onPress={() => {
                               setSelectedOrder(order);
                               setActiveModal('contact');
                             }}
                             activeOpacity={0.8}
                           >
-                            <Ionicons name="headset-outline" size={14} color="#475569" style={{ marginRight: 5 }} />
-                            <Text style={styles.contactBtnText}>Support</Text>
+                            <View style={styles.organicActionIconCircle}>
+                              <Ionicons name="headset-outline" size={12} color="#13BE9C" />
+                            </View>
+                            <Text style={styles.organicActionText}>Support</Text>
                           </TouchableOpacity>
 
                           {/* Demo Testing Helper: Mark Delivered */}
                           {!isDelivered && (
                             <TouchableOpacity
-                              style={styles.demoDeliveredBtn}
+                              style={styles.organicActionBtn}
                               onPress={() => handleMarkOrderDelivered(order)}
                               activeOpacity={0.8}
                             >
-                              <Ionicons name="checkmark-done" size={13} color="#008B94" style={{ marginRight: 4 }} />
-                              <Text style={styles.demoDeliveredBtnText}>Mark Delivered</Text>
+                              <View style={styles.organicActionIconCircle}>
+                                <Ionicons name="checkmark-done" size={12} color="#13BE9C" />
+                              </View>
+                              <Text style={styles.organicActionText}>Mark Delivered</Text>
                             </TouchableOpacity>
                           )}
                         </View>
 
                         {/* Return Items & Reorder Actions */}
-                        <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                        <View style={{ flexDirection: 'row', gap: 14, flexWrap: 'wrap', alignItems: 'center' }}>
                           {isDeliveredOrReturnable && returnableItemsCount > 0 && (
                             <TouchableOpacity
-                              style={styles.returnBtn}
+                              style={styles.organicActionBtn}
                               onPress={() => handleOpenReturnModal(order)}
                               activeOpacity={0.8}
                             >
-                              <Ionicons name="return-down-back-outline" size={14} color="#C2410C" style={{ marginRight: 4 }} />
-                              <Text style={styles.returnBtnText}>Return Items</Text>
+                              <View style={[styles.organicActionIconCircle, { borderColor: '#EA580C' }]}>
+                                <Ionicons name="return-down-back-outline" size={12} color="#EA580C" />
+                              </View>
+                              <Text style={[styles.organicActionText, { color: '#EA580C' }]}>Return Items</Text>
                             </TouchableOpacity>
                           )}
 
                           {isDelivered && (
                             <TouchableOpacity
-                              style={styles.reorderBtn}
+                              style={styles.organicActionBtn}
                               onPress={() => handleReorder(order)}
                               activeOpacity={0.8}
                             >
-                              <Ionicons name="repeat-outline" size={14} color="#FFFFFF" style={{ marginRight: 4 }} />
-                              <Text style={styles.reorderBtnText}>Reorder</Text>
+                              <View style={styles.organicArrowCircle}>
+                                <Ionicons name="repeat-outline" size={12} color="#13BE9C" />
+                              </View>
+                              <Text style={styles.organicPrimaryActionText}>Reorder</Text>
                             </TouchableOpacity>
                           )}
                         </View>
@@ -1678,7 +1657,7 @@ const MyMedicineOrdersScreenResponsive = (props) => {
 
 export default MyMedicineOrdersScreenResponsive;
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F8FAFC',
@@ -1692,32 +1671,6 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
     paddingHorizontal: 16,
-  },
-  breadcrumbBar: {
-    backgroundColor: 'transparent',
-    borderBottomWidth: 0,
-    paddingTop: 16,
-    paddingBottom: 4,
-  },
-  breadcrumbContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  breadcrumbItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  breadcrumbText: {
-    fontSize: 12.5,
-    color: BRAND.SLATE,
-    fontWeight: '500',
-  },
-  breadcrumbActive: {
-    fontSize: 12.5,
-    color: BRAND.NAVY,
-    fontWeight: '700',
   },
   toastContainer: {
     position: 'absolute',
@@ -1738,19 +1691,35 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  orderMedsBtn: {
+  // Image 2 Exact Hero CTA (Circular Outline Arrow + Bold Text in #13BE9C)
+  organicHeroBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: BRAND.TEAL,
-    paddingHorizontal: 18,
-    paddingVertical: 11,
-    borderRadius: 10,
-    boxShadow: '0 4px 14px rgba(0, 139, 148, 0.3)',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 24,
+    borderWidth: 1.8,
+    borderColor: '#13BE9C',
+    boxShadow: '0 2px 8px rgba(19, 190, 156, 0.15)',
+    cursor: 'pointer',
   },
-  orderMedsBtnText: {
-    color: '#FFFFFF',
-    fontSize: 13.5,
-    fontWeight: '700',
+  organicHeroArrowCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.8,
+    borderColor: '#13BE9C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  organicHeroBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#13BE9C',
+    letterSpacing: 0.1,
   },
   controlsCard: {
     backgroundColor: '#FFFFFF',
@@ -1782,27 +1751,49 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 16,
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E2E8F0',
     cursor: 'pointer',
+    userSelect: 'none',
   },
   filterChipActive: {
-    backgroundColor: BRAND.TEAL,
-    borderColor: BRAND.TEAL,
+    backgroundColor: '#13BE9C',
+    borderColor: '#13BE9C',
+    boxShadow: '0 2px 8px rgba(19, 190, 156, 0.2)',
   },
   filterChipText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#475569',
-    letterSpacing: 0.2,
+    userSelect: 'none',
   },
   filterChipTextActive: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
+  },
+  statusChipCountBadge: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+  },
+  statusChipCountBadgeActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+  },
+  statusChipCountText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#475569',
+  },
+  statusChipCountTextActive: {
+    color: '#FFFFFF',
   },
 
   // Skeleton / Loading UI (Requirement 8)
@@ -2254,6 +2245,73 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#C2410C',
   },
+  // Compact Order Summary Bar (Tablets List moved to Details Modal)
+  compactOrderSummaryBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingVertical: 11,
+    paddingHorizontal: 14,
+    gap: 12,
+    marginTop: 2,
+    cursor: 'pointer',
+  },
+  compactSummaryLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    flex: 1,
+    minWidth: 200,
+  },
+  compactMedIconCircle: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    backgroundColor: '#E6F8F4',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  compactItemCountText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  viewItemsLinkText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#13BE9C',
+  },
+  compactItemsPreviewText: {
+    fontSize: 11.5,
+    color: '#64748B',
+    marginTop: 1,
+  },
+  compactSummaryRight: {
+    alignItems: 'flex-end',
+    justifyContent: 'center',
+    borderLeftWidth: 1,
+    borderLeftColor: '#E2E8F0',
+    paddingLeft: 14,
+  },
+  compactTotalLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  compactTotalAmount: {
+    fontSize: 15,
+    fontWeight: '800',
+    color: '#0F172A',
+    marginTop: 1,
+  },
   totalRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
@@ -2278,11 +2336,51 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
-    gap: 8,
+    gap: 14,
     marginTop: 14,
     paddingTop: 12,
     borderTopWidth: 1,
     borderTopColor: '#E2E8F0',
+  },
+  // Image 2 Exact Button Design (Circular Outline Icon Ring + Bold Text in #13BE9C)
+  organicActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    cursor: 'pointer',
+  },
+  organicArrowCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.8,
+    borderColor: '#13BE9C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  organicActionIconCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: '#13BE9C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  organicPrimaryActionText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#13BE9C',
+    letterSpacing: 0.1,
+  },
+  organicActionText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#334155',
   },
   detailsBtn: {
     flexDirection: 'row',

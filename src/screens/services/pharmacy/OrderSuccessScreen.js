@@ -12,8 +12,13 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import colors from '../../../theme/colors';
+import WebFooter from '../../../components/web/WebFooter';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 
 const OrderSuccessScreen = ({ navigation, route }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
 
@@ -125,7 +130,7 @@ const OrderSuccessScreen = ({ navigation, route }) => {
             activeOpacity={0.8}
             accessibilityLabel="Close"
           >
-            <Ionicons name="close" size={22} color={colors.secondary} />
+            <Ionicons name="close" size={22} color={isDarkMode ? theme.text : colors.secondary} />
           </TouchableOpacity>
 
           <Text style={styles.topHeaderTitle}>Order Confirmation</Text>
@@ -372,63 +377,112 @@ const OrderSuccessScreen = ({ navigation, route }) => {
             </View>
           </View>
 
-          <View style={{ height: 160 }} />
+          {Platform.OS === 'web' && (
+            <View style={{ marginTop: 24, width: '100%', gap: 10 }}>
+              <TouchableOpacity
+                style={styles.floatingHomeBtn}
+                activeOpacity={0.88}
+                onPress={handleViewOrders}
+                accessibilityLabel="View Order"
+              >
+                <Ionicons name="receipt" size={18} color="#FFFFFF" />
+                <Text style={styles.floatingHomeText}>View Order Details</Text>
+              </TouchableOpacity>
+              <View style={styles.secondaryBtnRow}>
+                <TouchableOpacity
+                  style={styles.trackOrdersBtn}
+                  activeOpacity={0.85}
+                  onPress={handleViewOrders}
+                  accessibilityLabel="My Pharmacy Orders"
+                >
+                  <Ionicons name="list-outline" size={16} color={colors.primary} />
+                  <Text style={styles.trackOrdersText}>My Orders</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.continueShoppingBtn}
+                  activeOpacity={0.85}
+                  onPress={handleContinueShopping}
+                  accessibilityLabel="Pharmacy Store"
+                >
+                  <Ionicons name="medkit-outline" size={16} color={colors.secondary} />
+                  <Text style={styles.continueShoppingText}>Pharmacy</Text>
+                </TouchableOpacity>
+
+                <TouchableOpacity
+                  style={styles.continueShoppingBtn}
+                  activeOpacity={0.85}
+                  onPress={handleGoHome}
+                  accessibilityLabel="Home Screen"
+                >
+                  <Ionicons name="home-outline" size={16} color={colors.secondary} />
+                  <Text style={styles.continueShoppingText}>Home</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          )}
+
+          <View style={{ height: Platform.OS === 'web' ? 40 : 160 }} />
         </View>
+
+        {Platform.OS === 'web' && <WebFooter navigation={navigation} />}
       </ScrollView>
 
-      {/* FLOATING BOTTOM ACTION BAR */}
-      <View style={styles.floatingBottomBarWrapper}>
-        <View style={styles.floatingBottomBar}>
-          {/* PRIMARY: VIEW ORDER */}
-          <TouchableOpacity
-            style={styles.floatingHomeBtn}
-            activeOpacity={0.88}
-            onPress={handleViewOrders}
-            accessibilityLabel="View Order"
-          >
-            <Ionicons name="receipt" size={18} color="#FFFFFF" />
-            <Text style={styles.floatingHomeText}>View Order</Text>
-          </TouchableOpacity>
-
-          {/* SECONDARY ROW */}
-          <View style={styles.secondaryBtnRow}>
+      {/* FLOATING BOTTOM ACTION BAR (Native only) */}
+      {Platform.OS !== 'web' && (
+        <View style={styles.floatingBottomBarWrapper}>
+          <View style={styles.floatingBottomBar}>
+            {/* PRIMARY: VIEW ORDER */}
             <TouchableOpacity
-              style={styles.trackOrdersBtn}
-              activeOpacity={0.85}
+              style={styles.floatingHomeBtn}
+              activeOpacity={0.88}
               onPress={handleViewOrders}
-              accessibilityLabel="My Pharmacy Orders"
+              accessibilityLabel="View Order"
             >
-              <Ionicons name="list-outline" size={16} color={colors.primary} />
-              <Text style={styles.trackOrdersText}>My Orders</Text>
+              <Ionicons name="receipt" size={18} color="#FFFFFF" />
+              <Text style={styles.floatingHomeText}>View Order</Text>
             </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.continueShoppingBtn}
-              activeOpacity={0.85}
-              onPress={handleContinueShopping}
-              accessibilityLabel="Pharmacy Store"
-            >
-              <Ionicons name="medkit-outline" size={16} color={colors.secondary} />
-              <Text style={styles.continueShoppingText}>Pharmacy</Text>
-            </TouchableOpacity>
+            {/* SECONDARY ROW */}
+            <View style={styles.secondaryBtnRow}>
+              <TouchableOpacity
+                style={styles.trackOrdersBtn}
+                activeOpacity={0.85}
+                onPress={handleViewOrders}
+                accessibilityLabel="My Pharmacy Orders"
+              >
+                <Ionicons name="list-outline" size={16} color={colors.primary} />
+                <Text style={styles.trackOrdersText}>My Orders</Text>
+              </TouchableOpacity>
 
-            <TouchableOpacity
-              style={styles.continueShoppingBtn}
-              activeOpacity={0.85}
-              onPress={handleGoHome}
-              accessibilityLabel="Home Screen"
-            >
-              <Ionicons name="home-outline" size={16} color={colors.secondary} />
-              <Text style={styles.continueShoppingText}>Home</Text>
-            </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.continueShoppingBtn}
+                activeOpacity={0.85}
+                onPress={handleContinueShopping}
+                accessibilityLabel="Pharmacy Store"
+              >
+                <Ionicons name="medkit-outline" size={16} color={colors.secondary} />
+                <Text style={styles.continueShoppingText}>Pharmacy</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.continueShoppingBtn}
+                activeOpacity={0.85}
+                onPress={handleGoHome}
+                accessibilityLabel="Home Screen"
+              >
+                <Ionicons name="home-outline" size={16} color={colors.secondary} />
+                <Text style={styles.continueShoppingText}>Home</Text>
+              </TouchableOpacity>
+            </View>
           </View>
         </View>
-      </View>
+      )}
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F4F8FA',
@@ -472,10 +526,13 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
+    paddingBottom: Platform.OS === 'web' ? 0 : 20,
+    paddingHorizontal: Platform.OS === 'web' ? 0 : 16,
     alignItems: 'center',
   },
   scrollContentTablet: {
-    paddingHorizontal: 24,
+    paddingHorizontal: Platform.OS === 'web' ? 0 : 24,
+    paddingBottom: Platform.OS === 'web' ? 0 : 24,
   },
   contentWrapper: {
     width: '100%',

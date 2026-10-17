@@ -21,10 +21,14 @@ import * as ImagePicker from 'expo-image-picker';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import colors from '../../../theme/colors';
 import { useCart } from '../../../context/CartContext';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
 const VideoMeetingScreen = ({ route, navigation }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { addToCart } = useCart();
   const appointment = route?.params?.appointment || {};
   const doctor = appointment?.doctor || route?.params?.doctor || {
@@ -968,7 +972,7 @@ const VideoMeetingScreen = ({ route, navigation }) => {
 
 export default VideoMeetingScreen;
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#0B1120',

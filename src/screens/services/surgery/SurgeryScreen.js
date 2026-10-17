@@ -60,7 +60,8 @@ const SurgeryScreen = ({ navigation }) => {
   const isDesktopWeb = Platform.OS === 'web' && width >= 992;
   const isTablet = width >= 600 && width < 992;
   const { requireLogin } = useAuthGuard();
-  const { t } = useTheme();
+  const { t, isDarkMode, theme } = useTheme();
+  const isDark = isDarkMode;
 
   // Form State
   const [selectedSurgery, setSelectedSurgery] = useState('');
@@ -225,13 +226,13 @@ const SurgeryScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, isDark && { backgroundColor: theme.background }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? theme.headerBg : '#FFFFFF'} />
 
       {/* TOP HEADER BAR */}
-      <View style={styles.topHeaderBar}>
+      <View style={[styles.topHeaderBar, isDark && { backgroundColor: theme.headerBg, borderBottomColor: theme.border }]}>
         <TouchableOpacity
-          style={styles.headerBackBtn}
+          style={[styles.headerBackBtn, isDark && { backgroundColor: theme.card, borderColor: theme.border }]}
           onPress={() => {
             if (activeTab === 'quotes') {
               setActiveTab('explore');
@@ -243,10 +244,10 @@ const SurgeryScreen = ({ navigation }) => {
           }}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="arrow-back" size={20} color="#0F172A" />
+          <Ionicons name="arrow-back" size={20} color={isDark ? theme.text : '#0F172A'} />
         </TouchableOpacity>
         <View style={{ flex: 1, marginLeft: 12 }}>
-          <Text style={{ fontSize: 17, fontWeight: '800', color: '#0F172A' }} numberOfLines={1}>
+          <Text style={[{ fontSize: 17, fontWeight: '800', color: '#0F172A' }, isDark && { color: theme.text }]} numberOfLines={1}>
             {t('Surgery')}
           </Text>
           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 2 }}>
@@ -279,6 +280,7 @@ const SurgeryScreen = ({ navigation }) => {
       </View>
 
       <ScrollView
+        style={{ flex: 1, backgroundColor: '#F5FEFB' }}
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
@@ -649,9 +651,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingVertical: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#F5FEFB',
   },
   headerBackBtn: {
     width: 36,
@@ -718,18 +718,14 @@ const styles = StyleSheet.create({
 
   // HERO BANNER CARD - Modern Healthcare Light Banner
   heroBannerCard: {
-    backgroundColor: '#E6F8F5',
-    backgroundImage: Platform.OS === 'web' ? 'linear-gradient(180deg, #E6F8F5 0%, #F0FDFA 100%)' : undefined,
+    backgroundColor: '#F5FEFB',
     borderRadius: 20,
     padding: 20,
     marginBottom: 20,
-    borderWidth: 1.5,
-    borderColor: '#99F6E4',
-    shadowColor: '#0D9488',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
-    elevation: 3,
+    borderWidth: 0,
+    shadowColor: 'transparent',
+    shadowOpacity: 0,
+    elevation: 0,
   },
   heroBannerCardMobile: {
     backgroundColor: 'transparent',
@@ -817,10 +813,10 @@ const styles = StyleSheet.create({
     padding: 20,
     marginTop: 6,
     borderWidth: 1,
-    borderColor: '#CCFBF1',
-    shadowColor: '#0D9488',
+    borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.05,
     shadowRadius: 12,
     elevation: 2,
   },
@@ -871,14 +867,14 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
   quickSubmitBtn: {
-    backgroundColor: '#007D69',
+    backgroundColor: '#00A382',
     borderRadius: 12,
     height: 48,
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: '#007D69',
+    shadowColor: '#00A382',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.25,
+    shadowOpacity: 0.28,
     shadowRadius: 8,
     elevation: 3,
     marginTop: 2,
@@ -1007,7 +1003,7 @@ const styles = StyleSheet.create({
     justifyContent: 'space-around',
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    paddingVertical: 12,
+    paddingVertical: 14,
     paddingHorizontal: 8,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -1517,11 +1513,13 @@ const styles = StyleSheet.create({
 
   safeArea: {
     flex: 1,
-    backgroundColor: '#F4F7FC',
+    backgroundColor: '#F5FEFB',
+    ...(Platform.OS === 'web' ? { minHeight: '100vh' } : {}),
   },
   scrollContainer: {
     flexGrow: 1,
-    backgroundColor: '#F4F7FC',
+    backgroundColor: '#F5FEFB',
+    ...(Platform.OS === 'web' ? { minHeight: '100vh' } : {}),
   },
   mainBody: {
     width: '100%',

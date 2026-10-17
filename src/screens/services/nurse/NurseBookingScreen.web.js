@@ -21,6 +21,8 @@ import { showAlert } from '../../../utils/alert';
 import { isGuestUser, promptLoginRequired } from '../../../utils/authHelper';
 import WebFooter from '../../../components/web/WebFooter';
 import WebBackButton from '../../../components/web/WebBackButton';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 import {
   availableNursingServices,
   howItWorksSteps,
@@ -159,9 +161,11 @@ const FAQS = [
   },
 ];
 
-import NurseBookingScreenMobile from './NurseBookingScreenMobile';
+import NurseBookingScreenMobile from './NurseBookingScreen.js';
 
 const NurseBookingScreen = ({ navigation, route, ...props }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const desktopSiteMode = isDesktopSiteRequested();
   const isDesktopWeb = Platform.OS === 'web' && (desktopSiteMode || width >= 992);
@@ -4173,7 +4177,7 @@ const NurseBookingScreen = ({ navigation, route, ...props }) => {
 // =========================================================================
 // STYLES
 // =========================================================================
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   rootContainer: {
     flex: 1,
     backgroundColor: '#FAFCFD',

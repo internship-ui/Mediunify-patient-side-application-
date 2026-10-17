@@ -21,6 +21,8 @@ import OptimizedImage from '../../../components/common/OptimizedImage';
 import Pagination from '../../../components/common/Pagination';
 import WebBackButton from '../../../components/web/WebBackButton';
 import { isDesktopLayout } from '../../../utils/responsiveLayoutHelper';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 import {
   equipmentCategories,
   equipmentCatalog,
@@ -36,9 +38,11 @@ const ASYNC_KEY_NOTIFICATIONS = '@mediunify_user_notifications';
 const REQUIRED_DATE_CHOICES = ['Today', 'Tomorrow', 'Within 2-3 Days', 'Specific Date'];
 const DURATION_CHOICES = ['1 Week', '2 Weeks', '1 Month', '2 Months', '3 Months', 'Long-term'];
 
-import EquipmentRentalScreenMobile from './EquipmentRentalScreenMobile';
+import EquipmentRentalScreenMobile from './EquipmentRentalScreen.js';
 
 const EquipmentRentalScreen = ({ navigation, route, ...props }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const isDesktop = width >= 992;
   const isTablet = width >= 640 && width < 992;
@@ -1109,7 +1113,7 @@ const EquipmentRentalScreen = ({ navigation, route, ...props }) => {
 // ============================================================================
 // STYLESHEET (MediUnify Standard Theme - Responsive Pagination Grid)
 // ============================================================================
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: '#F8FAFC',

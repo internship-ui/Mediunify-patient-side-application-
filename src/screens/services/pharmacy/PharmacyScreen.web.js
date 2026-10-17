@@ -23,10 +23,15 @@ import {
   normalizePharmacyCity,
 } from '../../../data/pharmacyStores';
 import WebFooter from '../../../components/web/WebFooter';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 import OptimizedImage from '../../../components/common/OptimizedImage';
 import Pagination from '../../../components/common/Pagination';
-import WebBackButton from '../../../components/web/WebBackButton';
 import { isDesktopLayout, isDesktopSiteRequested } from '../../../utils/responsiveLayoutHelper';
+
+const pharmaVitaminC = require('../../../../assets/pharmacy/pharma_vitamin_c.jpg');
+const pharmaMultivitamin = require('../../../../assets/pharmacy/pharma_multivitamin.jpg');
+const pharmaThermometer = require('../../../../assets/pharmacy/pharma_thermometer.jpg');
 
 // ==================================================
 // 1. HERO ADS SLIDES (Exact HomeScreen.web.js Standard)
@@ -46,7 +51,7 @@ const PHARMACY_HERO_SLIDES = [
     subTitle: 'Branded and affordable generic medicines delivered in 60 minutes.',
     bullets: [
       'Express 60-min delivery to your doorstep',
-      'Upload prescription for fast checkout',
+      'Verified genuine medicines & trusted brands',
       'Cold-chain delivery for insulin & vaccines',
     ],
     ctaText: 'Order Medicines',
@@ -59,28 +64,28 @@ const PHARMACY_HERO_SLIDES = [
   },
   {
     id: 'pharma-slide-2',
-    pillText: 'RX VERIFICATION',
+    pillText: 'AYURVEDA & WELLNESS',
     pillBg: '#ECFDF5',
-    pillColor: '#00B894',
-    certText: 'Verified Pharmacists',
-    certIcon: 'shield-checkmark',
-    title: 'Upload Prescription for Instant Order',
-    priceText: 'Zero Extra Fee',
-    priceSub: 'Free Review',
-    priceColor: '#00B894',
-    subTitle: 'Upload your prescription. Our licensed pharmacist will verify and confirm your order.',
+    pillColor: '#007D69',
+    certText: '100% Herbal & Pure',
+    certIcon: 'leaf',
+    title: 'Ayurvedic & Herbal Wellness Care',
+    priceText: 'Up to 25% OFF',
+    priceSub: 'Natural Healing',
+    priceColor: '#007D69',
+    subTitle: 'Explore herbal supplements, immunity boosters, and pure natural Ayurvedic care.',
     bullets: [
-      'Fast digital prescription verification',
-      'Pharmacist confirms brand and dosage',
-      'Easy refills for monthly medications',
+      'Authentic certified herbal formulations',
+      'Doctor recommended wellness remedies',
+      'Natural immunity & vitality boosters',
     ],
-    ctaText: 'Upload Prescription',
-    ctaBg: '#1E3A8A',
+    ctaText: 'Explore Wellness',
+    ctaBg: '#007D69',
     bgColor: '#ECFDF5',
     borderColor: '#A7F3D0',
-    image: 'https://images.unsplash.com/photo-1576091160399-112ba8d25d1d?w=900',
-    trustBadge: 'Licensed & Registered Pharmacists',
-    actionType: 'upload',
+    image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=900',
+    trustBadge: '100% Herbal & Authentic',
+    actionType: 'scroll-to-products',
   },
   {
     id: 'pharma-slide-3',
@@ -312,16 +317,16 @@ export const BROWSE_CATEGORIES = [
 const ACTION_CARDS = [
   {
     id: 'discount-upload',
-    title: 'Get 20%* off on\nMedicines',
-    ctaText: 'UPLOAD PRESCRIPTION',
-    iconName: 'document-text-outline',
+    title: 'Order Genuine\nMedicines',
+    ctaText: 'FLAT 20% OFF',
+    iconName: 'medkit-outline',
     iconType: 'ionicons',
     bgColor: '#FFF5F0',
     borderColor: '#FED7AA',
     iconBg: '#FFEBE5',
     iconColor: '#FF7F50',
     ctaColor: '#FF7F50',
-    actionType: 'upload',
+    actionType: 'scroll-to-products',
   },
   {
     id: 'doctor-appointment',
@@ -450,11 +455,11 @@ const HEALTH_CONDITIONS = [
 // 5. HIGH-RESOLUTION PRODUCT IMAGES DICTIONARY
 // ==================================================
 export const PRODUCT_IMAGES = {
-  '1': 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=400', // Dolo Paracetamol
-  '2': 'https://images.unsplash.com/photo-1577401239170-897942555fb3?w=400', // Vitamin C Limcee
-  '3': 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?w=400', // Multivitamin Becadexamin
-  '4': 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=400', // Digital Thermometer
-  '5': 'https://images.unsplash.com/photo-1584362917165-526a968579e8?w=400', // Dettol Antiseptic
+  '1': 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500', // Dolo Paracetamol
+  '2': pharmaVitaminC, // Vitamin C Limcee on pure white
+  '3': pharmaMultivitamin, // Daily Multivitamin Becadexamin on pure white
+  '4': pharmaThermometer, // Digital Thermometer on pure white
+  '5': 'https://images.unsplash.com/photo-1584362917165-526a968579e8?w=500', // Dettol Antiseptic
   '6': 'https://images.unsplash.com/photo-1584744982491-665216d95f8b?w=400', // Hand Sanitizer
   '7': 'https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=400', // First Aid Kit
   '8': 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=400', // Augmentin Antibiotic
@@ -575,7 +580,7 @@ export const EXTENDED_PRODUCTS = [
 
 
 
-import PharmacyScreenMobile from './PharmacyScreenMobile';
+import PharmacyScreenMobile from './PharmacyScreen.js';
 
 // Helper: Format category names to short, concise tags
 const getShortCategory = (category) => {
@@ -621,6 +626,8 @@ const formatDiscountText = (discount, mrp, price) => {
 };
 
 const PharmacyScreenWeb = ({ navigation, route }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const desktopSiteMode = isDesktopSiteRequested();
   const isDesktop = desktopSiteMode || width >= 1024;
@@ -818,6 +825,46 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
   useEffect(() => {
     setCurrentPage(1);
   }, [searchQuery, selectedCategory, selectedCondition]);
+
+  // Inject Premium Hover CSS for Product Cards & Buttons
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const styleId = 'pharmacy-premium-cards-css';
+      let styleEl = document.getElementById(styleId);
+      if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = styleId;
+        document.head.appendChild(styleEl);
+      }
+      styleEl.innerHTML = `
+        .pharmacy-prod-card {
+          transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.26s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease !important;
+        }
+        .pharmacy-prod-card:hover {
+          transform: translateY(-6px) !important;
+          box-shadow: 0 20px 36px -10px rgba(15, 23, 42, 0.12), 0 4px 12px rgba(15, 23, 42, 0.04) !important;
+          border-color: #CBD5E1 !important;
+        }
+        .pharmacy-prod-card .pharmacy-card-img {
+          transition: transform 0.38s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        }
+        .pharmacy-prod-card:hover .pharmacy-card-img {
+          transform: scale(1.06) !important;
+        }
+        .pharmacy-add-btn {
+          transition: transform 0.18s ease, box-shadow 0.18s ease, filter 0.18s ease !important;
+        }
+        .pharmacy-add-btn:hover {
+          transform: translateY(-1.5px) !important;
+          box-shadow: 0 6px 18px rgba(0, 184, 148, 0.42) !important;
+          filter: brightness(1.05) !important;
+        }
+        .pharmacy-add-btn:active {
+          transform: translateY(0px) scale(0.98) !important;
+        }
+      `;
+    }
+  }, []);
 
   const totalPages = Math.ceil(filteredProducts.length / ITEMS_PER_PAGE) || 1;
 
@@ -1032,15 +1079,6 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
                   >
                     <Text style={styles.fullWidthCtaText}>{activeSlide.ctaText}</Text>
                     <Ionicons name="arrow-forward" size={15} color="#FFFFFF" />
-                  </TouchableOpacity>
-
-                  <TouchableOpacity
-                    style={styles.heroSecondaryUploadBtn}
-                    onPress={handleTriggerUpload}
-                    activeOpacity={0.85}
-                  >
-                    <Ionicons name="cloud-upload-outline" size={16} color="#1E3A8A" />
-                    <Text style={styles.heroSecondaryUploadText}>Upload Prescription</Text>
                   </TouchableOpacity>
                 </View>
               </View>
@@ -1471,10 +1509,12 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
                   const discountStr = formatDiscountText(prod.discount, prod.mrp || prod.oldPrice, prod.price);
 
                 return (
-                  <View key={prod.id} style={[styles.pharmacyCard, { width: cardWidth }]}>
-                    {/* Top Multi-Color Gradient Bar */}
-                    <View style={styles.cardGradientBarMulticolor} />
-
+                  <View
+                    key={prod.id}
+                    style={[styles.pharmacyCard, { width: cardWidth }]}
+                    // @ts-ignore
+                    className="pharmacy-prod-card"
+                  >
                     {/* Badge */}
                     <View style={styles.pharmacyBadge}>
                       <Text style={styles.pharmacyBadgeText}>
@@ -1495,9 +1535,12 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
                       style={styles.pharmacyCardImgWrap}
                     >
                       <OptimizedImage
-                        source={{ uri: prodImg }}
+                        source={typeof prodImg === 'number' ? prodImg : { uri: prodImg }}
                         style={styles.pharmacyCardImg}
+                        // @ts-ignore
+                        className="pharmacy-card-img"
                         resizeMode="contain"
+                        placeholderColor="transparent"
                         fallbackIcon="medkit-outline"
                         fallbackColor="#007D69"
                       />
@@ -1555,10 +1598,12 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
                         ) : (
                           <TouchableOpacity
                             style={styles.addToCartButton}
+                            // @ts-ignore
+                            className="pharmacy-add-btn"
                             onPress={() => addToCart(prod, 1, 'pharmacy')}
-                            activeOpacity={0.85}
+                            activeOpacity={0.88}
                           >
-                            <Ionicons name="cart-outline" size={15} color="#FFFFFF" />
+                            <Ionicons name="cart-outline" size={16} color="#FFFFFF" />
                             <Text style={styles.addToCartButtonText}>Add to Cart</Text>
                           </TouchableOpacity>
                         )}
@@ -1672,7 +1717,7 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
 // ==================================================
 // STYLESHEET (Exact HomeScreen.web.js Design System)
 // ==================================================
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FAFCFD', // Match healthcare background
@@ -2731,76 +2776,68 @@ const styles = StyleSheet.create({
     gap: 14,
   },
   cardGradientBarMulticolor: {
-    height: 4,
-    width: '100%',
-    backgroundImage: 'linear-gradient(90deg, #00B894 0%, #00C2CB 50%, #1E3A8A 100%)',
-    position: 'absolute',
-    top: 0,
-    left: 0,
-    right: 0,
-    zIndex: 3,
+    display: 'none',
   },
   pharmacyCard: {
-    backgroundColor: '#F0FDF9',
-    backgroundImage: 'linear-gradient(180deg, #F4FDF9 0%, #E6F8F3 50%, #EFF6FF 100%)',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#A7F3D0',
-    padding: 12,
-    paddingTop: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E8EFF5',
+    padding: 13,
+    paddingTop: 12,
+    paddingBottom: 14,
     position: 'relative',
     overflow: 'hidden',
-    shadowColor: '#00B894',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.08,
-    shadowRadius: 12,
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
     elevation: 3,
-    boxShadow: '0 8px 24px -3px rgba(0, 184, 148, 0.10)',
+    boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.02)',
     justifyContent: 'space-between',
-    minHeight: 310,
+    minHeight: 330,
     cursor: 'pointer',
   },
   pharmacyBadge: {
     position: 'absolute',
     top: 8,
     left: 8,
-    backgroundColor: '#FFF5F0',
-    paddingHorizontal: 6,
+    backgroundColor: '#FFF4ED',
+    paddingHorizontal: 5.5,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 6,
+    borderWidth: 0.8,
+    borderColor: '#FED7AA',
     zIndex: 2,
   },
   pharmacyBadgeText: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: '#FF7F50',
+    fontSize: 8.5,
+    fontWeight: '700',
+    color: '#EA580C',
     letterSpacing: 0.2,
   },
   pharmacyRxBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#EFF6FF',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    top: 9,
+    right: 9,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
+    borderColor: '#CBD5E1',
     zIndex: 2,
   },
   pharmacyRxBadgeText: {
     fontSize: 9.5,
     fontWeight: '800',
-    color: '#1E3A8A',
+    color: '#475569',
   },
   pharmacyCardImgWrap: {
     width: '100%',
-    height: 130,
-    backgroundColor: '#F8FAFC',
-    backgroundImage: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 50%, #ECFDF5 100%)',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#EDF2F7',
+    height: 140,
+    backgroundColor: 'transparent',
+    borderRadius: 12,
     marginTop: 14,
     marginBottom: 8,
     alignItems: 'center',
@@ -2808,8 +2845,9 @@ const styles = StyleSheet.create({
     overflow: 'hidden',
   },
   pharmacyCardImg: {
-    width: '88%',
-    height: '88%',
+    width: '94%',
+    height: '94%',
+    ...(Platform.OS === 'web' ? { mixBlendMode: 'multiply' } : {}),
   },
   pharmacyCardBody: {
     flex: 1,
@@ -2821,18 +2859,19 @@ const styles = StyleSheet.create({
   pharmacyCat: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#0D9488',
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    marginBottom: 3,
+    letterSpacing: 0.6,
+    marginBottom: 4,
   },
   pharmacyName: {
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '700',
-    color: '#1E3A8A',
-    lineHeight: 18,
-    height: 36,
+    color: '#0F172A',
+    lineHeight: 19,
+    height: 38,
     overflow: 'hidden',
+    letterSpacing: -0.1,
   },
   pharmacyBrand: {
     fontSize: 11,
@@ -2843,11 +2882,11 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 5,
+    marginTop: 6,
   },
   ratingNumberText: {
     fontSize: 11.5,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#334155',
   },
   reviewsCountText: {
@@ -2855,21 +2894,22 @@ const styles = StyleSheet.create({
     color: '#94A3B8',
   },
   pharmacyCardFooter: {
-    marginTop: 8,
+    marginTop: 10,
   },
   pharmacyPriceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 6,
+    gap: 7,
     marginBottom: 8,
   },
   pharmacyPrice: {
-    fontSize: 17,
+    fontSize: 18,
     fontWeight: '800',
-    color: '#1E3A8A',
+    color: '#0F172A',
+    letterSpacing: -0.3,
   },
   pharmacyMrp: {
-    fontSize: 11.5,
+    fontSize: 12,
     color: '#94A3B8',
     textDecorationLine: 'line-through',
   },
@@ -2877,22 +2917,24 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 7,
     backgroundColor: '#00B894',
-    backgroundImage: 'linear-gradient(135deg, #00B894 0%, #009B7B 100%)',
-    borderRadius: 8,
-    height: 36,
+    backgroundImage: 'linear-gradient(135deg, #00C29A 0%, #009E7E 100%)',
+    borderRadius: 10,
+    height: 38,
     cursor: 'pointer',
     shadowColor: '#00B894',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
+    boxShadow: '0 4px 14px rgba(0, 184, 148, 0.28)',
   },
   addToCartButtonText: {
     fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
   quantityStepper: {
     flexDirection: 'row',
@@ -2900,21 +2942,25 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     borderWidth: 1.5,
     borderColor: '#00B894',
-    borderRadius: 8,
-    backgroundColor: '#ECFDF5',
-    height: 36,
-    paddingHorizontal: 8,
+    borderRadius: 10,
+    backgroundColor: '#F0FDF4',
+    height: 38,
+    paddingHorizontal: 6,
+    boxShadow: '0 2px 8px rgba(0, 184, 148, 0.12)',
   },
   stepperBtn: {
     width: 28,
     height: 28,
+    borderRadius: 7,
+    backgroundColor: '#FFFFFF',
     alignItems: 'center',
     justifyContent: 'center',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
   },
   stepperQuantity: {
     fontSize: 13.5,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#065F46',
   },
   emptyProductsState: {
     paddingVertical: 60,

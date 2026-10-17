@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -22,16 +22,54 @@ import * as ImagePicker from 'expo-image-picker';
 import { requestLocationPermissionWebSafe, getCurrentPositionWebSafe, reverseGeocodeWebSafe } from '../../../utils/locationHelper';
 import pharmacyProducts from '../../../data/pharmacyProducts';
 import { LAB_PACKAGES } from '../../../data/labTestData';
+import { enrichLabItemDetails } from '../../../utils/labPackageMatcher.js';
 import WebFooter from '../../../components/web/WebFooter';
 import { useAuthGuard } from '../../../context/AuthGuardContext';
 import { saveTransaction } from '../../../services/transactionService';
 import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 import { isDesktopLayout } from '../../../utils/responsiveLayoutHelper';
 import {
   getSlotStatus,
   validateAndBookSlot,
   subscribeToSlotChanges,
 } from '../../../services/slotBookingService';
+
+const pharmaVitaminC = require('../../../../assets/pharmacy/pharma_vitamin_c.jpg');
+const pharmaMultivitamin = require('../../../../assets/pharmacy/pharma_multivitamin.jpg');
+const pharmaThermometer = require('../../../../assets/pharmacy/pharma_thermometer.jpg');
+
+const CART_PRODUCT_IMAGES = {
+  '1': 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=500',
+  '2': pharmaVitaminC,
+  '3': pharmaMultivitamin,
+  '4': pharmaThermometer,
+  '5': 'https://images.unsplash.com/photo-1584362917165-526a968579e8?w=500',
+  '6': 'https://images.unsplash.com/photo-1584744982491-665216d95f8b?w=500',
+  '7': 'https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=500',
+  '8': 'https://images.unsplash.com/photo-1471864190281-a93a3070b6de?w=500',
+  '9': 'https://images.unsplash.com/photo-1550572017-ed24058d844c?w=500',
+  '10': 'https://images.unsplash.com/photo-1579154204601-01588f351e67?w=500',
+};
+
+const getCartItemImage = (item) => {
+  if (typeof item?.image === 'number') return item.image;
+  if (item?.id && CART_PRODUCT_IMAGES[item.id]) {
+    const mapped = CART_PRODUCT_IMAGES[item.id];
+    return typeof mapped === 'number' ? mapped : { uri: mapped };
+  }
+  if (item?.image) return typeof item.image === 'string' ? { uri: item.image } : item.image;
+  return { uri: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300' };
+};
+
+const getDealImage = (deal) => {
+  if (typeof deal?.image === 'number') return deal.image;
+  if (deal?.id === 'deal-1' || deal?.id === 'quick-1') return pharmaVitaminC;
+  if (deal?.id === 'deal-2' || deal?.id === 'deal-7' || deal?.id === 'deal-8' || deal?.id === 'deal-10' || deal?.id === 'quick-3') return pharmaMultivitamin;
+  if (deal?.id === 'quick-4' || deal?.id === 'quick-5' || deal?.id === 'quick-6' || deal?.id === 'deal-5') return pharmaThermometer;
+  if (deal?.image) return typeof deal.image === 'string' ? { uri: deal.image } : deal.image;
+  return pharmaVitaminC;
+};
 
 // PAYMENT CONSTANTS MATCHED TO CHECKOUT MODAL
 const UPI_APPS = [
@@ -218,6 +256,76 @@ const TOP_DEALS = [
     brand: 'Sanofi',
     category: 'Stomach Care',
   },
+  {
+    id: 'deal-6',
+    name: 'Volini Pain Relief Gel Fast Acting Formula',
+    packSize: 'Tube of 75 gm gel',
+    price: 210,
+    mrp: 245,
+    discount: '14% off',
+    rating: 4.6,
+    reviews: '1420',
+    eta: 'Get by 7pm, Today',
+    image: 'https://images.unsplash.com/photo-1550572017-ed24058d844c?w=300',
+    brand: 'Sun Pharma',
+    category: 'Pain Relief',
+  },
+  {
+    id: 'deal-7',
+    name: 'Zincovit Daily Multivitamin & Minerals Tablet',
+    packSize: 'Strip of 15 tablets',
+    price: 95,
+    mrp: 110,
+    discount: '13% off',
+    rating: 4.8,
+    reviews: '4890',
+    eta: 'Get by 7pm, Today',
+    image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300',
+    brand: 'Apex',
+    category: 'Vitamins & Minerals',
+  },
+  {
+    id: 'deal-8',
+    name: 'Revital H Daily Health Supplement Capsules',
+    packSize: 'Bottle of 30 capsules',
+    price: 285,
+    mrp: 330,
+    discount: '14% off',
+    rating: 4.5,
+    reviews: '3120',
+    eta: 'Get by 7pm, Today',
+    image: 'https://images.unsplash.com/photo-1584017911766-d451b3d0e843?w=300',
+    brand: 'Sun Pharma',
+    category: 'Daily Wellness',
+  },
+  {
+    id: 'deal-9',
+    name: 'Otrivin Oxy Fast Relief Adult Nasal Spray',
+    packSize: 'Bottle of 10 ml spray',
+    price: 92,
+    mrp: 105,
+    discount: '12% off',
+    rating: 4.7,
+    reviews: '980',
+    eta: 'Get by 7pm, Today',
+    image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=300',
+    brand: 'GSK',
+    category: 'Cold & Allergy',
+  },
+  {
+    id: 'deal-10',
+    name: 'Becosules Z Multivitamin & Zinc Capsules',
+    packSize: 'Strip of 20 capsules',
+    price: 45,
+    mrp: 52,
+    discount: '13% off',
+    rating: 4.8,
+    reviews: '5120',
+    eta: 'Get by 7pm, Today',
+    image: 'https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=300',
+    brand: 'Pfizer',
+    category: 'Vitamins & Minerals',
+  },
 ];
 
 // LAST MINUTE BUYS
@@ -274,6 +382,58 @@ const LAST_MINUTE_BUYS = [
     brand: 'Micro Labs',
     category: 'Medicines',
   },
+  {
+    id: 'quick-5',
+    name: 'Eno Fast Relief Fruit Salt Regular',
+    packSize: 'Sachet of 5 gm',
+    price: 8.5,
+    mrp: 10,
+    discount: '15% off',
+    rating: 4.8,
+    eta: 'Express 30 mins',
+    image: 'https://images.unsplash.com/photo-1550572017-ed24058d844c?w=300',
+    brand: 'GSK',
+    category: 'Acidity & Digestion',
+  },
+  {
+    id: 'quick-6',
+    name: 'Digene Antacid Chewable Tablets Mint',
+    packSize: 'Strip of 15 tablets',
+    price: 22,
+    mrp: 26,
+    discount: '15% off',
+    rating: 4.7,
+    eta: 'Express 30 mins',
+    image: 'https://images.unsplash.com/photo-1603398938378-e54eab446dde?w=300',
+    brand: 'Abbott',
+    category: 'Digestive Care',
+  },
+  {
+    id: 'quick-7',
+    name: 'Strepsils Honey & Lemon Lozenges',
+    packSize: 'Strip of 8 lozenges',
+    price: 36,
+    mrp: 40,
+    discount: '10% off',
+    rating: 4.9,
+    eta: 'Express 30 mins',
+    image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300',
+    brand: 'Reckitt',
+    category: 'Throat Care',
+  },
+  {
+    id: 'quick-8',
+    name: 'Soframycin Skin Antibacterial Cream',
+    packSize: 'Tube of 30 gm cream',
+    price: 58,
+    mrp: 65,
+    discount: '11% off',
+    rating: 4.8,
+    eta: 'Express 30 mins',
+    image: 'https://images.unsplash.com/photo-1556228720-195a672e8a03?w=300',
+    brand: 'Sanofi',
+    category: 'First Aid',
+  },
 ];
 
 // DEFAULT MOCKUP ITEMS (Matches the user's uploaded screenshot)
@@ -305,7 +465,8 @@ const DEFAULT_MOCKUP_ITEMS = [
 ];
 
 const CartScreen = ({ navigation, route }) => {
-  const { t, isIndic } = useTheme();
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const isDesktop = isDesktopLayout(width);
   const { requireLogin } = useAuthGuard();
@@ -377,6 +538,53 @@ const CartScreen = ({ navigation, route }) => {
     }
   }, [route?.params?.initialTab]);
 
+  // Carousel scroll refs & handlers for horizontal cards
+  const topDealsScrollRef = useRef(null);
+  const lastMinuteScrollRef = useRef(null);
+  const radiologyDealsScrollRef = useRef(null);
+  const labDealsScrollRef = useRef(null);
+
+  const topDealsScrollX = useRef(0);
+  const lastMinuteScrollX = useRef(0);
+  const radiologyDealsScrollX = useRef(0);
+  const labDealsScrollX = useRef(0);
+
+  const scrollDeals = (direction, ref, xRef) => {
+    const delta = direction === 'next' ? 380 : -380;
+    const currentX = xRef.current || 0;
+    const targetX = Math.max(0, currentX + delta);
+    xRef.current = targetX;
+    if (ref.current) {
+      if (typeof ref.current.scrollTo === 'function') {
+        ref.current.scrollTo({ x: targetX, animated: true });
+      } else {
+        const node = ref.current.getScrollableNode ? ref.current.getScrollableNode() : ref.current;
+        if (node && node.scrollTo) {
+          node.scrollTo({ left: targetX, behavior: 'smooth' });
+        }
+      }
+    }
+  };
+
+  const handleSelectProduct = (deal) => {
+    try {
+      navigation?.navigate('ProductDetails', {
+        product: {
+          ...deal,
+          inStock: true,
+          requiresPrescription: Boolean(deal.requiresPrescription),
+          description: deal.description || `${deal.name} is clinically evaluated to deliver authentic, high-grade therapeutic support and verified patient wellness.`,
+          packSize: deal.packSize || '1 unit',
+          brand: deal.brand || 'Sanofi',
+          category: deal.category || 'Pharmacy Essentials',
+        },
+        productId: deal.id,
+      });
+    } catch (e) {
+      console.warn('Could not navigate to ProductDetails', e);
+    }
+  };
+
 
   const [checkoutModalVisible, setCheckoutModalVisible] = useState(false);
 
@@ -385,6 +593,7 @@ const CartScreen = ({ navigation, route }) => {
   const [labBookingDate, setLabBookingDate] = useState('Tomorrow');
   const [labBookingSlot, setLabBookingSlot] = useState('08:00 AM - 09:00 AM (Fasting)');
   const [isSubmittingLabOrder, setIsSubmittingLabOrder] = useState(false);
+  const [selectedLabItemDetails, setSelectedLabItemDetails] = useState(null);
 
   // Radiology Scan Booking & Checkout State
   const [radiologyCheckoutModalVisible, setRadiologyCheckoutModalVisible] = useState(false);
@@ -1271,34 +1480,15 @@ const CartScreen = ({ navigation, route }) => {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
       <ScrollView contentContainerStyle={styles.scrollContainer} showsVerticalScrollIndicator={false}>
-        {/* BREADCRUMB ROW (Desktop) */}
-        {isDesktop ? (
-          <View style={styles.breadcrumbWrap}>
-            <View style={styles.breadcrumbInner}>
-              <TouchableOpacity onPress={() => navigation.navigate('Home')} activeOpacity={0.7}>
-                <Text style={styles.breadcrumbLink}>{t('Home')}</Text>
-              </TouchableOpacity>
-              <Ionicons name="chevron-forward" size={13} color="#94A3B8" />
-              <TouchableOpacity
-                onPress={() => navigation.navigate(activeCartTab === 'radiology' ? (Platform.OS === 'web' ? 'Imaging' : 'RadiologyLabs') : activeCartTab === 'lab' ? 'LabTests' : 'Pharmacy')}
-                activeOpacity={0.7}
-              >
-                <Text style={styles.breadcrumbLink}>
-                  {activeCartTab === 'radiology' ? t('navigation.scans_xray', 'Scans & X-Ray') : activeCartTab === 'lab' ? t('navigation.lab_tests', 'Lab Tests & Diagnostics') : t('pharmacy.pharmacy_title', 'Pharmacy')}
-                </Text>
-              </TouchableOpacity>
-              <Ionicons name="chevron-forward" size={13} color="#94A3B8" />
-              <Text style={[styles.breadcrumbActive, isIndic && { lineHeight: 16 }]}>{t('pharmacy.cart_title', 'Shopping Cart')}</Text>
-            </View>
-          </View>
-        ) : (
+        {/* Mobile Header (Desktop breadcrumbs removed per user request) */}
+        {!isDesktop && (
           <View style={styles.mobileAppHeader}>
             <TouchableOpacity
               onPress={() => (navigation.canGoBack && navigation.canGoBack() ? navigation.goBack() : navigation.navigate(activeCartTab === 'radiology' ? (Platform.OS === 'web' ? 'Imaging' : 'RadiologyLabs') : activeCartTab === 'lab' ? 'LabTests' : 'Pharmacy'))}
               style={styles.mobileBackBtn}
               activeOpacity={0.7}
             >
-              <Ionicons name="arrow-back" size={22} color="#0F172A" />
+              <Ionicons name="arrow-back" size={22} color={isDarkMode ? theme.text : "#0F172A"} />
             </TouchableOpacity>
             <View style={{ flex: 1 }}>
               <Text style={[styles.mobileHeaderTitle, isIndic && { lineHeight: 20 }]}>
@@ -1551,52 +1741,84 @@ const CartScreen = ({ navigation, route }) => {
                 <View style={styles.dealsHeaderRow}>
                   <Text style={styles.dealsSectionTitle}>Recommended Radiology & Cardiac Scans</Text>
                 </View>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dealsScrollContainer}>
-                  {POPULAR_RADIOLOGY_RECOMMENDED.map((scan) => {
-                    const inCart = radiologyCart.some((it) => it.id === scan.id);
-                    return (
-                      <View key={scan.id} style={styles.dealCard}>
-                        <View style={[styles.dealImageWrap, { backgroundColor: '#F0F9FF', justifyContent: 'center', alignItems: 'center' }]}>
-                          <Ionicons name="radio" size={32} color="#0284C7" />
+
+                <View style={styles.carouselContainerWrap}>
+                  <TouchableOpacity
+                    style={[styles.carouselSideArrowBtn, styles.carouselLeftArrowBtn]}
+                    onPress={() => scrollDeals('prev', radiologyDealsScrollRef, radiologyDealsScrollX)}
+                    activeOpacity={0.85}
+                    accessibilityLabel="Previous scans"
+                  >
+                    <Ionicons name="chevron-back" size={20} color="#0F172A" />
+                  </TouchableOpacity>
+
+                  <ScrollView
+                    ref={radiologyDealsScrollRef}
+                    horizontal
+                    nestedScrollEnabled={true}
+                    showsHorizontalScrollIndicator={false}
+                    contentContainerStyle={styles.dealsScrollContainer}
+                    onScroll={(e) => {
+                      radiologyDealsScrollX.current = e.nativeEvent.contentOffset.x;
+                    }}
+                    scrollEventThrottle={16}
+                    style={styles.dealsScrollView}
+                  >
+                    {POPULAR_RADIOLOGY_RECOMMENDED.map((scan) => {
+                      const inCart = radiologyCart.some((it) => it.id === scan.id);
+                      return (
+                        <View key={scan.id} style={styles.dealCard}>
+                          <View style={[styles.dealImageWrap, { backgroundColor: '#F0F9FF', justifyContent: 'center', alignItems: 'center' }]}>
+                            <Ionicons name="radio" size={32} color="#0284C7" />
+                          </View>
+                          <Text style={styles.dealNameText} numberOfLines={2}>{scan.name}</Text>
+                          <Text style={styles.dealPackSize} numberOfLines={1}>{scan.centerName}</Text>
+                          <View style={styles.dealPriceRow}>
+                            <Text style={styles.dealPriceText}>₹{scan.price}</Text>
+                            {scan.mrp && <Text style={styles.dealMrpText}>₹{scan.mrp}</Text>}
+                          </View>
+                          <TouchableOpacity
+                            style={[styles.dealAddBtn, inCart && { backgroundColor: '#0284C7' }]}
+                            onPress={() => {
+                              if (inCart) {
+                                removeFromCart(scan.id, 'radiology');
+                              } else {
+                                addToCart({
+                                  id: scan.id,
+                                  name: scan.name,
+                                  price: scan.price,
+                                  mrp: scan.mrp,
+                                  category: 'Radiology',
+                                  categoryLabel: scan.category,
+                                  modality: scan.modality,
+                                  centerName: scan.centerName,
+                                  labName: scan.centerName,
+                                  reportTime: scan.reportTime,
+                                  itemType: 'radiology',
+                                }, 1, 'radiology');
+                                showAlert('Added to Radiology Cart', `${scan.name} added to your radiology cart.`);
+                              }
+                            }}
+                            activeOpacity={0.85}
+                          >
+                            <Text style={[styles.dealAddBtnText, inCart && { color: '#FFFFFF' }]}>
+                              {inCart ? 'In Cart' : '+ Add Scan'}
+                            </Text>
+                          </TouchableOpacity>
                         </View>
-                        <Text style={styles.dealNameText} numberOfLines={2}>{scan.name}</Text>
-                        <Text style={styles.dealPackSize} numberOfLines={1}>{scan.centerName}</Text>
-                        <View style={styles.dealPriceRow}>
-                          <Text style={styles.dealPriceText}>₹{scan.price}</Text>
-                          {scan.mrp && <Text style={styles.dealMrpText}>₹{scan.mrp}</Text>}
-                        </View>
-                        <TouchableOpacity
-                          style={[styles.dealAddBtn, inCart && { backgroundColor: '#0284C7' }]}
-                          onPress={() => {
-                            if (inCart) {
-                              removeFromCart(scan.id, 'radiology');
-                            } else {
-                              addToCart({
-                                id: scan.id,
-                                name: scan.name,
-                                price: scan.price,
-                                mrp: scan.mrp,
-                                category: 'Radiology',
-                                categoryLabel: scan.category,
-                                modality: scan.modality,
-                                centerName: scan.centerName,
-                                labName: scan.centerName,
-                                reportTime: scan.reportTime,
-                                itemType: 'radiology',
-                              }, 1, 'radiology');
-                              showAlert('Added to Radiology Cart', `${scan.name} added to your radiology cart.`);
-                            }
-                          }}
-                          activeOpacity={0.85}
-                        >
-                          <Text style={[styles.dealAddBtnText, inCart && { color: '#FFFFFF' }]}>
-                            {inCart ? 'In Cart' : '+ Add Scan'}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-                    );
-                  })}
-                </ScrollView>
+                      );
+                    })}
+                  </ScrollView>
+
+                  <TouchableOpacity
+                    style={[styles.carouselSideArrowBtn, styles.carouselRightArrowBtn]}
+                    onPress={() => scrollDeals('next', radiologyDealsScrollRef, radiologyDealsScrollX)}
+                    activeOpacity={0.85}
+                    accessibilityLabel="Next scans"
+                  >
+                    <Ionicons name="chevron-forward" size={20} color="#0F172A" />
+                  </TouchableOpacity>
+                </View>
               </View>
             </View>
           ) : activeCartTab === 'lab' ? (
@@ -1651,12 +1873,23 @@ const CartScreen = ({ navigation, route }) => {
                       const itemPrice = Number(item.price || 0);
                       const itemMrp = Number(item.mrp || Math.round(itemPrice * 1.25));
                       const discountPct = itemMrp > itemPrice ? Math.round(((itemMrp - itemPrice) / itemMrp) * 100) : null;
+                      const isPkg = Boolean(item.isPackage || (item.testsCount && item.testsCount > 1) || (Array.isArray(item.tests) && item.tests.length > 1));
 
                       return (
-                        <View key={item.id || index} style={styles.labItemCardContainer}>
-                          <View style={styles.labItemIconWrap}>
+                        <TouchableOpacity
+                          key={item.id || index}
+                          style={[
+                            styles.labItemCardContainer,
+                            { cursor: 'pointer' },
+                          ]}
+                          onPress={() => setSelectedLabItemDetails(enrichLabItemDetails(item))}
+                          activeOpacity={0.88}
+                          accessibilityRole="button"
+                          accessibilityLabel={`View full details for ${item.name}`}
+                        >
+                          <View style={[styles.labItemIconWrap, isPkg && { backgroundColor: '#ECFDF5' }]}>
                             <Ionicons
-                              name={item.category === 'Radiology' || item.modality ? 'scan-outline' : 'flask'}
+                              name={isPkg ? 'shield-checkmark' : item.category === 'Radiology' || item.modality ? 'scan-outline' : 'flask'}
                               size={22}
                               color="#00B894"
                             />
@@ -1664,13 +1897,28 @@ const CartScreen = ({ navigation, route }) => {
 
                           <View style={{ flex: 1 }}>
                             <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: 8 }}>
-                              <Text style={styles.labItemTitleText} numberOfLines={2}>
-                                {item.name}
-                              </Text>
+                              <View style={{ flex: 1 }}>
+                                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                                  <Text style={styles.labItemTitleText} numberOfLines={2}>
+                                    {item.name}
+                                  </Text>
+                                  {isPkg && (
+                                    <View style={styles.labPackageTypePill}>
+                                      <Text style={styles.labPackageTypePillText}>PACKAGE</Text>
+                                    </View>
+                                  )}
+                                </View>
+                              </View>
                               <TouchableOpacity
-                                onPress={() => removeFromCart && removeFromCart(item.id, 'lab')}
+                                onPress={(e) => {
+                                  if (e?.stopPropagation) e.stopPropagation();
+                                  removeFromCart && removeFromCart(item.id, 'lab');
+                                }}
                                 style={styles.labRemoveItemBtn}
                                 activeOpacity={0.7}
+                                hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                                accessibilityRole="button"
+                                accessibilityLabel={`Remove ${item.name}`}
                               >
                                 <Ionicons name="trash-outline" size={16} color="#FF7F50" />
                               </TouchableOpacity>
@@ -1682,9 +1930,9 @@ const CartScreen = ({ navigation, route }) => {
 
                             <View style={styles.labItemBadgesRow}>
                               <View style={styles.labBadgePill}>
-                                <Ionicons name="water-outline" size={11} color="#0284C7" />
+                                <Ionicons name={isPkg ? 'fitness-outline' : 'water-outline'} size={11} color="#0284C7" />
                                 <Text style={styles.labBadgePillText}>
-                                  {item.sampleType || item.categoryLabel || 'Sample Test'}
+                                  {item.sampleType || item.categoryLabel || (isPkg ? 'Full Body Tests' : 'Sample Test')}
                                 </Text>
                               </View>
                               <View style={styles.labBadgePill}>
@@ -1701,15 +1949,21 @@ const CartScreen = ({ navigation, route }) => {
                               </View>
                             </View>
 
-                            <View style={styles.labItemPriceRow}>
+                            <View style={[styles.labItemPriceRow, { justifyContent: 'space-between', alignItems: 'center' }]}>
                               <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
                                 <Text style={styles.labPriceVal}>₹{itemPrice}</Text>
                                 {itemMrp > itemPrice && <Text style={styles.labMrpVal}>₹{itemMrp}</Text>}
                                 {discountPct && <Text style={styles.labDiscountVal}>{discountPct}% off</Text>}
                               </View>
+
+                              <View style={styles.labDetailsActionPill}>
+                                <Ionicons name="information-circle-outline" size={13} color="#007D69" />
+                                <Text style={styles.labDetailsActionPillText}>View Details</Text>
+                                <Ionicons name="chevron-forward" size={12} color="#007D69" />
+                              </View>
                             </View>
                           </View>
-                        </View>
+                        </TouchableOpacity>
                       );
                     })}
                   </View>
@@ -1722,48 +1976,185 @@ const CartScreen = ({ navigation, route }) => {
                   <View style={styles.dealsHeaderRow}>
                     <Text style={styles.dealsSectionTitle}>Recommended Diagnostic Health Packages</Text>
                   </View>
-                  <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.dealsScrollContainer}>
-                    {LAB_PACKAGES.map((pkg) => {
-                      const inCart = labCart.some((it) => it.id === pkg.id);
-                      return (
-                        <View key={pkg.id} style={styles.dealCard}>
-                          <View style={[styles.dealImageWrap, { backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center' }]}>
-                            <Ionicons name="fitness" size={32} color="#00B894" />
+
+                  <View style={styles.carouselContainerWrap}>
+                    <TouchableOpacity
+                      style={[styles.carouselSideArrowBtn, styles.carouselLeftArrowBtn]}
+                      onPress={() => scrollDeals('prev', labDealsScrollRef, labDealsScrollX)}
+                      activeOpacity={0.85}
+                      accessibilityLabel="Previous packages"
+                    >
+                      <Ionicons name="chevron-back" size={18} color="#00BB95" />
+                    </TouchableOpacity>
+
+                    <ScrollView
+                      ref={labDealsScrollRef}
+                      horizontal
+                      nestedScrollEnabled={true}
+                      showsHorizontalScrollIndicator={false}
+                      contentContainerStyle={styles.dealsScrollContainer}
+                      onScroll={(e) => {
+                        labDealsScrollX.current = e.nativeEvent.contentOffset.x;
+                      }}
+                      scrollEventThrottle={16}
+                      style={styles.dealsScrollView}
+                    >
+                      {LAB_PACKAGES.map((pkg) => {
+                        const inCart = labCart.some((it) => it.id === pkg.id);
+                        const catLower = (pkg.category || '').toLowerCase();
+                        let catBg = '#EFF6FF';
+                        let catBorder = '#DBEAFE';
+                        let catColor = '#1D4ED8';
+                        let catLabel = 'Executive Health';
+
+                        if (catLower.includes('body') || catLower.includes('check')) {
+                          catBg = '#ECFDF5'; catBorder = '#A7F3D0'; catColor = '#00BB95'; catLabel = 'Full Body';
+                        } else if (catLower.includes('diabet')) {
+                          catBg = '#FFFBEB'; catBorder = '#FDE68A'; catColor = '#B45309'; catLabel = 'Diabetes';
+                        } else if (catLower.includes('cardiac') || catLower.includes('heart')) {
+                          catBg = '#FEF2F2'; catBorder = '#FEE2E2'; catColor = '#DC2626'; catLabel = 'Heart Health';
+                        }
+
+                        const isFastingRequired = (pkg.preparationSummary || '').toLowerCase().includes('fasting');
+                        const tatLabel = (pkg.tatSummary && (pkg.tatSummary.includes('6–8') || pkg.tatSummary.includes('6-8')))
+                          ? 'Reports in 6–8 hrs'
+                          : 'Reports in 24 hrs';
+
+                        return (
+                          <View key={pkg.id} style={styles.labPkgCard}>
+                            {/* Top Badges Row: Category Pill & TAT Badge */}
+                            <View style={styles.labPkgCardHeaderRow}>
+                              <View style={[styles.labPkgCategoryBadge, { backgroundColor: catBg, borderColor: catBorder }]}>
+                                <Text style={[styles.labPkgCategoryText, { color: catColor }]} numberOfLines={1}>
+                                  {catLabel}
+                                </Text>
+                              </View>
+                              <View style={styles.labPkgTatBadge}>
+                                <Ionicons name="flash" size={11} color="#00BB95" style={{ marginRight: 3 }} />
+                                <Text style={styles.labPkgTatText} numberOfLines={1}>
+                                  {tatLabel}
+                                </Text>
+                              </View>
+                            </View>
+
+                            {/* Package Title */}
+                            <TouchableOpacity
+                              onPress={() => setSelectedLabItemDetails({ ...pkg, isPackage: true, centerName: 'Unnathi Comprehensive Diagnostic Care' })}
+                              activeOpacity={0.85}
+                            >
+                              <Text style={styles.labPkgNameText} numberOfLines={2}>
+                                {pkg.name}
+                              </Text>
+                            </TouchableOpacity>
+
+                            {/* Clinical Key Details */}
+                            <View style={styles.labPkgDetailsRow}>
+                              <View style={styles.labPkgDetailItem}>
+                                <Ionicons name="cube-outline" size={13} color="#00BB95" style={{ marginRight: 5 }} />
+                                <Text style={styles.labPkgDetailText} numberOfLines={1}>
+                                  {pkg.includedCount || pkg.testsCount || 10} Tests Included
+                                </Text>
+                              </View>
+                              <View
+                                style={[
+                                  styles.labPkgDetailItem,
+                                  isFastingRequired
+                                    ? { backgroundColor: '#FFFBEB', borderColor: '#FDE68A' }
+                                    : { backgroundColor: '#F0FDF4', borderColor: '#DCFCE7' },
+                                ]}
+                              >
+                                <Ionicons
+                                  name={isFastingRequired ? 'timer-outline' : 'restaurant-outline'}
+                                  size={13}
+                                  color={isFastingRequired ? '#B45309' : '#15803D'}
+                                  style={{ marginRight: 5 }}
+                                />
+                                <Text
+                                  style={[
+                                    styles.labPkgDetailText,
+                                    { color: isFastingRequired ? '#B45309' : '#15803D', fontWeight: '700' },
+                                  ]}
+                                  numberOfLines={1}
+                                >
+                                  {isFastingRequired ? 'Fasting required' : 'No fasting required'}
+                                </Text>
+                              </View>
+                            </View>
+
+                            {/* Footer: Price Row & Action Buttons */}
+                            <View style={styles.labPkgFooterWrap}>
+                              <View style={styles.labPkgPriceRow}>
+                                <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                                  <Text style={styles.labPkgPrice}>₹{pkg.price}</Text>
+                                  {pkg.mrp && <Text style={styles.labPkgMrp}>₹{pkg.mrp}</Text>}
+                                </View>
+                                {pkg.discount && (
+                                  <View style={styles.labPkgDiscountBadge}>
+                                    <Text style={styles.labPkgDiscountText}>{pkg.discount}</Text>
+                                  </View>
+                                )}
+                              </View>
+
+                              <View style={styles.labPkgActionRow}>
+                                <TouchableOpacity
+                                  style={styles.labPkgDetailsBtn}
+                                  onPress={() => setSelectedLabItemDetails({ ...pkg, isPackage: true, centerName: 'Unnathi Comprehensive Diagnostic Care' })}
+                                  activeOpacity={0.8}
+                                  accessibilityRole="button"
+                                  accessibilityLabel="Package Details"
+                                >
+                                  <Ionicons name="information-circle-outline" size={14} color="#475569" style={{ marginRight: 4 }} />
+                                  <Text style={styles.labPkgDetailsBtnText}>Details</Text>
+                                </TouchableOpacity>
+
+                                <TouchableOpacity
+                                  style={[styles.labPkgCartBtn, inCart && styles.labPkgCartBtnActive]}
+                                  onPress={() => {
+                                    if (inCart) {
+                                      removeFromCart(pkg.id, 'lab');
+                                    } else {
+                                      addToCart({
+                                        id: pkg.id,
+                                        name: pkg.name,
+                                        price: pkg.price,
+                                        mrp: pkg.mrp,
+                                        centerName: 'Unnathi Comprehensive Diagnostic Care',
+                                        sampleType: `${pkg.includedCount || pkg.testsCount || 10} Parameters`,
+                                        homeSample: true,
+                                      }, 1, 'lab');
+                                      showAlert('Added to Cart', `${pkg.name} added to cart.`);
+                                    }
+                                  }}
+                                  activeOpacity={0.85}
+                                  accessibilityRole="button"
+                                  accessibilityLabel={inCart ? "In Cart" : "Add to Cart"}
+                                >
+                                  <Ionicons
+                                    name={inCart ? 'checkmark-circle' : 'cart-outline'}
+                                    size={15}
+                                    color={inCart ? '#FFFFFF' : '#00BB95'}
+                                    style={{ marginRight: 4 }}
+                                  />
+                                  <Text style={[styles.labPkgCartBtnText, inCart && styles.labPkgCartBtnTextActive]}>
+                                    {inCart ? 'In Cart' : '+ Add'}
+                                  </Text>
+                                </TouchableOpacity>
+                              </View>
+                            </View>
                           </View>
-                          <Text style={styles.dealNameText} numberOfLines={2}>{pkg.name}</Text>
-                          <Text style={styles.dealPackSize} numberOfLines={1}>{pkg.includedCount} Tests Included</Text>
-                          <View style={styles.dealPriceRow}>
-                            <Text style={styles.dealPriceText}>₹{pkg.price}</Text>
-                            <Text style={styles.dealMrpText}>₹{pkg.mrp}</Text>
-                          </View>
-                          <TouchableOpacity
-                            style={[styles.addToCartBtn, inCart && { backgroundColor: '#00B894', borderColor: '#00B894' }]}
-                            onPress={() => {
-                              if (inCart) {
-                                removeFromCart(pkg.id, 'lab');
-                              } else {
-                                addToCart({
-                                  id: pkg.id,
-                                  name: pkg.name,
-                                  price: pkg.price,
-                                  mrp: pkg.mrp,
-                                  centerName: 'Unnathi Comprehensive Diagnostic Care',
-                                  sampleType: `${pkg.includedCount} Parameters`,
-                                  homeSample: true,
-                                }, 1, 'lab');
-                                showAlert('Added to Cart', `${pkg.name} added to cart.`);
-                              }
-                            }}
-                            activeOpacity={0.85}
-                          >
-                            <Text style={[styles.addToCartBtnText, inCart && { color: '#FFFFFF' }]}>
-                              {inCart ? 'In Cart' : 'Add to cart'}
-                            </Text>
-                          </TouchableOpacity>
-                        </View>
-                      );
-                    })}
-                  </ScrollView>
+                        );
+                      })}
+                    </ScrollView>
+
+                    <TouchableOpacity
+                      style={[styles.carouselSideArrowBtn, styles.carouselRightArrowBtn]}
+                      onPress={() => scrollDeals('next', labDealsScrollRef, labDealsScrollX)}
+                      activeOpacity={0.85}
+                      accessibilityLabel="Next packages"
+                    >
+                      <Ionicons name="chevron-forward" size={18} color="#00BB95" />
+                    </TouchableOpacity>
+                  </View>
                 </View>
               )}
             </View>
@@ -1806,9 +2197,7 @@ const CartScreen = ({ navigation, route }) => {
                         {/* Product Thumbnail */}
                         <View style={styles.itemImageWrap}>
                           <Image
-                            source={{
-                              uri: item.image || 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=300',
-                            }}
+                            source={getCartItemImage(item)}
                             style={styles.itemImage}
                             resizeMode="contain"
                           />
@@ -1874,78 +2263,144 @@ const CartScreen = ({ navigation, route }) => {
                 <Text style={styles.dealsSectionTitle}>Sanofi top deals</Text>
               </View>
 
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.dealsScrollContainer}
-              >
-                {TOP_DEALS.map((deal) => (
-                  <View key={deal.id} style={styles.dealCard}>
-                    <View style={styles.dealImageWrap}>
-                      <Image source={{ uri: deal.image }} style={styles.dealImage} resizeMode="contain" />
-                    </View>
+              <View style={styles.carouselContainerWrap}>
+                {/* Left Floating Arrow Button */}
+                <TouchableOpacity
+                  style={[styles.carouselSideArrowBtn, styles.carouselLeftArrowBtn]}
+                  onPress={() => scrollDeals('prev', topDealsScrollRef, topDealsScrollX)}
+                  activeOpacity={0.85}
+                  accessibilityLabel="Scroll previous deals"
+                >
+                  <Ionicons name="chevron-back" size={20} color="#0F172A" />
+                </TouchableOpacity>
 
-                    <Text style={styles.dealNameText} numberOfLines={2}>
-                      {deal.name}
-                    </Text>
-                    <Text style={styles.dealPackSize} numberOfLines={1}>
-                      {deal.packSize}
-                    </Text>
-
-                    {/* Rating */}
-                    <View style={styles.dealRatingRow}>
-                      <View style={styles.starRatingBadge}>
-                        <Ionicons name="star" size={10} color="#FFFFFF" />
-                        <Text style={styles.starRatingText}>{deal.rating}</Text>
-                      </View>
-                      <Text style={styles.reviewsCountText}>({deal.reviews})</Text>
-                    </View>
-
-                    <Text style={styles.dealEtaText}>{deal.eta}</Text>
-
-                    {/* Price & Discount */}
-                    <View style={styles.dealPriceRow}>
-                      <Text style={styles.dealPriceText}>₹{deal.price}</Text>
-                      <Text style={styles.dealMrpText}>₹{deal.mrp}</Text>
-                      <Text style={styles.dealDiscountText}>{deal.discount}</Text>
-                    </View>
-
-                    {/* Add to Cart or Stepper (matching Pharmacy page reference) */}
-                    {getDealQty(deal.id) > 0 ? (
-                      <View style={styles.dealQuantityStepper}>
-                        <TouchableOpacity
-                          style={styles.dealStepperBtn}
-                          onPress={() => handleDecreaseDealQty(deal)}
-                          activeOpacity={0.7}
-                        >
-                          {getDealQty(deal.id) === 1 ? (
-                            <Ionicons name="trash-outline" size={13} color="#EF4444" />
-                          ) : (
-                            <Ionicons name="remove" size={13} color="#00B894" />
-                          )}
-                        </TouchableOpacity>
-                        <Text style={styles.dealStepperQuantity}>{getDealQty(deal.id)}</Text>
-                        <TouchableOpacity
-                          style={styles.dealStepperBtn}
-                          onPress={() => handleIncreaseDealQty(deal)}
-                          activeOpacity={0.7}
-                        >
-                          <Ionicons name="add" size={13} color="#00B894" />
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
+                <ScrollView
+                  ref={topDealsScrollRef}
+                  horizontal
+                  nestedScrollEnabled={true}
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.dealsScrollContainer}
+                  onScroll={(e) => {
+                    topDealsScrollX.current = e.nativeEvent.contentOffset.x;
+                  }}
+                  scrollEventThrottle={16}
+                  style={styles.dealsScrollView}
+                >
+                  {TOP_DEALS.map((deal) => {
+                    const dealImg = getDealImage(deal);
+                    const dealQty = getDealQty(deal.id);
+                    return (
                       <TouchableOpacity
-                        style={styles.dealAddToCartBtn}
-                        onPress={() => handleAddDealToCart(deal)}
-                        activeOpacity={0.85}
+                        key={deal.id}
+                        style={styles.dealCard}
+                        onPress={() => handleSelectProduct(deal)}
+                        activeOpacity={0.92}
                       >
-                        <Ionicons name="cart-outline" size={14} color="#FFFFFF" />
-                        <Text style={styles.dealAddToCartBtnText}>Add to Cart</Text>
+                        {/* Discount Badge */}
+                        <View style={styles.pharmacyBadge}>
+                          <Text style={styles.pharmacyBadgeText}>{deal.discount || '12% OFF'}</Text>
+                        </View>
+
+                        {/* Product Image */}
+                        <View style={styles.pharmacyCardImgWrap}>
+                          <Image
+                            source={typeof dealImg === 'number' ? dealImg : { uri: dealImg }}
+                            style={styles.pharmacyCardImg}
+                            resizeMode="contain"
+                          />
+                        </View>
+
+                        {/* Card Content matching Pharmacy page */}
+                        <View style={styles.pharmacyCardBody}>
+                          <View style={styles.pharmacyCardContent}>
+                            <Text style={styles.pharmacyCat} numberOfLines={1}>
+                              {(deal.brand || 'SANOFI').toUpperCase()} • {(deal.category || 'HEALTH').toUpperCase()}
+                            </Text>
+
+                            <Text style={styles.pharmacyName} numberOfLines={2} ellipsizeMode="tail">
+                              {deal.name}
+                            </Text>
+
+                            <Text style={styles.pharmacyBrand} numberOfLines={1}>
+                              {deal.packSize || deal.eta}
+                            </Text>
+
+                            {/* Compact Star Rating */}
+                            <View style={styles.pharmacyRatingRow}>
+                              <Ionicons name="star" size={12} color="#FF9F43" />
+                              <Text style={styles.ratingNumberText}>{deal.rating || 4.5}</Text>
+                              <Text style={styles.reviewsCountText}>({deal.reviews || '850'})</Text>
+                            </View>
+                          </View>
+
+                          {/* Footer: Price & Add to Cart Action */}
+                          <View style={styles.pharmacyCardFooter}>
+                            <View style={styles.pharmacyPriceRow}>
+                              <Text style={styles.pharmacyPrice}>₹{deal.price}</Text>
+                              {Boolean(deal.mrp) && (
+                                <Text style={styles.pharmacyMrp}>MRP ₹{deal.mrp}</Text>
+                              )}
+                            </View>
+
+                            {/* Add to Cart or Stepper */}
+                            {dealQty > 0 ? (
+                              <View style={styles.quantityStepper}>
+                                <TouchableOpacity
+                                  style={styles.stepperBtn}
+                                  onPress={(e) => {
+                                    e?.stopPropagation?.();
+                                    handleDecreaseDealQty(deal);
+                                  }}
+                                  activeOpacity={0.7}
+                                >
+                                  {dealQty === 1 ? (
+                                    <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                                  ) : (
+                                    <Ionicons name="remove" size={14} color="#00B894" />
+                                  )}
+                                </TouchableOpacity>
+                                <Text style={styles.stepperQuantity}>{dealQty}</Text>
+                                <TouchableOpacity
+                                  style={styles.stepperBtn}
+                                  onPress={(e) => {
+                                    e?.stopPropagation?.();
+                                    handleIncreaseDealQty(deal);
+                                  }}
+                                  activeOpacity={0.7}
+                                >
+                                  <Ionicons name="add" size={14} color="#00B894" />
+                                </TouchableOpacity>
+                              </View>
+                            ) : (
+                              <TouchableOpacity
+                                style={styles.addToCartButton}
+                                onPress={(e) => {
+                                  e?.stopPropagation?.();
+                                  handleAddDealToCart(deal);
+                                }}
+                                activeOpacity={0.88}
+                              >
+                                <Ionicons name="bag-add" size={15} color="#FFFFFF" />
+                                <Text style={styles.addToCartText}>Add to Cart</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        </View>
                       </TouchableOpacity>
-                    )}
-                  </View>
-                ))}
-              </ScrollView>
+                    );
+                  })}
+                </ScrollView>
+
+                {/* Right Floating Arrow Button */}
+                <TouchableOpacity
+                  style={[styles.carouselSideArrowBtn, styles.carouselRightArrowBtn]}
+                  onPress={() => scrollDeals('next', topDealsScrollRef, topDealsScrollX)}
+                  activeOpacity={0.85}
+                  accessibilityLabel="Scroll next deals"
+                >
+                  <Ionicons name="chevron-forward" size={20} color="#0F172A" />
+                </TouchableOpacity>
+              </View>
             </View>
 
             {/* 3. LAST MINUTE BUYS SECTION */}
@@ -1954,75 +2409,144 @@ const CartScreen = ({ navigation, route }) => {
                 <Text style={styles.dealsSectionTitle}>Last minute buys</Text>
               </View>
 
-              <ScrollView
-                horizontal
-                showsHorizontalScrollIndicator={false}
-                contentContainerStyle={styles.dealsScrollContainer}
-              >
-                {LAST_MINUTE_BUYS.map((buy) => (
-                  <View key={buy.id} style={styles.dealCard}>
-                    <View style={styles.dealImageWrap}>
-                      <Image source={{ uri: buy.image }} style={styles.dealImage} resizeMode="contain" />
-                    </View>
+              <View style={styles.carouselContainerWrap}>
+                {/* Left Floating Arrow Button */}
+                <TouchableOpacity
+                  style={[styles.carouselSideArrowBtn, styles.carouselLeftArrowBtn]}
+                  onPress={() => scrollDeals('prev', lastMinuteScrollRef, lastMinuteScrollX)}
+                  activeOpacity={0.85}
+                  accessibilityLabel="Previous last minute buys"
+                >
+                  <Ionicons name="chevron-back" size={20} color="#0F172A" />
+                </TouchableOpacity>
 
-                    <Text style={styles.dealNameText} numberOfLines={2}>
-                      {buy.name}
-                    </Text>
-                    <Text style={styles.dealPackSize} numberOfLines={1}>
-                      {buy.packSize}
-                    </Text>
-
-                    <View style={styles.dealRatingRow}>
-                      <View style={styles.starRatingBadge}>
-                        <Ionicons name="star" size={10} color="#FFFFFF" />
-                        <Text style={styles.starRatingText}>{buy.rating}</Text>
-                      </View>
-                    </View>
-
-                    <Text style={styles.dealEtaText}>{buy.eta}</Text>
-
-                    <View style={styles.dealPriceRow}>
-                      <Text style={styles.dealPriceText}>₹{buy.price}</Text>
-                      <Text style={styles.dealMrpText}>₹{buy.mrp}</Text>
-                      <Text style={styles.dealDiscountText}>{buy.discount}</Text>
-                    </View>
-
-                    {/* Add to Cart or Stepper (matching Pharmacy page reference) */}
-                    {getDealQty(buy.id) > 0 ? (
-                      <View style={styles.dealQuantityStepper}>
-                        <TouchableOpacity
-                          style={styles.dealStepperBtn}
-                          onPress={() => handleDecreaseDealQty(buy)}
-                          activeOpacity={0.7}
-                        >
-                          {getDealQty(buy.id) === 1 ? (
-                            <Ionicons name="trash-outline" size={13} color="#EF4444" />
-                          ) : (
-                            <Ionicons name="remove" size={13} color="#00B894" />
-                          )}
-                        </TouchableOpacity>
-                        <Text style={styles.dealStepperQuantity}>{getDealQty(buy.id)}</Text>
-                        <TouchableOpacity
-                          style={styles.dealStepperBtn}
-                          onPress={() => handleIncreaseDealQty(buy)}
-                          activeOpacity={0.7}
-                        >
-                          <Ionicons name="add" size={13} color="#00B894" />
-                        </TouchableOpacity>
-                      </View>
-                    ) : (
+                <ScrollView
+                  ref={lastMinuteScrollRef}
+                  horizontal
+                  nestedScrollEnabled={true}
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.dealsScrollContainer}
+                  onScroll={(e) => {
+                    lastMinuteScrollX.current = e.nativeEvent.contentOffset.x;
+                  }}
+                  scrollEventThrottle={16}
+                  style={styles.dealsScrollView}
+                >
+                  {LAST_MINUTE_BUYS.map((buy) => {
+                    const buyImg = getDealImage(buy);
+                    const buyQty = getDealQty(buy.id);
+                    return (
                       <TouchableOpacity
-                        style={styles.dealAddToCartBtn}
-                        onPress={() => handleAddDealToCart(buy)}
-                        activeOpacity={0.85}
+                        key={buy.id}
+                        style={styles.dealCard}
+                        onPress={() => handleSelectProduct(buy)}
+                        activeOpacity={0.92}
                       >
-                        <Ionicons name="cart-outline" size={14} color="#FFFFFF" />
-                        <Text style={styles.dealAddToCartBtnText}>Add to Cart</Text>
+                        {/* Discount Badge */}
+                        <View style={styles.pharmacyBadge}>
+                          <Text style={styles.pharmacyBadgeText}>{buy.discount || '10% OFF'}</Text>
+                        </View>
+
+                        {/* Product Image */}
+                        <View style={styles.pharmacyCardImgWrap}>
+                          <Image
+                            source={typeof buyImg === 'number' ? buyImg : { uri: buyImg }}
+                            style={styles.pharmacyCardImg}
+                            resizeMode="contain"
+                          />
+                        </View>
+
+                        {/* Card Content matching Pharmacy page */}
+                        <View style={styles.pharmacyCardBody}>
+                          <View style={styles.pharmacyCardContent}>
+                            <Text style={styles.pharmacyCat} numberOfLines={1}>
+                              {(buy.brand || 'ESSENTIALS').toUpperCase()} • {(buy.category || 'QUICK BUY').toUpperCase()}
+                            </Text>
+
+                            <Text style={styles.pharmacyName} numberOfLines={2} ellipsizeMode="tail">
+                              {buy.name}
+                            </Text>
+
+                            <Text style={styles.pharmacyBrand} numberOfLines={1}>
+                              {buy.packSize || buy.eta}
+                            </Text>
+
+                            {/* Compact Star Rating */}
+                            <View style={styles.pharmacyRatingRow}>
+                              <Ionicons name="star" size={12} color="#FF9F43" />
+                              <Text style={styles.ratingNumberText}>{buy.rating || 4.7}</Text>
+                              <Text style={styles.reviewsCountText}>(Quick Delivery)</Text>
+                            </View>
+                          </View>
+
+                          {/* Footer: Price & Add to Cart Action */}
+                          <View style={styles.pharmacyCardFooter}>
+                            <View style={styles.pharmacyPriceRow}>
+                              <Text style={styles.pharmacyPrice}>₹{buy.price}</Text>
+                              {Boolean(buy.mrp) && (
+                                <Text style={styles.pharmacyMrp}>MRP ₹{buy.mrp}</Text>
+                              )}
+                            </View>
+
+                            {/* Add to Cart or Stepper */}
+                            {buyQty > 0 ? (
+                              <View style={styles.quantityStepper}>
+                                <TouchableOpacity
+                                  style={styles.stepperBtn}
+                                  onPress={(e) => {
+                                    e?.stopPropagation?.();
+                                    handleDecreaseDealQty(buy);
+                                  }}
+                                  activeOpacity={0.7}
+                                >
+                                  {buyQty === 1 ? (
+                                    <Ionicons name="trash-outline" size={14} color="#EF4444" />
+                                  ) : (
+                                    <Ionicons name="remove" size={14} color="#00B894" />
+                                  )}
+                                </TouchableOpacity>
+                                <Text style={styles.stepperQuantity}>{buyQty}</Text>
+                                <TouchableOpacity
+                                  style={styles.stepperBtn}
+                                  onPress={(e) => {
+                                    e?.stopPropagation?.();
+                                    handleIncreaseDealQty(buy);
+                                  }}
+                                  activeOpacity={0.7}
+                                >
+                                  <Ionicons name="add" size={14} color="#00B894" />
+                                </TouchableOpacity>
+                              </View>
+                            ) : (
+                              <TouchableOpacity
+                                style={styles.addToCartButton}
+                                onPress={(e) => {
+                                  e?.stopPropagation?.();
+                                  handleAddDealToCart(buy);
+                                }}
+                                activeOpacity={0.88}
+                              >
+                                <Ionicons name="bag-add" size={15} color="#FFFFFF" />
+                                <Text style={styles.addToCartText}>Add to Cart</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
+                        </View>
                       </TouchableOpacity>
-                    )}
-                  </View>
-                ))}
-              </ScrollView>
+                    );
+                  })}
+                </ScrollView>
+
+                {/* Right Floating Arrow Button */}
+                <TouchableOpacity
+                  style={[styles.carouselSideArrowBtn, styles.carouselRightArrowBtn]}
+                  onPress={() => scrollDeals('next', lastMinuteScrollRef, lastMinuteScrollX)}
+                  activeOpacity={0.85}
+                  accessibilityLabel="Next last minute buys"
+                >
+                  <Ionicons name="chevron-forward" size={20} color="#0F172A" />
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
         )}
@@ -3600,16 +4124,284 @@ const CartScreen = ({ navigation, route }) => {
           </View>
         </View>
       </Modal>
+
+      {/* ============================================================
+          LAB TEST / PACKAGE FULL CLINICAL DETAILS MODAL
+      ============================================================ */}
+      <Modal
+        visible={Boolean(selectedLabItemDetails)}
+        transparent={true}
+        animationType="fade"
+        onRequestClose={() => setSelectedLabItemDetails(null)}
+      >
+        <View style={styles.labDetailsModalBackdrop}>
+          <View style={styles.labDetailsModalCard}>
+            {/* Modal Header */}
+            <View style={styles.labDetailsModalHeader}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
+                <View style={[styles.labDetailsIconBox, selectedLabItemDetails?.isPackage && { backgroundColor: '#ECFDF5' }]}>
+                  <Ionicons
+                    name={selectedLabItemDetails?.isPackage ? 'shield-checkmark' : 'flask'}
+                    size={24}
+                    color="#00B894"
+                  />
+                </View>
+                <View style={{ flex: 1 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 2 }}>
+                    <Text style={styles.labDetailsCategoryBadge}>
+                      {selectedLabItemDetails?.isPackage ? 'DIAGNOSTIC HEALTH PACKAGE' : 'LABORATORY TEST'}
+                    </Text>
+                    {selectedLabItemDetails?.discount && (
+                      <Text style={styles.labDetailsDiscountBadge}>{selectedLabItemDetails.discount}</Text>
+                    )}
+                  </View>
+                  <Text style={styles.labDetailsModalTitle} numberOfLines={2}>
+                    {selectedLabItemDetails?.name}
+                  </Text>
+                  <Text style={styles.labDetailsModalCenter}>
+                    {selectedLabItemDetails?.centerName} • 100% NABL & CAP Accredited
+                  </Text>
+                </View>
+              </View>
+
+              <TouchableOpacity
+                onPress={() => setSelectedLabItemDetails(null)}
+                style={styles.labDetailsCloseBtn}
+                accessibilityRole="button"
+                accessibilityLabel="Close test details"
+                activeOpacity={0.7}
+              >
+                <Ionicons name="close" size={22} color="#475569" />
+              </TouchableOpacity>
+            </View>
+
+            {/* Scrollable Details Body */}
+            <ScrollView
+              style={{ flex: 1 }}
+              contentContainerStyle={styles.labDetailsModalScrollContent}
+              showsVerticalScrollIndicator={true}
+            >
+              {/* Highlights 4-Grid */}
+              <View style={styles.labDetailsMetricsGrid}>
+                <View style={styles.labDetailsMetricBox}>
+                  <Ionicons name="water-outline" size={18} color="#0284C7" />
+                  <Text style={styles.labDetailsMetricLabel}>SAMPLE TYPE</Text>
+                  <Text style={styles.labDetailsMetricValue} numberOfLines={2}>
+                    {selectedLabItemDetails?.sampleType || 'Blood Sample'}
+                  </Text>
+                </View>
+
+                <View style={styles.labDetailsMetricBox}>
+                  <Ionicons
+                    name={selectedLabItemDetails?.fastingRequired ? 'restaurant-outline' : 'checkmark-circle-outline'}
+                    size={18}
+                    color={selectedLabItemDetails?.fastingRequired ? '#F59E0B' : '#10B981'}
+                  />
+                  <Text style={styles.labDetailsMetricLabel}>FASTING RULES</Text>
+                  <Text style={styles.labDetailsMetricValue} numberOfLines={2}>
+                    {selectedLabItemDetails?.fastingRequired ? 'Fasting Required' : 'No Fasting Required'}
+                  </Text>
+                </View>
+
+                <View style={styles.labDetailsMetricBox}>
+                  <Ionicons name="time-outline" size={18} color="#6366F1" />
+                  <Text style={styles.labDetailsMetricLabel}>REPORT TAT</Text>
+                  <Text style={styles.labDetailsMetricValue} numberOfLines={2}>
+                    {selectedLabItemDetails?.reportTime || 'Within 24 Hours'}
+                  </Text>
+                </View>
+
+                <View style={styles.labDetailsMetricBox}>
+                  <Ionicons name="home-outline" size={18} color="#00B894" />
+                  <Text style={styles.labDetailsMetricLabel}>COLLECTION</Text>
+                  <Text style={styles.labDetailsMetricValue} numberOfLines={2}>
+                    Free Doorstep Pickup
+                  </Text>
+                </View>
+              </View>
+
+              {/* Price & Summary Banner */}
+              <View style={styles.labDetailsPriceCard}>
+                <View>
+                  <Text style={styles.labDetailsPriceSub}>TOTAL PRICE IN CART</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 8, marginTop: 2 }}>
+                    <Text style={styles.labDetailsPriceMain}>₹{selectedLabItemDetails?.price}</Text>
+                    {selectedLabItemDetails?.mrp > selectedLabItemDetails?.price && (
+                      <Text style={styles.labDetailsMrpCross}>₹{selectedLabItemDetails?.mrp}</Text>
+                    )}
+                    {selectedLabItemDetails?.mrp > selectedLabItemDetails?.price && (
+                      <Text style={styles.labDetailsSaveText}>
+                        Save ₹{selectedLabItemDetails?.mrp - selectedLabItemDetails?.price}
+                      </Text>
+                    )}
+                  </View>
+                </View>
+                <View style={styles.labDetailsAccreditedBadge}>
+                  <Ionicons name="shield-checkmark" size={16} color="#00B894" />
+                  <Text style={styles.labDetailsAccreditedText}>Verified NABL Partner</Text>
+                </View>
+              </View>
+
+              {/* Clinical Description / Purpose */}
+              {Boolean(selectedLabItemDetails?.description) && (
+                <View style={styles.labDetailsSectionBox}>
+                  <View style={styles.labDetailsSectionHeader}>
+                    <Ionicons name="medical-outline" size={18} color="#0F172A" />
+                    <Text style={styles.labDetailsSectionTitle}>Clinical Purpose & Overview</Text>
+                  </View>
+                  <Text style={styles.labDetailsDescriptionText}>
+                    {selectedLabItemDetails?.description}
+                  </Text>
+                </View>
+              )}
+
+              {/* Preparation & Fasting Guidelines */}
+              <View style={styles.labDetailsSectionBox}>
+                <View style={styles.labDetailsSectionHeader}>
+                  <Ionicons name="clipboard-outline" size={18} color="#0F172A" />
+                  <Text style={styles.labDetailsSectionTitle}>Preparation & Fasting Instructions</Text>
+                </View>
+                <View style={styles.labDetailsPrepNote}>
+                  <Ionicons name="information-circle" size={18} color="#0284C7" style={{ marginTop: 2 }} />
+                  <Text style={styles.labDetailsPrepNoteText}>
+                    {selectedLabItemDetails?.preparation || 'No special dietary instructions needed. Drink adequate water.'}
+                  </Text>
+                </View>
+              </View>
+
+              {/* If PACKAGE: List of Included Tests */}
+              {selectedLabItemDetails?.isPackage && Array.isArray(selectedLabItemDetails?.tests) && selectedLabItemDetails.tests.length > 0 && (
+                <View style={styles.labDetailsSectionBox}>
+                  <View style={styles.labDetailsSectionHeader}>
+                    <Ionicons name="layers-outline" size={18} color="#007D69" />
+                    <Text style={styles.labDetailsSectionTitle}>
+                      Included Tests & Panels ({selectedLabItemDetails.tests.length})
+                    </Text>
+                  </View>
+                  <Text style={styles.labDetailsSubNote}>
+                    All the following investigation panels are covered under this checkup package:
+                  </Text>
+
+                  <View style={{ gap: 10, marginTop: 10 }}>
+                    {selectedLabItemDetails.tests.map((testItem, tIdx) => {
+                      const tName = typeof testItem === 'string' ? testItem : testItem.name;
+                      const tParams = typeof testItem === 'string' ? '' : testItem.parameters;
+                      const tTube = typeof testItem === 'string' ? '' : testItem.tube || testItem.sample;
+                      const tPrep = typeof testItem === 'string' ? '' : testItem.preparation;
+                      const tTat = typeof testItem === 'string' ? '' : testItem.tat;
+
+                      return (
+                        <View key={tIdx} style={styles.labDetailsSubTestCard}>
+                          <View style={{ flexDirection: 'row', alignItems: 'flex-start', gap: 8 }}>
+                            <View style={styles.labDetailsSubTestNumber}>
+                              <Text style={styles.labDetailsSubTestNumberText}>{tIdx + 1}</Text>
+                            </View>
+                            <View style={{ flex: 1 }}>
+                              <Text style={styles.labDetailsSubTestName}>{tName}</Text>
+                              {Boolean(tParams) && (
+                                <Text style={styles.labDetailsSubTestParams}>
+                                  <Text style={{ fontWeight: '700', color: '#475569' }}>Parameters: </Text>
+                                  {tParams}
+                                </Text>
+                              )}
+                              <View style={styles.labDetailsSubTestTagsRow}>
+                                {Boolean(tTube) && (
+                                  <View style={styles.labDetailsMiniTag}>
+                                    <Ionicons name="flask-outline" size={10} color="#0284C7" />
+                                    <Text style={styles.labDetailsMiniTagText}>{tTube}</Text>
+                                  </View>
+                                )}
+                                {Boolean(tPrep) && (
+                                  <View style={styles.labDetailsMiniTag}>
+                                    <Ionicons name="information-circle-outline" size={10} color="#64748B" />
+                                    <Text style={styles.labDetailsMiniTagText}>{tPrep}</Text>
+                                  </View>
+                                )}
+                                {Boolean(tTat) && (
+                                  <View style={styles.labDetailsMiniTag}>
+                                    <Ionicons name="time-outline" size={10} color="#16A34A" />
+                                    <Text style={[styles.labDetailsMiniTagText, { color: '#16A34A' }]}>{tTat}</Text>
+                                  </View>
+                                )}
+                              </View>
+                            </View>
+                          </View>
+                        </View>
+                      );
+                    })}
+                  </View>
+                </View>
+              )}
+
+              {/* If INDIVIDUAL TEST: Parameters Breakdown */}
+              {!selectedLabItemDetails?.isPackage && Array.isArray(selectedLabItemDetails?.parametersList) && selectedLabItemDetails.parametersList.length > 0 && (
+                <View style={styles.labDetailsSectionBox}>
+                  <View style={styles.labDetailsSectionHeader}>
+                    <Ionicons name="list-outline" size={18} color="#007D69" />
+                    <Text style={styles.labDetailsSectionTitle}>
+                      Parameters Evaluated ({selectedLabItemDetails.parametersList.length})
+                    </Text>
+                  </View>
+                  <View style={styles.labDetailsParamsGrid}>
+                    {selectedLabItemDetails.parametersList.map((param, pIdx) => (
+                      <View key={pIdx} style={styles.labDetailsParamChip}>
+                        <Ionicons name="checkmark-circle" size={13} color="#00B894" />
+                        <Text style={styles.labDetailsParamChipText}>{param}</Text>
+                      </View>
+                    ))}
+                  </View>
+                </View>
+              )}
+
+              {/* Quality & Safety Assurance */}
+              <View style={styles.labDetailsGuaranteeCard}>
+                <Ionicons name="ribbon-outline" size={24} color="#007D69" />
+                <View style={{ flex: 1 }}>
+                  <Text style={styles.labDetailsGuaranteeTitle}>MediUnify Diagnostic Quality Assurance</Text>
+                  <Text style={styles.labDetailsGuaranteeDesc}>
+                    Every test report is signed by an MD Pathologist and processed using barcoded vacuum tubes for 100% sample integrity.
+                  </Text>
+                </View>
+              </View>
+            </ScrollView>
+
+            {/* Modal Action Footer */}
+            <View style={styles.labDetailsModalFooter}>
+              <TouchableOpacity
+                style={styles.labDetailsRemoveBtn}
+                onPress={() => {
+                  removeFromCart && removeFromCart(selectedLabItemDetails.id, 'lab');
+                  setSelectedLabItemDetails(null);
+                }}
+                activeOpacity={0.8}
+              >
+                <Ionicons name="trash-outline" size={16} color="#DC2626" />
+                <Text style={styles.labDetailsRemoveBtnText}>Remove from Cart</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.labDetailsDoneBtn}
+                onPress={() => setSelectedLabItemDetails(null)}
+                activeOpacity={0.85}
+              >
+                <Text style={styles.labDetailsDoneBtnText}>Close</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   cartCategoryTabsWrap: {
     width: '100%',
     backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderWidth: 0,
+    borderBottomWidth: 0,
+    borderBottomColor: 'transparent',
+    borderTopWidth: 0,
     paddingVertical: 8,
     paddingHorizontal: 12,
   },
@@ -4029,30 +4821,38 @@ const styles = StyleSheet.create({
 
   // Items List Rows
   itemsListWrap: {
-    gap: 16,
+    gap: 12,
   },
   itemRowContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
-    paddingVertical: 14,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
-    gap: 12,
+    alignItems: 'center',
+    padding: 14,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E8EFF5',
+    marginBottom: 8,
+    gap: 14,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+    boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
   },
   itemImageWrap: {
-    width: 76,
-    height: 76,
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    padding: 4,
-    backgroundColor: '#F8FAFC',
+    width: 78,
+    height: 78,
+    borderRadius: 12,
+    backgroundColor: 'transparent',
     justifyContent: 'center',
     alignItems: 'center',
+    overflow: 'hidden',
   },
   itemImage: {
-    width: '100%',
-    height: '100%',
+    width: '94%',
+    height: '94%',
+    ...(Platform.OS === 'web' ? { mixBlendMode: 'multiply' } : {}),
   },
   itemDetailsCol: {
     flex: 1,
@@ -4093,15 +4893,17 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   itemDiscountBadge: {
-    backgroundColor: '#ECFDF5',
-    paddingHorizontal: 6,
+    backgroundColor: '#FFF4ED',
+    paddingHorizontal: 5.5,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 6,
+    borderWidth: 0.8,
+    borderColor: '#FED7AA',
   },
   itemDiscountVal: {
-    fontSize: 11,
+    fontSize: 9,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#EA580C',
   },
 
   // Quantity Selector Box
@@ -4110,30 +4912,37 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1.5,
     borderColor: '#00B894',
-    backgroundColor: '#ECFDF5',
-    borderRadius: 8,
-    height: 32,
+    backgroundColor: '#F0FDF4',
+    borderRadius: 10,
+    height: 34,
+    paddingHorizontal: 4,
+    boxShadow: '0 2px 8px rgba(0, 184, 148, 0.12)',
   },
   qtyBtn: {
-    paddingHorizontal: 10,
-    height: '100%',
+    paddingHorizontal: 8,
+    height: 26,
+    width: 26,
+    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
     justifyContent: 'center',
     alignItems: 'center',
+    boxShadow: '0 1px 3px rgba(0, 0, 0, 0.08)',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
   },
   qtyMinusText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#00B894',
     fontWeight: '800',
   },
   qtyPlusText: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#00B894',
     fontWeight: '800',
   },
   qtyValueText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#007D69',
+    color: '#065F46',
     paddingHorizontal: 6,
   },
 
@@ -4144,6 +4953,52 @@ const styles = StyleSheet.create({
   },
   dealsHeaderRow: {
     marginBottom: 14,
+  },
+  carouselContainerWrap: {
+    position: 'relative',
+    width: '100%',
+    justifyContent: 'center',
+  },
+  carouselSideArrowBtn: {
+    position: 'absolute',
+    top: '46%',
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 20,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 10,
+    elevation: 6,
+    ...(Platform.OS === 'web'
+      ? {
+          cursor: 'pointer',
+          boxShadow: '0 4px 16px rgba(15, 23, 42, 0.14), 0 1px 3px rgba(15, 23, 42, 0.08)',
+          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        }
+      : {}),
+  },
+  carouselLeftArrowBtn: {
+    left: -14,
+  },
+  carouselRightArrowBtn: {
+    right: -14,
+  },
+  dealsScrollView: {
+    width: '100%',
+    ...(Platform.OS === 'web'
+      ? {
+          overflowX: 'auto',
+          WebkitOverflowScrolling: 'touch',
+          scrollBehavior: 'smooth',
+        }
+      : {}),
   },
   dealsSectionTitle: {
     fontSize: 17,
@@ -4156,129 +5011,339 @@ const styles = StyleSheet.create({
     paddingBottom: 6,
   },
   dealCard: {
-    width: 180,
+    width: 196,
     backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E8EFF5',
+    padding: 13,
+    paddingTop: 12,
+    paddingBottom: 14,
+    position: 'relative',
+    overflow: 'hidden',
+    justifyContent: 'space-between',
+    minHeight: 330,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: 3,
+    ...(Platform.OS === 'web'
+      ? {
+          boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.02)',
+          cursor: 'pointer',
+          transition: 'all 0.2s ease',
+        }
+      : {}),
+  },
+  labPkgCard: {
+    width: 295,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    padding: 16,
+    justifyContent: 'space-between',
+    minHeight: 250,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
+    elevation: 3,
+    ...(Platform.OS === 'web'
+      ? {
+          boxShadow: '0 4px 20px -4px rgba(0, 187, 149, 0.08), 0 2px 6px rgba(15, 23, 42, 0.03)',
+          transition: 'transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease',
+        }
+      : {}),
+  },
+  labPkgCardHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+    gap: 8,
+  },
+  labPkgCategoryBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 8,
+    borderWidth: 1,
+    maxWidth: '65%',
+  },
+  labPkgCategoryText: {
+    fontSize: 10,
+    fontWeight: '800',
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
+  labPkgTatBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 7.5,
+    paddingVertical: 3,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  labPkgTatText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#00BB95',
+  },
+  labPkgNameText: {
+    fontSize: 15.5,
+    fontWeight: '800',
+    color: '#0F172A',
+    lineHeight: 21,
+    minHeight: 42,
+    marginBottom: 10,
+  },
+  labPkgDetailsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginBottom: 12,
+  },
+  labPkgDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 12,
-    padding: 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 8,
+  },
+  labPkgDetailText: {
+    fontSize: 11,
+    fontWeight: '600',
+    color: '#334155',
+  },
+  labPkgFooterWrap: {
+    paddingTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    marginTop: 'auto',
+    gap: 10,
+  },
+  labPkgPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
   },
-  dealImageWrap: {
-    width: '100%',
-    height: 96,
-    justifyContent: 'center',
-    alignItems: 'center',
-    marginBottom: 8,
-    backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    padding: 4,
-  },
-  dealImage: {
-    width: '100%',
-    height: '100%',
-  },
-  dealNameText: {
-    fontSize: 12.5,
-    fontWeight: '700',
+  labPkgPrice: {
+    fontSize: 20,
+    fontWeight: '900',
     color: '#0F172A',
-    lineHeight: 17,
-    minHeight: 34,
-    marginBottom: 4,
   },
-  dealPackSize: {
-    fontSize: 10.5,
-    color: '#64748B',
-    marginBottom: 6,
-  },
-  dealRatingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    marginBottom: 4,
-  },
-  starRatingBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 2,
-    backgroundColor: '#7BC96F',
-    paddingHorizontal: 4,
-    paddingVertical: 1,
-    borderRadius: 4,
-  },
-  starRatingText: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: '#FFFFFF',
-  },
-  reviewsCountText: {
-    fontSize: 10,
-    color: '#94A3B8',
-  },
-  dealEtaText: {
-    fontSize: 10.5,
-    color: '#64748B',
-    marginBottom: 6,
-  },
-  dealPriceRow: {
-    flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 4,
-    marginBottom: 10,
-    flexWrap: 'wrap',
-  },
-  dealPriceText: {
-    fontSize: 13,
-    fontWeight: '800',
-    color: '#1E3A8A',
-  },
-  dealMrpText: {
-    fontSize: 10.5,
+  labPkgMrp: {
+    fontSize: 12,
     color: '#94A3B8',
     textDecorationLine: 'line-through',
   },
-  dealDiscountText: {
+  labPkgDiscountBadge: {
+    backgroundColor: '#FFF2ED',
+    paddingHorizontal: 6.5,
+    paddingVertical: 2,
+    borderRadius: 6,
+  },
+  labPkgDiscountText: {
+    color: '#FF7F50',
     fontSize: 10.5,
     fontWeight: '800',
-    color: '#7BC96F',
   },
-  dealAddToCartBtn: {
+  labPkgActionRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  labPkgDetailsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 10,
+    height: 36,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  labPkgDetailsBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  labPkgCartBtn: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 36,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#00BB95',
+    backgroundColor: '#F0FDF9',
+  },
+  labPkgCartBtnActive: {
+    backgroundColor: '#00BB95',
+    borderColor: '#00BB95',
+  },
+  labPkgCartBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#00BB95',
+  },
+  labPkgCartBtnTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  pharmacyBadge: {
+    position: 'absolute',
+    top: 8,
+    left: 8,
+    backgroundColor: '#FFF4ED',
+    paddingHorizontal: 5.5,
+    paddingVertical: 2,
+    borderRadius: 6,
+    borderWidth: 0.8,
+    borderColor: '#FED7AA',
+    zIndex: 2,
+  },
+  pharmacyBadgeText: {
+    fontSize: 8.5,
+    fontWeight: '700',
+    color: '#EA580C',
+    letterSpacing: 0.2,
+  },
+  pharmacyCardImgWrap: {
+    width: '100%',
+    height: 125,
+    backgroundColor: 'transparent',
+    borderRadius: 12,
+    marginTop: 14,
+    marginBottom: 8,
+    alignItems: 'center',
+    justifyContent: 'center',
+    overflow: 'hidden',
+  },
+  pharmacyCardImg: {
+    width: '92%',
+    height: '92%',
+    ...(Platform.OS === 'web' ? { mixBlendMode: 'multiply' } : {}),
+  },
+  pharmacyCardBody: {
+    flex: 1,
+    justifyContent: 'space-between',
+  },
+  pharmacyCardContent: {
+    flex: 1,
+  },
+  pharmacyCat: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#0D9488',
+    textTransform: 'uppercase',
+    letterSpacing: 0.6,
+    marginBottom: 4,
+  },
+  pharmacyName: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#0F172A',
+    lineHeight: 19,
+    height: 38,
+    overflow: 'hidden',
+    letterSpacing: -0.1,
+  },
+  pharmacyBrand: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  pharmacyRatingRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    marginTop: 6,
+  },
+  ratingNumberText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#334155',
+  },
+  reviewsCountText: {
+    fontSize: 11,
+    color: '#94A3B8',
+  },
+  pharmacyCardFooter: {
+    marginTop: 10,
+  },
+  pharmacyPriceRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 7,
+    marginBottom: 8,
+  },
+  pharmacyPrice: {
+    fontSize: 18,
+    fontWeight: '800',
+    color: '#0F172A',
+    letterSpacing: -0.3,
+  },
+  pharmacyMrp: {
+    fontSize: 12,
+    color: '#94A3B8',
+    textDecorationLine: 'line-through',
+  },
+  addToCartButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 6,
     backgroundColor: '#00B894',
-    paddingVertical: 7,
-    borderRadius: 8,
-    height: 36,
-    marginTop: 6,
-    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
+    paddingVertical: 9,
+    borderRadius: 20,
+    height: 38,
+    ...(Platform.OS === 'web'
+      ? {
+          cursor: 'pointer',
+          background: 'linear-gradient(135deg, #00C29A 0%, #009E7E 100%)',
+          boxShadow: '0 4px 12px rgba(0, 194, 154, 0.28)',
+          transition: 'all 0.2s ease',
+        }
+      : {}),
   },
-  dealAddToCartBtnText: {
-    fontSize: 12,
-    fontWeight: '700',
+  addToCartText: {
     color: '#FFFFFF',
+    fontSize: 12.5,
+    fontWeight: '700',
+    letterSpacing: 0.2,
   },
-  dealQuantityStepper: {
+  quantityStepper: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1.5,
     borderColor: '#00B894',
-    borderRadius: 8,
-    backgroundColor: '#ECFDF5',
-    height: 36,
-    paddingHorizontal: 6,
-    marginTop: 6,
+    borderRadius: 20,
+    backgroundColor: '#F0FDF9',
+    height: 38,
+    paddingHorizontal: 8,
+    ...(Platform.OS === 'web' ? { boxShadow: '0 2px 8px rgba(0, 184, 148, 0.15)' } : {}),
   },
-  dealStepperBtn: {
-    width: 26,
-    height: 26,
+  stepperBtn: {
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
+    borderRadius: 14,
     ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
   },
-  dealStepperQuantity: {
+  stepperQuantity: {
     fontSize: 13,
     fontWeight: '800',
     color: '#00B894',
@@ -4590,12 +5655,15 @@ const styles = StyleSheet.create({
   // 6. PRIMARY CONTINUE BUTTON
   continueBtn: {
     backgroundColor: '#00B894',
+    backgroundImage: 'linear-gradient(135deg, #00C29A 0%, #009E7E 100%)',
     height: 48,
-    borderRadius: 8,
+    borderRadius: 12,
     justifyContent: 'center',
     alignItems: 'center',
+    boxShadow: '0 4px 16px rgba(0, 184, 148, 0.32)',
+    cursor: 'pointer',
     ...(Platform.OS === 'web'
-      ? { cursor: 'pointer', boxShadow: '0px 4px 14px rgba(0, 184, 148, 0.3)' }
+      ? { cursor: 'pointer', boxShadow: '0px 4px 16px rgba(0, 184, 148, 0.32)' }
       : {
           shadowColor: '#00B894',
           shadowOffset: { width: 0, height: 4 },
@@ -5490,6 +6558,370 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 4,
+  },
+
+  // Lab Package & Details Pill & Modal Styles
+  labPackageTypePill: {
+    backgroundColor: '#D1FAE5',
+    paddingHorizontal: 6,
+    paddingVertical: 2,
+    borderRadius: 4,
+    alignSelf: 'center',
+  },
+  labPackageTypePillText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#065F46',
+    letterSpacing: 0.5,
+  },
+  labDetailsActionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  labDetailsActionPillText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#007D69',
+  },
+  labDetailsModalBackdrop: {
+    flex: 1,
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 16,
+  },
+  labDetailsModalCard: {
+    width: '100%',
+    maxWidth: 680,
+    maxHeight: '90%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
+    overflow: 'hidden',
+    ...(Platform.OS === 'web'
+      ? { boxShadow: '0px 20px 40px rgba(0, 0, 0, 0.25)' }
+      : {
+          shadowColor: '#000',
+          shadowOffset: { width: 0, height: 16 },
+          shadowOpacity: 0.25,
+          shadowRadius: 28,
+          elevation: 12,
+        }),
+  },
+  labDetailsModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    backgroundColor: '#FAFCFC',
+  },
+  labDetailsIconBox: {
+    width: 44,
+    height: 44,
+    borderRadius: 12,
+    backgroundColor: '#F0FDF4',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  labDetailsCategoryBadge: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#007D69',
+    letterSpacing: 0.5,
+    textTransform: 'uppercase',
+  },
+  labDetailsDiscountBadge: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#16A34A',
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 4,
+  },
+  labDetailsModalTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  labDetailsModalCenter: {
+    fontSize: 12,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  labDetailsCloseBtn: {
+    width: 36,
+    height: 36,
+    borderRadius: 18,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  labDetailsModalScrollContent: {
+    padding: 20,
+    gap: 16,
+  },
+  labDetailsMetricsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  labDetailsMetricBox: {
+    flex: 1,
+    minWidth: 130,
+    backgroundColor: '#F8FAFC',
+    borderRadius: 12,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  labDetailsMetricLabel: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: '#64748B',
+    letterSpacing: 0.5,
+    marginTop: 6,
+  },
+  labDetailsMetricValue: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#0F172A',
+    marginTop: 2,
+  },
+  labDetailsPriceCard: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    padding: 16,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  labDetailsPriceSub: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#047857',
+    letterSpacing: 0.5,
+  },
+  labDetailsPriceMain: {
+    fontSize: 22,
+    fontWeight: '800',
+    color: '#065F46',
+  },
+  labDetailsMrpCross: {
+    fontSize: 14,
+    color: '#94A3B8',
+    textDecorationLine: 'line-through',
+  },
+  labDetailsSaveText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#16A34A',
+  },
+  labDetailsAccreditedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#86EFAC',
+  },
+  labDetailsAccreditedText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#065F46',
+  },
+  labDetailsSectionBox: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    padding: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  labDetailsSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    marginBottom: 8,
+  },
+  labDetailsSectionTitle: {
+    fontSize: 14.5,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  labDetailsDescriptionText: {
+    fontSize: 13,
+    lineHeight: 20,
+    color: '#475569',
+  },
+  labDetailsPrepNote: {
+    flexDirection: 'row',
+    gap: 10,
+    backgroundColor: '#EFF6FF',
+    padding: 12,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#BFDBFE',
+  },
+  labDetailsPrepNoteText: {
+    flex: 1,
+    fontSize: 12.5,
+    lineHeight: 18,
+    color: '#1E40AF',
+  },
+  labDetailsSubNote: {
+    fontSize: 12,
+    color: '#64748B',
+    marginBottom: 6,
+  },
+  labDetailsSubTestCard: {
+    backgroundColor: '#F8FAFC',
+    borderRadius: 10,
+    padding: 12,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  labDetailsSubTestNumber: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#007D69',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  labDetailsSubTestNumberText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  labDetailsSubTestName: {
+    fontSize: 13.5,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  labDetailsSubTestParams: {
+    fontSize: 12,
+    lineHeight: 17,
+    color: '#64748B',
+    marginTop: 3,
+  },
+  labDetailsSubTestTagsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 6,
+    marginTop: 6,
+  },
+  labDetailsMiniTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 7,
+    paddingVertical: 3,
+    borderRadius: 6,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  labDetailsMiniTagText: {
+    fontSize: 11,
+    color: '#475569',
+  },
+  labDetailsParamsGrid: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 6,
+  },
+  labDetailsParamChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+  },
+  labDetailsParamChipText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#065F46',
+  },
+  labDetailsGuaranteeCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#F0FDFA',
+    padding: 14,
+    borderRadius: 12,
+    borderWidth: 1,
+    borderColor: '#CCFBF1',
+  },
+  labDetailsGuaranteeTitle: {
+    fontSize: 12.5,
+    fontWeight: '800',
+    color: '#0F766E',
+  },
+  labDetailsGuaranteeDesc: {
+    fontSize: 11.5,
+    lineHeight: 16,
+    color: '#115E59',
+    marginTop: 2,
+  },
+  labDetailsModalFooter: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    gap: 12,
+    paddingHorizontal: 20,
+    paddingVertical: 14,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    backgroundColor: '#FFFFFF',
+  },
+  labDetailsRemoveBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+    borderRadius: 10,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+  },
+  labDetailsRemoveBtnText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  labDetailsDoneBtn: {
+    flex: 1,
+    maxWidth: 160,
+    paddingVertical: 11,
+    borderRadius: 10,
+    backgroundColor: '#00B894',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  labDetailsDoneBtnText: {
+    fontSize: 14,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
 });
 

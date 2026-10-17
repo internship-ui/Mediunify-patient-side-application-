@@ -24,10 +24,14 @@ import {
 } from '../../../data/patientDashboardData';
 import { cancelBookedSlot } from '../../../services/slotBookingService';
 import { showAlert } from '../../../utils/alert';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 
 const CONSULTATION_TABS = ['Upcoming', 'Completed', 'Cancelled'];
 
 const MyOnlineConsultationsScreen = ({ navigation, route }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const insets = useSafeAreaInsets();
   const isTablet = width >= 600;
@@ -197,7 +201,7 @@ const MyOnlineConsultationsScreen = ({ navigation, route }) => {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? theme.headerBg : "#FFFFFF"} />
 
       {/* ==================================================
           TOAST NOTIFICATION (Float top)
@@ -218,7 +222,7 @@ const MyOnlineConsultationsScreen = ({ navigation, route }) => {
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
         >
-          <Ionicons name="arrow-back" size={22} color="#0F172A" />
+          <Ionicons name="arrow-back" size={22} color={isDarkMode ? theme.text : "#0F172A"} />
         </TouchableOpacity>
 
         <View style={styles.headerTitleWrap}>
@@ -728,7 +732,7 @@ const MyOnlineConsultationsScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F8FAFC',

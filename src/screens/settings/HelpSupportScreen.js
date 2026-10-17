@@ -17,6 +17,7 @@ import { showAlert } from '../../utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 
 import colors from '../../theme/colors';
+import WebFooter from '../../components/web/WebFooter';
 
 const FAQS = [
   {
@@ -105,17 +106,19 @@ const HelpSupportScreen = ({ navigation }) => {
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.secondary} />
-        </TouchableOpacity>
+        <View style={styles.webHeaderInner}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-back" size={22} color={colors.secondary} />
+          </TouchableOpacity>
 
-        <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Help & 24/7 Support</Text>
-          <Text style={styles.headerSubtitle}>We are here to assist your care</Text>
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.headerTitle}>Help & 24/7 Support</Text>
+            <Text style={styles.headerSubtitle}>We are here to assist your care</Text>
+          </View>
         </View>
       </View>
 
@@ -129,12 +132,13 @@ const HelpSupportScreen = ({ navigation }) => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: isKeyboardVisible ? (Platform.OS === 'ios' ? 240 : 180) : 40 },
+            { paddingBottom: isKeyboardVisible ? (Platform.OS === 'ios' ? 240 : 180) : (Platform.OS === 'web' ? 0 : 40) },
           ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         >
+        <View style={styles.webContainer}>
         {/* EMERGENCY 24/7 HELPLINE CARD */}
         <View style={styles.helpHeroCard}>
           <View style={styles.helpHeroTop}>
@@ -286,8 +290,9 @@ const HelpSupportScreen = ({ navigation }) => {
             <Text style={styles.submitTicketText}>Submit Support Ticket</Text>
           </TouchableOpacity>
         </View>
+        </View>
 
-        <View style={{ height: 40 }} />
+        {Platform.OS === 'web' && <WebFooter navigation={navigation} />}
       </ScrollView>
       </KeyboardAvoidingView>
     </SafeAreaView>
@@ -301,13 +306,20 @@ const styles = StyleSheet.create({
   },
   header: {
     minHeight: 60,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
     backgroundColor: colors.white,
     borderBottomWidth: 1,
     borderBottomColor: colors.border,
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  webHeaderInner: {
+    maxWidth: 1080,
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    gap: 12,
   },
   backBtn: {
     width: 40,
@@ -318,7 +330,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
   },
   headerTitleWrap: {
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   headerTitle: {
     fontSize: 17,
@@ -326,12 +338,19 @@ const styles = StyleSheet.create({
     color: colors.secondary,
   },
   headerSubtitle: {
-    fontSize: 10,
+    fontSize: 11,
     color: colors.slate,
     fontWeight: '600',
   },
   scrollContent: {
     padding: 16,
+    width: '100%',
+  },
+  webContainer: {
+    maxWidth: 1080,
+    width: '100%',
+    alignSelf: 'center',
+    paddingBottom: 40,
   },
   helpHeroCard: {
     backgroundColor: colors.secondary,

@@ -20,6 +20,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import colors from '../../theme/colors';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
+import WebFooter from '../../components/web/WebFooter';
 
 // ─────────────────────────────────────────────
 // DEFAULT TRANSACTIONS (Includes Completed & Refunded)
@@ -264,7 +266,8 @@ function groupTransactions(list) {
 // MAIN COMPONENT
 // ─────────────────────────────────────────────
 const TransactionHistoryScreen = ({ navigation }) => {
-  const { t, isIndic } = useTheme();
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const S = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
 
@@ -660,34 +663,38 @@ const TransactionHistoryScreen = ({ navigation }) => {
   // ─────────────────────────────────────────────
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={S.safe}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? theme.headerBg : "#FFFFFF"} />
 
       {/* ── HEADER ── */}
-      <View style={[S.header, isTablet && S.headerTablet]}>
-        <TouchableOpacity style={S.headerBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
-          <Ionicons name="arrow-back" size={22} color="#0F172A" />
-        </TouchableOpacity>
-        <Text style={S.headerTitle}>{t('Payment History')}</Text>
-        <TouchableOpacity style={S.headerBtn} onPress={loadTransactionsFromStorage} activeOpacity={0.8}>
-          <Ionicons name="refresh-outline" size={20} color="#64748B" />
-        </TouchableOpacity>
+      <View style={S.header}>
+        <View style={S.webHeaderInner}>
+          <TouchableOpacity style={S.headerBtn} onPress={() => navigation.goBack()} activeOpacity={0.8}>
+            <Ionicons name="arrow-back" size={22} color={isDarkMode ? theme.text : "#0F172A"} />
+          </TouchableOpacity>
+          <Text style={S.headerTitle}>{t('Payment History')}</Text>
+          <TouchableOpacity style={S.headerBtn} onPress={loadTransactionsFromStorage} activeOpacity={0.8}>
+            <Ionicons name="refresh-outline" size={20} color={isDarkMode ? theme.textSecondary : "#64748B"} />
+          </TouchableOpacity>
+        </View>
       </View>
 
       {/* ── SUMMARY STRIP ── */}
-      <View style={[S.summary, isTablet && S.summaryTablet, selectedTab === 'refund' && S.summaryRefund]}>
-        <View>
-          <Text style={S.summaryLabel}>
-            {selectedTab === 'refund' ? t('Total Refunded') : t('Total Spent')}
+      <View style={[S.summary, selectedTab === 'refund' && S.summaryRefund]}>
+        <View style={S.summaryInner}>
+          <View>
+            <Text style={S.summaryLabel}>
+              {selectedTab === 'refund' ? t('Total Refunded') : t('Total Spent')}
+            </Text>
+            <Text style={S.summaryAmount}>₹{totalSpent.toLocaleString('en-IN')}</Text>
+          </View>
+          <Text style={S.summaryCount}>
+            {filteredTransactions.length} {selectedTab === 'refund' ? t('refunds') : t('payments')}
           </Text>
-          <Text style={S.summaryAmount}>₹{totalSpent.toLocaleString('en-IN')}</Text>
         </View>
-        <Text style={S.summaryCount}>
-          {filteredTransactions.length} {selectedTab === 'refund' ? t('refunds') : t('payments')}
-        </Text>
       </View>
 
       {/* ── SEARCH ── */}
-      <View style={[S.searchWrap, isTablet && S.searchWrapTablet]}>
+      <View style={S.searchWrap}>
         <View style={S.searchBox}>
           <Ionicons name="search-outline" size={16} color="#94A3B8" />
           <TextInput
@@ -707,7 +714,7 @@ const TransactionHistoryScreen = ({ navigation }) => {
       </View>
 
       {/* ── FILTER PILLS (With Refund filter) ── */}
-      <View style={[S.filterRow, isTablet && S.filterRowTablet]}>
+      <View style={S.filterRow}>
         <ScrollView
           horizontal
           showsHorizontalScrollIndicator={false}
@@ -754,17 +761,20 @@ const TransactionHistoryScreen = ({ navigation }) => {
       {/* ── LIST ── */}
       {isTablet ? (
         <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={[S.listContent, S.listContentTablet]}>
-          {sections.length === 0
-            ? <EmptyState onExplore={() => navigation.goBack()} isRefund={selectedTab === 'refund'} t={t} />
-            : sections.map((sec) => (
-                <View key={sec.title}>
-                  {renderSectionHeader({ section: sec })}
-                  <View style={S.tabletGrid}>
-                    {sec.data.map((item) => renderCard(item, true))}
+          <View style={Platform.OS === 'web' ? S.webInnerContainer : null}>
+            {sections.length === 0
+              ? <EmptyState onExplore={() => navigation.goBack()} isRefund={selectedTab === 'refund'} t={t} />
+              : sections.map((sec) => (
+                  <View key={sec.title}>
+                    {renderSectionHeader({ section: sec })}
+                    <View style={S.tabletGrid}>
+                      {sec.data.map((item) => renderCard(item, true))}
+                    </View>
                   </View>
-                </View>
-              ))
-          }
+                ))
+            }
+          </View>
+          {Platform.OS === 'web' && <WebFooter navigation={navigation} />}
         </ScrollView>
       ) : (
         <SectionList
@@ -776,6 +786,7 @@ const TransactionHistoryScreen = ({ navigation }) => {
           contentContainerStyle={S.listContent}
           stickySectionHeadersEnabled={false}
           ListEmptyComponent={<EmptyState onExplore={() => navigation.goBack()} isRefund={selectedTab === 'refund'} t={t} />}
+          ListFooterComponent={Platform.OS === 'web' ? <WebFooter navigation={navigation} /> : null}
         />
       )}
 
@@ -919,21 +930,27 @@ export default TransactionHistoryScreen;
 // ─────────────────────────────────────────────
 // STYLES
 // ─────────────────────────────────────────────
-const S = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safe: { flex: 1, backgroundColor: '#F8FAFC' },
 
   // HEADER
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingTop: Platform.OS === 'android' ? 8 : 4,
-    paddingBottom: 10,
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  headerTablet: { paddingHorizontal: 32 },
+  webHeaderInner: {
+    maxWidth: 1080,
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingTop: Platform.OS === 'android' ? 8 : 10,
+    paddingBottom: 10,
+  },
   headerBtn: {
     width: 38, height: 38, borderRadius: 12,
     backgroundColor: '#F1F5F9',
@@ -943,24 +960,35 @@ const S = StyleSheet.create({
 
   // SUMMARY
   summary: {
+    backgroundColor: '#0F766E',
+    width: '100%',
+    paddingVertical: 14,
+  },
+  summaryInner: {
+    maxWidth: 1080,
+    width: '100%',
+    alignSelf: 'center',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    backgroundColor: '#0F766E',
-    paddingHorizontal: 20,
-    paddingVertical: 14,
+    paddingHorizontal: 16,
   },
   summaryRefund: {
     backgroundColor: '#6D28D9',
   },
-  summaryTablet: { paddingHorizontal: 32, paddingVertical: 16 },
   summaryLabel:  { fontSize: 11, color: '#A7F3D0', fontWeight: '600', marginBottom: 2 },
   summaryAmount: { fontSize: 24, fontWeight: '900', color: '#FFFFFF' },
   summaryCount:  { fontSize: 12, color: '#A7F3D0', fontWeight: '600' },
 
   // SEARCH
-  searchWrap: { paddingHorizontal: 16, paddingTop: 12, paddingBottom: 2 },
-  searchWrapTablet: { paddingHorizontal: 32 },
+  searchWrap: {
+    maxWidth: 1080,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: 16,
+    paddingTop: 12,
+    paddingBottom: 2,
+  },
   searchBox: {
     flexDirection: 'row', alignItems: 'center',
     backgroundColor: '#FFFFFF',
@@ -974,10 +1002,12 @@ const S = StyleSheet.create({
 
   // FILTER PILLS
   filterRow: {
+    maxWidth: 1080,
+    width: '100%',
+    alignSelf: 'center',
     height: 46,
     paddingTop: 8,
   },
-  filterRowTablet: { height: 50, paddingTop: 10 },
   filterScroll: {
     paddingHorizontal: 16,
     paddingRight: 16,
@@ -1003,8 +1033,9 @@ const S = StyleSheet.create({
   pillTextRefund: { color: '#7C3AED' },
 
   // LIST
-  listContent: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: Platform.OS === 'ios' ? 145 : 130 },
-  listContentTablet: { paddingHorizontal: 32, paddingBottom: 145 },
+  listContent: { paddingHorizontal: 16, paddingTop: 4, paddingBottom: Platform.OS === 'web' ? 0 : (Platform.OS === 'ios' ? 145 : 130) },
+  listContentTablet: { paddingHorizontal: 0, paddingBottom: Platform.OS === 'web' ? 0 : 145 },
+  webInnerContainer: { maxWidth: 1080, width: '100%', alignSelf: 'center', paddingHorizontal: 16 },
 
   // SECTION HEADER
   sectionHeader: { paddingTop: 14, paddingBottom: 6 },
@@ -1030,7 +1061,7 @@ const S = StyleSheet.create({
     shadowRadius: 3,
     elevation: 1,
   },
-  cardTablet:  { width: '48.5%', marginBottom: 12 },
+  cardTablet:  { width: Platform.OS === 'web' ? 'calc(50% - 6px)' : '48.5%', marginBottom: 12 },
   cardIcon:    { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center', flexShrink: 0 },
   cardMid:     { flex: 1, paddingHorizontal: 10 },
   cardService: { fontSize: 11, fontWeight: '600', color: '#94A3B8', marginBottom: 1 },

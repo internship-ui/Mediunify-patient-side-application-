@@ -53,8 +53,6 @@ import DoctorBookingScreen from '../screens/services/doctors/DoctorBookingScreen
 // ==================================================
 // HOSPITALS
 // ==================================================
-
-import HospitalListScreen from '../screens/services/surgery/HospitalListScreen';
 // ==================================================
 // SERVICES
 // ==================================================
@@ -64,7 +62,6 @@ import VideoConsultationScreen from '../screens/services/videocall/VideoConsulta
 import VideoMeetingScreen from '../screens/services/videocall/VideoMeetingScreen';
 
 import LabTestsScreen from '../screens/services/lab/LabTestsScreen';
-import LabBookingScreen from '../screens/services/lab/LabBookingScreen';
 
 
 // ==================================================
@@ -72,12 +69,9 @@ import LabBookingScreen from '../screens/services/lab/LabBookingScreen';
 // ==================================================
 
 import PharmacyScreen from '../screens/services/pharmacy/PharmacyScreen';
-import PharmacyStoreDetailScreen from '../screens/services/pharmacy/PharmacyStoreDetailScreen';
 import PharmacyLocationScreen from '../screens/services/pharmacy/PharmacyLocationScreen';
 import ProductDetailsScreen from '../screens/services/pharmacy/ProductDetailsScreen';
 import CartScreen from '../screens/services/pharmacy/CartScreen';
-import CheckoutScreen from '../screens/services/pharmacy/CheckoutScreen';
-import PaymentScreen from '../screens/services/pharmacy/PaymentScreen';
 import OrderSuccessScreen from '../screens/services/pharmacy/OrderSuccessScreen';
 
 
@@ -88,8 +82,6 @@ import OrderSuccessScreen from '../screens/services/pharmacy/OrderSuccessScreen'
 import ImagingScreen from '../screens/services/radiology/ImagingScreen';
 
 import SurgeryScreen from '../screens/services/surgery/SurgeryScreen';
-import HospitalSurgeryDetailsScreen from '../screens/services/surgery/HospitalSurgeryDetailsScreen';
-import SurgeryQuoteRequestScreen from '../screens/services/surgery/SurgeryQuoteRequestScreen';
 import HealthInsuranceScreen from '../screens/services/insurance/HealthInsuranceScreen';
 import NurseBookingScreen from '../screens/services/nurse/NurseBookingScreen';
 import EmergencyScreen from '../screens/services/emergency/EmergencyScreen';
@@ -101,8 +93,6 @@ import AllServicesScreen from '../screens/services/AllServicesScreen';
 // ==================================================
 // RADIOLOGY & SCANS
 // ==================================================
-import RadiologyLabsScreen from '../screens/services/radiology/RadiologyLabsScreen';
-import RadiologyOrderSuccessScreen from '../screens/services/radiology/RadiologyOrderSuccessScreen';
 
 
 
@@ -126,8 +116,6 @@ import ReportsScreen from '../screens/health/ReportsScreen';
 // ==================================================
 // BOOKINGS
 // ==================================================
-
-import BookingDetailsScreen from '../screens/services/booking/BookingDetailsScreen';
 
 
 // ==================================================
@@ -188,7 +176,7 @@ const BottomNavigation = ({
   const { width } = useWindowDimensions();
   const isTabletDevice = width >= 600;
   const insets = useSafeAreaInsets();
-  const { t, isIndic } = useTheme();
+  const { t, isIndic, isDarkMode, theme } = useTheme();
 
   // Gentle breathing aura animation for the AI bot floating button
   const pulseAnim = useRef(new Animated.Value(1)).current;
@@ -247,7 +235,7 @@ const BottomNavigation = ({
   const isHistoryActive = ['TransactionHistory', 'History'].includes(currentRoute);
 
   const activeColor = '#00B894';
-  const inactiveColor = '#647488';
+  const inactiveColor = isDarkMode ? '#94A3B8' : '#647488';
 
   return (
     <View
@@ -258,6 +246,10 @@ const BottomNavigation = ({
           width: barWidth,
           bottom: bottomOffset,
           height: isTabletDevice ? 64 : 62,
+        },
+        isDarkMode && {
+          backgroundColor: theme.card,
+          borderColor: theme.border,
         },
       ]}
     >
@@ -276,6 +268,7 @@ const BottomNavigation = ({
           style={[
             styles.bottomText,
             isIndic && { fontSize: 8.5, lineHeight: 12 },
+            isDarkMode && { color: '#94A3B8' },
             isHomeActive && styles.activeBottomText,
           ]}
           numberOfLines={1}
@@ -299,6 +292,7 @@ const BottomNavigation = ({
           style={[
             styles.bottomText,
             isIndic && { fontSize: 8.5, lineHeight: 12 },
+            isDarkMode && { color: '#94A3B8' },
             isSearchActive && styles.activeBottomText,
           ]}
           numberOfLines={1}
@@ -350,6 +344,7 @@ const BottomNavigation = ({
             styles.bottomText,
             styles.centerAiText,
             isIndic && { fontSize: 8.5, lineHeight: 12 },
+            isDarkMode && { color: '#94A3B8' },
             isChatbotActive && styles.activeBottomText,
           ]}
           numberOfLines={1}
@@ -376,6 +371,7 @@ const BottomNavigation = ({
           style={[
             styles.bottomText,
             isIndic && { fontSize: 8.5, lineHeight: 12 },
+            isDarkMode && { color: '#94A3B8' },
             isAlertsActive && styles.activeBottomText,
           ]}
           numberOfLines={1}
@@ -399,6 +395,7 @@ const BottomNavigation = ({
           style={[
             styles.bottomText,
             isIndic && { fontSize: 8.5, lineHeight: 12 },
+            isDarkMode && { color: '#94A3B8' },
             isHistoryActive && styles.activeBottomText,
           ]}
           numberOfLines={1}
@@ -441,6 +438,7 @@ const MainNavigator = ({
   navigation,
 }) => {
   const { width } = useWindowDimensions();
+  const { isDarkMode, theme } = useTheme();
   const desktopSiteMode = isDesktopSiteRequested();
   const isDesktopWeb = Platform.OS === 'web' && isDesktopLayout(width);
 
@@ -462,9 +460,9 @@ const MainNavigator = ({
 
   const hasBottomBar = (
     (['LabTests'].includes(currentRoute) && labCartCount > 0) ||
-    (['Pharmacy', 'PharmacyStoreDetail'].includes(currentRoute) && pharmacyCartCount > 0) ||
+    (currentRoute === 'Pharmacy' && pharmacyCartCount > 0) ||
     (['Cart', 'Checkout', 'Payment'].includes(currentRoute)) ||
-    (['DoctorList', 'DoctorDetails', 'HospitalList'].includes(currentRoute) && totalCartCount > 0)
+    (['DoctorList', 'DoctorDetails'].includes(currentRoute) && totalCartCount > 0)
   );
 
 
@@ -540,6 +538,7 @@ const MainNavigator = ({
       style={[
         styles.mainContainer,
         desktopSiteMode && { minWidth: 1200, width: '100%' },
+        isDarkMode && { backgroundColor: theme.background },
       ]}
     >
       {/* ==================================================
@@ -568,7 +567,6 @@ const MainNavigator = ({
             'RadiologyLabDetails',
             'Pharmacy',
             'ProductDetails',
-            'PharmacyStoreDetail',
             'PharmacyLocation',
             'EquipmentRental',
             'FindDoctors',
@@ -578,8 +576,6 @@ const MainNavigator = ({
             'VideoConsultation',
             'VideoBooking',
             'HospitalCare',
-            'HospitalList',
-            'SurgeryQuoteRequest',
             'HealthInsurance',
             'NurseBooking',
             'Emergency',
@@ -601,6 +597,27 @@ const MainNavigator = ({
             'MyOnlineConsultations',
             'MyFeedback',
             'Settings',
+            'Profile',
+            'EditProfile',
+            'FamilyProfiles',
+            'TransactionHistory',
+            'History',
+            'Wallet',
+            'ReferEarn',
+            'HealthRecords',
+            'Prescriptions',
+            'Reports',
+            'HealthMonitor',
+            'AllServices',
+            'Notifications',
+            'Alerts',
+            'HelpSupport',
+            'OrderSuccess',
+            'OnlineConsultant',
+            'RadiologyPayment',
+            'RadiologyOrderSuccess',
+            'RadiologyReportUpload',
+            'VideoMeeting',
           ].includes(currentRoute) &&
           styles.desktopStackWrapper,
         ]}
@@ -613,8 +630,7 @@ const MainNavigator = ({
             headerShown: false,
 
             contentStyle: {
-              backgroundColor:
-                '#FAFCFD',
+              backgroundColor: isDarkMode ? theme.background : '#FAFCFD',
             },
           }}
 
@@ -700,23 +716,8 @@ const MainNavigator = ({
         ================================================== */}
 
           <Stack.Screen
-            name="HospitalList"
-            component={HospitalListScreen}
-          />
-
-          <Stack.Screen
             name="HospitalCare"
             component={SurgeryScreen}
-          />
-
-          <Stack.Screen
-            name="HospitalSurgeryDetails"
-            component={HospitalSurgeryDetailsScreen}
-          />
-
-          <Stack.Screen
-            name="SurgeryQuoteRequest"
-            component={SurgeryQuoteRequestScreen}
           />
 
           <Stack.Screen
@@ -773,11 +774,6 @@ const MainNavigator = ({
             component={LabTestsScreen}
           />
 
-          <Stack.Screen
-            name="LabBooking"
-            component={LabBookingScreen}
-          />
-
 
           {/* ==================================================
             PHARMACY
@@ -786,11 +782,6 @@ const MainNavigator = ({
           <Stack.Screen
             name="Pharmacy"
             component={PharmacyScreen}
-          />
-
-          <Stack.Screen
-            name="PharmacyStoreDetail"
-            component={PharmacyStoreDetailScreen}
           />
 
           <Stack.Screen
@@ -810,12 +801,12 @@ const MainNavigator = ({
 
           <Stack.Screen
             name="Checkout"
-            component={CheckoutScreen}
+            component={CartScreen}
           />
 
           <Stack.Screen
             name="Payment"
-            component={PaymentScreen}
+            component={CartScreen}
           />
 
           <Stack.Screen
@@ -880,7 +871,8 @@ const MainNavigator = ({
 
           <Stack.Screen
             name="RadiologyLabs"
-            component={RadiologyLabsScreen}
+            component={ImagingScreen}
+            initialParams={{ initialView: 'categories' }}
           />
 
           <Stack.Screen
@@ -900,12 +892,14 @@ const MainNavigator = ({
 
           <Stack.Screen
             name="RadiologyOrderSuccess"
-            component={RadiologyOrderSuccessScreen}
+            component={ImagingScreen}
+            initialParams={{ initialView: 'my-bookings' }}
           />
 
           <Stack.Screen
             name="RadiologistList"
-            component={RadiologyLabsScreen}
+            component={ImagingScreen}
+            initialParams={{ initialView: 'providers' }}
           />
 
           <Stack.Screen
@@ -915,7 +909,8 @@ const MainNavigator = ({
 
           <Stack.Screen
             name="RadiologyReportUpload"
-            component={RadiologyLabsScreen}
+            component={ImagingScreen}
+            initialParams={{ initialView: 'providers' }}
           />
 
 
@@ -926,11 +921,6 @@ const MainNavigator = ({
           <Stack.Screen
             name="Bookings"
             component={MyTestsScreen}
-          />
-
-          <Stack.Screen
-            name="BookingDetails"
-            component={BookingDetailsScreen}
           />
 
 

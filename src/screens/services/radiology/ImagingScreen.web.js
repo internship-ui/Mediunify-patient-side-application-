@@ -1,3 +1,4 @@
+import ImagingScreenMobile from './ImagingScreen.js';
 import React, { useState, useEffect, useMemo, useRef, useCallback } from 'react';
 import {
   View,
@@ -38,6 +39,7 @@ import {
   getAvailableTestsForCity,
   RADIOLOGY_CENTRES_FILTERED,
   getGoogleMapsDirectionsUrl,
+  normalizeRadiologyCity,
 } from '../../../data/radiologyCatalogData';
 import {
   getSlotStatus,
@@ -57,16 +59,171 @@ const CITIES = ['Mysuru', 'Bengaluru', 'Hassan', 'All Cities'];
 
 const POPULAR_SEARCH_CHIPS = [
   'MRI Brain',
+  'Chest X-Ray',
   'CT Chest',
-  '2D Echo',
-  'Ultrasound Abdomen',
-  'Digital X-Ray Chest',
-  'HRCT Chest',
-  'Mammography',
-  '12-Lead ECG',
+  'Ultrasound Pelvis',
 ];
 
-export default function ImagingScreenWeb({ navigation, route }) {
+// Design tokens per category: Light, clean card colors matching the button color family
+const CATEGORY_DESIGN_MAP = {
+  mri: {
+    gradient: 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 55%, #BAE6FD 100%)',
+    bg: '#F0F9FF',
+    border: '#7DD3FC',
+    cardShadow: 'rgba(2, 132, 199, 0.16)',
+    btnGradient: 'linear-gradient(90deg, #0284C7 0%, #0369A1 100%)',
+    btnBg: '#0284C7',
+    btnShadow: 'rgba(2, 132, 199, 0.35)',
+    discBg: '#BAE6FD',
+    discGradient: 'linear-gradient(135deg, #BAE6FD 0%, #7DD3FC 100%)',
+  },
+  ct: {
+    gradient: 'linear-gradient(135deg, #F0FDF9 0%, #E6FAF4 55%, #CCFBF1 100%)',
+    bg: '#F0FDF9',
+    border: '#5EEAD4',
+    cardShadow: 'rgba(0, 187, 149, 0.16)',
+    btnGradient: 'linear-gradient(90deg, #00BB95 0%, #009E7E 100%)',
+    btnBg: '#00BB95',
+    btnShadow: 'rgba(0, 187, 149, 0.35)',
+    discBg: '#CCFBF1',
+    discGradient: 'linear-gradient(135deg, #CCFBF1 0%, #99F6E4 100%)',
+  },
+  xray: {
+    gradient: 'linear-gradient(135deg, #EFF6FF 0%, #DBEAFE 55%, #BFDBFE 100%)',
+    bg: '#EFF6FF',
+    border: '#93C5FD',
+    cardShadow: 'rgba(37, 99, 235, 0.16)',
+    btnGradient: 'linear-gradient(90deg, #2563EB 0%, #1D4ED8 100%)',
+    btnBg: '#1D4ED8',
+    btnShadow: 'rgba(37, 99, 235, 0.35)',
+    discBg: '#DBEAFE',
+    discGradient: 'linear-gradient(135deg, #DBEAFE 0%, #BFDBFE 100%)',
+  },
+  usg: {
+    gradient: 'linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 55%, #A7F3D0 100%)',
+    bg: '#ECFDF5',
+    border: '#6EE7B7',
+    cardShadow: 'rgba(16, 185, 129, 0.16)',
+    btnGradient: 'linear-gradient(90deg, #10B981 0%, #059669 100%)',
+    btnBg: '#059669',
+    btnShadow: 'rgba(16, 185, 129, 0.35)',
+    discBg: '#D1FAE5',
+    discGradient: 'linear-gradient(135deg, #D1FAE5 0%, #A7F3D0 100%)',
+  },
+  mammo: {
+    gradient: 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 55%, #FECDD3 100%)',
+    bg: '#FFF1F2',
+    border: '#FDA4AF',
+    cardShadow: 'rgba(225, 29, 72, 0.16)',
+    btnGradient: 'linear-gradient(90deg, #F43F5E 0%, #E11D48 100%)',
+    btnBg: '#E11D48',
+    btnShadow: 'rgba(225, 29, 72, 0.35)',
+    discBg: '#FFE4E6',
+    discGradient: 'linear-gradient(135deg, #FFE4E6 0%, #FECDD3 100%)',
+  },
+  pet: {
+    gradient: 'linear-gradient(135deg, #ECFEFF 0%, #CFFAFE 55%, #A5F3FC 100%)',
+    bg: '#ECFEFF',
+    border: '#67E8F9',
+    cardShadow: 'rgba(8, 145, 178, 0.16)',
+    btnGradient: 'linear-gradient(90deg, #0891B2 0%, #0E7490 100%)',
+    btnBg: '#0891B2',
+    btnShadow: 'rgba(8, 145, 178, 0.35)',
+    discBg: '#CFFAFE',
+    discGradient: 'linear-gradient(135deg, #CFFAFE 0%, #A5F3FC 100%)',
+  },
+  dexa: {
+    gradient: 'linear-gradient(135deg, #F5F3FF 0%, #EDE9FE 55%, #DDD6FE 100%)',
+    bg: '#F5F3FF',
+    border: '#C4B5FD',
+    cardShadow: 'rgba(124, 58, 237, 0.16)',
+    btnGradient: 'linear-gradient(90deg, #8B5CF6 0%, #7C3AED 100%)',
+    btnBg: '#7C3AED',
+    btnShadow: 'rgba(124, 58, 237, 0.35)',
+    discBg: '#EDE9FE',
+    discGradient: 'linear-gradient(135deg, #EDE9FE 0%, #DDD6FE 100%)',
+  },
+  doppler: {
+    gradient: 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 55%, #BAE6FD 100%)',
+    bg: '#F0F9FF',
+    border: '#7DD3FC',
+    cardShadow: 'rgba(2, 132, 199, 0.16)',
+    btnGradient: 'linear-gradient(90deg, #0284C7 0%, #0369A1 100%)',
+    btnBg: '#0284C7',
+    btnShadow: 'rgba(2, 132, 199, 0.35)',
+    discBg: '#BAE6FD',
+    discGradient: 'linear-gradient(135deg, #BAE6FD 0%, #7DD3FC 100%)',
+  },
+  ecg: {
+    gradient: 'linear-gradient(135deg, #FFFBEB 0%, #FEF3C7 55%, #FDE68A 100%)',
+    bg: '#FFFBEB',
+    border: '#FCD34D',
+    cardShadow: 'rgba(217, 119, 6, 0.16)',
+    btnGradient: 'linear-gradient(90deg, #F59E0B 0%, #D97706 100%)',
+    btnBg: '#D97706',
+    btnShadow: 'rgba(217, 119, 6, 0.35)',
+    discBg: '#FEF3C7',
+    discGradient: 'linear-gradient(135deg, #FEF3C7 0%, #FDE68A 100%)',
+  },
+  echo: {
+    gradient: 'linear-gradient(135deg, #F0FDF9 0%, #E6FAF4 55%, #CCFBF1 100%)',
+    bg: '#F0FDF9',
+    border: '#5EEAD4',
+    cardShadow: 'rgba(0, 187, 149, 0.16)',
+    btnGradient: 'linear-gradient(90deg, #00BB95 0%, #009E7E 100%)',
+    btnBg: '#00BB95',
+    btnShadow: 'rgba(0, 187, 149, 0.35)',
+    discBg: '#CCFBF1',
+    discGradient: 'linear-gradient(135deg, #CCFBF1 0%, #99F6E4 100%)',
+  },
+  cardio: {
+    gradient: 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 55%, #FECDD3 100%)',
+    bg: '#FFF1F2',
+    border: '#FDA4AF',
+    cardShadow: 'rgba(225, 29, 72, 0.16)',
+    btnGradient: 'linear-gradient(90deg, #F43F5E 0%, #E11D48 100%)',
+    btnBg: '#E11D48',
+    btnShadow: 'rgba(225, 29, 72, 0.35)',
+  },
+  cardiology: {
+    gradient: 'linear-gradient(135deg, #FFF1F2 0%, #FFE4E6 55%, #FECDD3 100%)',
+    bg: '#FFF1F2',
+    border: '#FDA4AF',
+    cardShadow: 'rgba(225, 29, 72, 0.16)',
+    btnGradient: 'linear-gradient(90deg, #F43F5E 0%, #E11D48 100%)',
+    btnBg: '#E11D48',
+    btnShadow: 'rgba(225, 29, 72, 0.35)',
+  },
+  other: {
+    gradient: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 55%, #E2E8F0 100%)',
+    bg: '#F8FAFC',
+    border: '#94A3B8',
+    cardShadow: 'rgba(71, 85, 105, 0.16)',
+    btnGradient: 'linear-gradient(90deg, #475569 0%, #334155 100%)',
+    btnBg: '#475569',
+    btnShadow: 'rgba(71, 85, 105, 0.35)',
+    discBg: '#F1F5F9',
+    discGradient: 'linear-gradient(135deg, #F1F5F9 0%, #E2E8F0 100%)',
+  },
+};
+
+const getCategoryDesign = (catId) => {
+  return (
+    CATEGORY_DESIGN_MAP[catId] || {
+      gradient: 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 55%, #BAE6FD 100%)',
+      bg: '#F0F9FF',
+      border: '#7DD3FC',
+      cardShadow: 'rgba(2, 132, 199, 0.16)',
+      btnGradient: 'linear-gradient(90deg, #0284C7 0%, #0369A1 100%)',
+      btnBg: '#0284C7',
+      btnShadow: 'rgba(2, 132, 199, 0.35)',
+      discBg: '#BAE6FD',
+      discGradient: 'linear-gradient(135deg, #BAE6FD 0%, #7DD3FC 100%)',
+    }
+  );
+};
+
+function ImagingScreenWeb({ navigation, route }) {
   const { t, isIndic } = useTheme();
   const { width } = useWindowDimensions();
   const desktopSiteMode = isDesktopSiteRequested();
@@ -91,7 +248,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
   // Responsive card dimension calculators (2 cards per row on Tablet, 3 on Desktop, 1 on Mobile)
   const getCategoryCardWidth = () => {
     if (desktopSiteMode) return '31.5%';
-    if (width < 600) return '100%';
+    if (width < 640) return '100%';
     if (width < 1024) return '48%'; // Exactly 2 cards per row on Tablet
     return '31.5%'; // 3 cards per row on Desktop
   };
@@ -116,6 +273,11 @@ export default function ImagingScreenWeb({ navigation, route }) {
   const [selectedCategory, setSelectedCategory] = useState(null);
   const [selectedTest, setSelectedTest] = useState(null);
   const [selectedProvider, setSelectedProvider] = useState(null);
+
+  // Active Category Design Scheme (Dynamic colors for cards, buttons, accents)
+  const activeCategoryDesign = selectedCategory
+    ? getCategoryDesign(selectedCategory.id)
+    : (selectedTest?.categoryId ? getCategoryDesign(selectedTest.categoryId) : getCategoryDesign('mri'));
 
   // Filters & Sorting in Provider List
   const [sortBy, setSortBy] = useState('price-low'); // 'price-low' | 'price-high' | 'distance' | 'rating' | 'earliest'
@@ -162,6 +324,68 @@ export default function ImagingScreenWeb({ navigation, route }) {
       setSlotRefreshTick((t) => t + 1);
     });
     return unsub;
+  }, []);
+
+  // Inject web hover transitions for category cards and clean image blending
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const styleId = 'imaging-custom-web-styles';
+      let style = document.getElementById(styleId);
+      if (!style) {
+        style = document.createElement('style');
+        style.id = styleId;
+        document.head.appendChild(style);
+      }
+      style.textContent = `
+        .rad-category-card {
+          transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease !important;
+          cursor: pointer;
+        }
+        .rad-category-card:hover {
+          transform: translateY(-4px) !important;
+          box-shadow: 0 14px 28px -6px rgba(15, 23, 42, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.04) !important;
+        }
+        .rad-category-card:active {
+          transform: translateY(-1px) !important;
+        }
+        .rad-category-card img {
+          background-color: transparent !important;
+          transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), filter 0.28s ease !important;
+          filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.08)) !important;
+        }
+        .rad-category-card:hover img {
+          transform: scale(1.08) translateY(-3px) !important;
+          filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.12)) !important;
+        }
+        .rad-test-card {
+          transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease !important;
+        }
+        .rad-test-card:hover {
+          transform: translateY(-4px) !important;
+          box-shadow: 0 16px 32px -6px rgba(15, 23, 42, 0.12), 0 6px 14px -2px rgba(15, 23, 42, 0.04) !important;
+        }
+        .rad-test-card img {
+          transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), filter 0.28s ease !important;
+        }
+        .rad-test-card:hover img {
+          transform: scale(1.06) translateY(-2px) !important;
+        }
+        .rad-cta-btn {
+          transition: transform 0.2s ease, opacity 0.2s ease !important;
+          cursor: pointer;
+        }
+        .rad-cta-btn:hover {
+          transform: translateX(3px) !important;
+        }
+        .rad-provider-card {
+          transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease !important;
+        }
+        .rad-provider-card:hover {
+          transform: translateY(-4px) !important;
+          box-shadow: 0 16px 32px -6px rgba(15, 23, 42, 0.12), 0 6px 14px -2px rgba(15, 23, 42, 0.04) !important;
+        }
+      `;
+    }
   }, []);
 
   const getFirstAvailableSlot = (dateIso, providerId, preferredSlot = null) => {
@@ -522,15 +746,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
   // Sync route params & city
   useEffect(() => {
     if (route?.params?.city) {
-      const lower = route.params.city.toLowerCase().trim();
-      let normalized = 'Mysuru';
-      if (lower.includes('mys')) normalized = 'Mysuru';
-      else if (lower.includes('bengal') || lower.includes('bangal')) normalized = 'Bengaluru';
-      else if (lower.includes('hassan')) normalized = 'Hassan';
-      else if (lower.includes('mandya')) normalized = 'Mandya';
-      else if (lower.includes('mangal')) normalized = 'Mangaluru';
-      else normalized = route.params.city;
-      setSelectedCity(normalized);
+      setSelectedCity(normalizeRadiologyCity(route.params.city));
     }
     if (route?.params?.initialCategory) {
       const cat = getCategoryById(route.params.initialCategory);
@@ -550,10 +766,35 @@ export default function ImagingScreenWeb({ navigation, route }) {
     } else if (route?.params?.searchTest) {
       setGlobalSearch(route.params.searchTest);
     }
-    if (route?.params?.initialView === 'my-bookings') {
+    if (route?.params?.initialView === 'my-bookings' || route?.name === 'RadiologyOrderSuccess') {
       setViewMode('my-bookings');
+    } else if (route?.params?.initialView === 'categories' || route?.name === 'RadiologyLabs' || route?.name === 'Imaging') {
+      if (route?.params?.testId) {
+        // Handled by testId
+      } else if (route?.params?.initialCategory) {
+        // Handled by initialCategory
+      } else {
+        setViewMode('categories');
+      }
+    } else if (route?.params?.initialView === 'providers' || route?.name === 'RadiologistList' || route?.name === 'RadiologyReportUpload') {
+      if (route?.params?.testId || selectedTest) {
+        setViewMode('providers');
+      } else {
+        setViewMode('categories');
+      }
+    } else if (route?.params?.initialView) {
+      setViewMode(route.params.initialView);
     }
-  }, [route?.params]);
+  }, [route?.params, route?.name]);
+
+  // Safety guard: Never stay in an invalid state where viewMode expects an entity that is null
+  useEffect(() => {
+    if (viewMode === 'providers' && !selectedTest) {
+      setViewMode('categories');
+    } else if (viewMode === 'tests' && !selectedCategory) {
+      setViewMode('categories');
+    }
+  }, [viewMode, selectedTest, selectedCategory]);
 
   // Generate Next 7 Days for Slot Picking
   const appointmentDays = useMemo(() => {
@@ -1101,7 +1342,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
     );
   }, [cityCategories, globalSearch]);
 
-  // Filtered tests in active category (only show tests available in this city)
+  // Filtered tests in active category
   const displayedTests = useMemo(() => {
     if (!selectedCategory) return [];
     let list = getTestsByCategory(selectedCategory.id);
@@ -1251,7 +1492,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
               : t('navigation.scans_xray', 'Scan & X-Ray')}
           </Text>
           <View style={styles.pinnedCityBadge}>
-            <Ionicons name="location-sharp" size={10} color="#00B894" />
+            <Ionicons name="location-sharp" size={10} color="#00BB95" />
             <Text style={styles.pinnedCityText} numberOfLines={1} ellipsizeMode="tail">
               {width < 360 ? selectedCity : `${selectedCity} • Home`}
             </Text>
@@ -1297,23 +1538,22 @@ export default function ImagingScreenWeb({ navigation, route }) {
         contentContainerStyle={styles.scrollContent}
         showsVerticalScrollIndicator={false}
       >
-        {/* HERO BANNER SECTION (Shown only on root categories page, concise & user-friendly) */}
+        {/* HERO BANNER SECTION */}
         {viewMode === 'categories' && (
-          <View
-            style={[
-              styles.heroBannerWrap,
-              Platform.OS === 'web'
-                ? {
-                    backgroundImage:
-                      'linear-gradient(135deg, #F0FDF9 0%, #F8FAFC 55%, #EEF2FF 100%)',
-                  }
-                : { backgroundColor: '#F8FAFC' },
-            ]}
-          >
+          <View style={styles.heroBannerWrap}>
+            {/* Decorative Translucent Medical Cross Watermark in Top Right */}
+            <View style={styles.heroWatermarkContainer} pointerEvents="none">
+              <View style={styles.heroWatermarkGlow} />
+              <View style={styles.heroCrossWrap}>
+                <View style={styles.heroCrossH} />
+                <View style={styles.heroCrossV} />
+              </View>
+            </View>
+
             <View style={styles.heroInnerContainer}>
               <View style={styles.heroContentBlock}>
                 <View style={styles.cityLocationRow}>
-                  <Ionicons name="location-sharp" size={14} color="#00B894" />
+                  <Ionicons name="location-sharp" size={15} color="#00BB95" />
                   <Text style={styles.cityLocationText}>{selectedCity}</Text>
                 </View>
 
@@ -1324,7 +1564,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
 
                 {/* Search Bar */}
                 <View style={styles.heroSearchBox}>
-                  <Ionicons name="search" size={18} color="#00B894" style={styles.searchIcon} />
+                  <Ionicons name="search" size={19} color="#00BB95" style={styles.searchIcon} />
                   <TextInput
                     style={styles.heroSearchInput}
                     placeholder="Search scans or centres"
@@ -1340,16 +1580,19 @@ export default function ImagingScreenWeb({ navigation, route }) {
                       <Ionicons name="close-circle" size={18} color="#94A3B8" />
                     </TouchableOpacity>
                   )}
+                  <TouchableOpacity
+                    style={styles.heroSearchSubmitBtn}
+                    activeOpacity={0.85}
+                    accessibilityLabel="Search"
+                  >
+                    <Ionicons name="arrow-forward" size={18} color="#FFFFFF" />
+                  </TouchableOpacity>
                 </View>
 
                 {/* Popular Search Chips */}
                 <View style={styles.popularChipsWrap}>
                   <Text style={styles.popularChipsLabel}>Popular:</Text>
-                  <ScrollView
-                    horizontal
-                    showsHorizontalScrollIndicator={false}
-                    contentContainerStyle={styles.popularChipsScroll}
-                  >
+                  <View style={styles.popularChipsRow}>
                     {['MRI Brain', 'Chest X-Ray', 'CT Chest', 'Ultrasound Pelvis'].map((chip) => (
                       <TouchableOpacity
                         key={chip}
@@ -1360,7 +1603,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                         <Text style={styles.popularChipText}>{chip}</Text>
                       </TouchableOpacity>
                     ))}
-                  </ScrollView>
+                  </View>
                 </View>
               </View>
             </View>
@@ -1374,17 +1617,9 @@ export default function ImagingScreenWeb({ navigation, route }) {
           {/* VIEW 1: CATEGORIES (MAIN PAGE) */}
           {viewMode === 'categories' && (
             <View style={styles.sectionWrap}>
-              <View style={styles.sectionHeaderRow}>
-                <View>
-                  <Text style={styles.sectionTitle}>Scan & X-Ray Categories</Text>
-                  <Text style={styles.sectionSubtitle}>
-                    Diagnostic imaging services in {selectedCity}
-                  </Text>
-                </View>
-                <Text style={styles.categoryCountLabel}>
-                  {displayedCategories.length} Categories
-                </Text>
-              </View>
+              {/* Background ambient medical glows so the mint background color & atmosphere flows here also */}
+              <View style={styles.categoriesAmbientGlow} pointerEvents="none" />
+              <View style={styles.categoriesAmbientGlowLeft} pointerEvents="none" />
 
               {/* Categories Grid or Empty State */}
               {displayedCategories.length === 0 ? (
@@ -1418,51 +1653,63 @@ export default function ImagingScreenWeb({ navigation, route }) {
                 </View>
               ) : (
                 <View style={styles.categoriesGrid}>
-                  {displayedCategories.map((cat) => (
-                    <TouchableOpacity
-                      key={cat.id}
-                      style={[
-                        styles.categoryCard,
-                        {
-                          borderColor: cat.border || '#E2E8F0',
-                          width: getCategoryCardWidth(),
-                        },
-                      ]}
-                      onPress={() => handleSelectCategory(cat)}
-                      activeOpacity={0.88}
-                    >
-                      {/* 1. Top Fixed Image Container */}
-                      <View style={[styles.cardImageContainer, { backgroundColor: cat.bg || '#F1F5F9' }]}>
-                        {RADIOLOGY_3D_ICONS[cat.id] ? (
-                          <Image
-                            source={RADIOLOGY_3D_ICONS[cat.id]}
-                            style={styles.cardImage}
-                            resizeMode="contain"
-                          />
-                        ) : (
-                          <Ionicons name={cat.icon} size={30} color={cat.color} />
-                        )}
-                      </View>
-
-                      {/* 2. Card Body Content */}
-                      <View style={styles.cardBody}>
-                        <Text style={styles.catCardTitle} numberOfLines={1}>
-                          {cat.name}
-                        </Text>
-                        <Text style={styles.catCardSubText} numberOfLines={1}>
-                          {cat.testCount} Tests available
-                        </Text>
-                      </View>
-
-                      {/* 3. Action Button */}
-                      <View style={styles.cardActionsRowSingle}>
-                        <View style={styles.cardPrimaryBtn}>
-                          <Text style={styles.cardPrimaryBtnText}>Explore Scans</Text>
-                          <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
+                  {displayedCategories.map((cat) => {
+                    const design = getCategoryDesign(cat.id);
+                    return (
+                      <TouchableOpacity
+                        key={cat.id}
+                        className="rad-category-card"
+                        style={[
+                          styles.categoryBannerCard,
+                          {
+                            width: getCategoryCardWidth(),
+                            borderColor: design.border,
+                            backgroundColor: design.bg,
+                            ...(Platform.OS === 'web'
+                              ? {
+                                  backgroundImage: design.gradient,
+                                  boxShadow: `0 8px 24px -4px ${design.cardShadow}`,
+                                }
+                              : {}),
+                          },
+                        ]}
+                        onPress={() => handleSelectCategory(cat)}
+                        activeOpacity={0.88}
+                      >
+                        {/* 1. Left Column: Title, test count & Explore button */}
+                        <View style={styles.catBannerLeftCol}>
+                          <Text style={styles.catBannerTitle} numberOfLines={1}>
+                            {cat.name}
+                          </Text>
+                          <Text style={styles.catBannerSubtitle} numberOfLines={1}>
+                            {cat.testCount} Tests available
+                          </Text>
+                          {/* Circular Arrow & Book Now CTA */}
+                          <View style={styles.organicCtaRow}>
+                            <View style={[styles.organicArrowCircle, { borderColor: design.btnBg }]}>
+                              <Ionicons name="arrow-forward" size={11} color={design.btnBg} />
+                            </View>
+                            <Text style={[styles.organicCtaText, { color: design.btnBg }]}>
+                              Book Now
+                            </Text>
+                          </View>
                         </View>
-                      </View>
-                    </TouchableOpacity>
-                  ))}
+
+                        {/* 2. Right Column: 3D Machine floating seamlessly with no circle backdrop */}
+                        <View style={styles.catBannerRightCol}>
+                          {RADIOLOGY_3D_ICONS[cat.id] ? (
+                            <Image
+                              source={RADIOLOGY_3D_ICONS[cat.id]}
+                              style={styles.catBannerImage}
+                              resizeMode="contain"
+                            />
+                          ) : (
+                            <Ionicons name={cat.icon || 'scan-outline'} size={46} color={design.btnBg} />
+                          )}
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
                 </View>
               )}
             </View>
@@ -1475,24 +1722,32 @@ export default function ImagingScreenWeb({ navigation, route }) {
               <View
                 style={[
                   styles.categoryBannerHero,
-                  { backgroundColor: selectedCategory.bg, borderColor: selectedCategory.border },
+                  {
+                    backgroundColor: activeCategoryDesign.bg,
+                    backgroundImage: activeCategoryDesign.gradient,
+                    borderColor: activeCategoryDesign.border,
+                    boxShadow: `0 8px 24px -4px ${activeCategoryDesign.cardShadow}`,
+                  },
                 ]}
               >
                 <View style={styles.catBannerLeft}>
-                  <View style={[styles.catLargeIconWrap, { backgroundColor: '#FFFFFF' }]}>
+                  <View style={styles.catLargeIconWrap}>
                     {RADIOLOGY_3D_ICONS[selectedCategory.id] ? (
                       <Image
                         source={RADIOLOGY_3D_ICONS[selectedCategory.id]}
-                        style={styles.catBanner3DImage}
-                        resizeMode="cover"
+                        style={[
+                          styles.catBanner3DImage,
+                          { filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.14))' },
+                        ]}
+                        resizeMode="contain"
                       />
                     ) : (
-                      <Ionicons name={selectedCategory.icon} size={36} color={selectedCategory.color} />
+                      <Ionicons name={selectedCategory.icon} size={36} color={activeCategoryDesign.btnBg} />
                     )}
                   </View>
                   <View style={styles.catBannerInfo}>
                     <View style={styles.catBannerTagRow}>
-                      <Text style={[styles.catBannerBadge, { color: selectedCategory.color }]}>
+                      <Text style={[styles.catBannerBadge, { color: activeCategoryDesign.btnBg }]}>
                         {selectedCategory.badge}
                       </Text>
                       <Text style={styles.catBannerDot}>•</Text>
@@ -1506,19 +1761,30 @@ export default function ImagingScreenWeb({ navigation, route }) {
                 </View>
 
                 <TouchableOpacity
-                  style={styles.changeCategoryBtn}
+                  style={[
+                    styles.changeCategoryBtn,
+                    {
+                      borderColor: activeCategoryDesign.border,
+                      backgroundColor: '#FFFFFF',
+                      boxShadow: `0 2px 8px ${activeCategoryDesign.cardShadow}`,
+                    },
+                  ]}
                   onPress={() => navigateToView('categories')}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="grid-outline" size={15} color="#1E3A8A" />
-                  <Text style={styles.changeCategoryBtnText}>All Categories</Text>
+                  <Ionicons name="grid-outline" size={15} color={activeCategoryDesign.btnBg} />
+                  <Text style={[styles.changeCategoryBtnText, { color: activeCategoryDesign.btnBg }]}>All Categories</Text>
                 </TouchableOpacity>
               </View>
 
               {/* Tests Grid */}
               <View style={styles.sectionHeaderRow}>
                 <View>
-                  <Text style={styles.sectionTitle}>Available {selectedCategory.name} Scans</Text>
+                  <Text style={styles.sectionTitle}>
+                    {selectedCategory.name.toLowerCase().endsWith('scan')
+                      ? `Available ${selectedCategory.name}s`
+                      : `Available ${selectedCategory.name} Scans`}
+                  </Text>
                   <Text style={styles.sectionSubtitle}>
                     Compare prices across centres in {selectedCity}
                   </Text>
@@ -1533,7 +1799,14 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     Diagnostic centres offering this scan are not listed in {selectedCity} yet.
                   </Text>
                   <TouchableOpacity
-                    style={styles.emptyResetBtn}
+                    style={[
+                      styles.emptyResetBtn,
+                      {
+                        backgroundColor: activeCategoryDesign.btnBg,
+                        backgroundImage: activeCategoryDesign.btnGradient,
+                        boxShadow: `0 4px 14px ${activeCategoryDesign.btnShadow}`,
+                      },
+                    ]}
                     onPress={() => navigateToView('categories')}
                   >
                     <Text style={styles.emptyResetBtnText}>View All Categories</Text>
@@ -1542,17 +1815,51 @@ export default function ImagingScreenWeb({ navigation, route }) {
               ) : (
                 <View style={styles.testsGrid}>
                   {displayedTests.map((test) => (
-                    <View key={test.id} style={[styles.testCard, { width: getTestCardWidth() }]}>
+                    <View
+                      key={test.id}
+                      className="rad-test-card"
+                      style={[
+                        styles.testCard,
+                        {
+                          width: getTestCardWidth(),
+                          borderColor: activeCategoryDesign.border,
+                          backgroundColor: '#FFFFFF',
+                          backgroundImage: `linear-gradient(180deg, #FFFFFF 0%, #FFFFFF 65%, ${activeCategoryDesign.bg} 100%)`,
+                          boxShadow: `0 8px 24px -4px ${activeCategoryDesign.cardShadow}`,
+                        },
+                      ]}
+                    >
                       {/* 1. Top Fixed Image Container */}
-                      <View style={[styles.cardImageContainer, { backgroundColor: selectedCategory.bg || '#F1F5F9' }]}>
+                      <View
+                        style={[
+                          styles.cardImageContainer,
+                          {
+                            backgroundColor: activeCategoryDesign.bg,
+                            backgroundImage: activeCategoryDesign.gradient,
+                          },
+                        ]}
+                      >
                         <Image
                           source={RADIOLOGY_3D_ICONS[selectedCategory.id] || RADIOLOGY_3D_ICONS.mri}
-                          style={styles.cardImage}
+                          style={[
+                            styles.cardImage,
+                            { filter: 'drop-shadow(0 6px 14px rgba(0,0,0,0.12))' },
+                          ]}
                           resizeMode="contain"
                         />
                         <View style={styles.testCardBadgeRow}>
-                          <View style={styles.testCategoryTag}>
-                            <Text style={styles.testCategoryTagText}>{selectedCategory.name}</Text>
+                          <View
+                            style={[
+                              styles.testCategoryTag,
+                              {
+                                borderColor: activeCategoryDesign.border,
+                                backgroundColor: '#FFFFFF',
+                              },
+                            ]}
+                          >
+                            <Text style={[styles.testCategoryTagText, { color: activeCategoryDesign.btnBg }]}>
+                              {selectedCategory.name}
+                            </Text>
                           </View>
                           <View
                             style={[
@@ -1579,15 +1886,15 @@ export default function ImagingScreenWeb({ navigation, route }) {
 
                       {/* 2. Card Body Content */}
                       <View style={styles.cardBody}>
-                        <Text style={styles.testCardName} numberOfLines={1}>
+                        <Text style={styles.testCardName} numberOfLines={2}>
                           {test.name}
                         </Text>
 
                         {/* Specs Row */}
                         <View style={styles.testKeyParamsRow}>
                           {test.reportTime ? (
-                            <View style={styles.testParamItem}>
-                              <Ionicons name="document-text-outline" size={12} color="#64748B" />
+                            <View style={[styles.testParamItem, { borderColor: activeCategoryDesign.border }]}>
+                              <Ionicons name="document-text-outline" size={12} color={activeCategoryDesign.btnBg} />
                               <Text style={styles.testParamText}>Report in {test.reportTime}</Text>
                             </View>
                           ) : null}
@@ -1596,7 +1903,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                         {/* Price Row */}
                         <View style={styles.testPriceRow}>
                           <Text style={styles.startsAtLabel}>Starts at </Text>
-                          <Text style={styles.discountedPrice}>
+                          <Text style={[styles.discountedPrice, { color: activeCategoryDesign.btnBg }]}>
                             ₹{test.typicalPrice.toLocaleString('en-IN')}
                           </Text>
                           {test.mrp && (
@@ -1607,23 +1914,29 @@ export default function ImagingScreenWeb({ navigation, route }) {
                         </View>
                       </View>
 
-                      {/* 3. Action Buttons */}
+                      {/* 3. Action Row: Details & Circular Arrow Book Now CTA */}
                       <View style={styles.cardActionsRow}>
                         <TouchableOpacity
-                          style={styles.cardSecondaryBtn}
+                          style={styles.cardDetailsLink}
                           onPress={() => setTestDetailsModal(test)}
-                          activeOpacity={0.8}
+                          activeOpacity={0.7}
                         >
-                          <Text style={styles.cardSecondaryBtnText}>View Details</Text>
+                          <Ionicons name="information-circle-outline" size={13} color="#64748B" />
+                          <Text style={styles.cardDetailsLinkText}>Details</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                          style={styles.cardPrimaryBtn}
+                          className="rad-cta-btn"
+                          style={styles.organicCtaBtn}
                           onPress={() => handleSelectTest(test)}
-                          activeOpacity={0.85}
+                          activeOpacity={0.8}
                         >
-                          <Text style={styles.cardPrimaryBtnText}>Book Now</Text>
-                          <Ionicons name="chevron-forward" size={13} color="#FFFFFF" />
+                          <View style={[styles.organicArrowCircle, { borderColor: activeCategoryDesign.btnBg }]}>
+                            <Ionicons name="arrow-forward" size={11} color={activeCategoryDesign.btnBg} />
+                          </View>
+                          <Text style={[styles.organicCtaText, { color: activeCategoryDesign.btnBg }]}>
+                            Book Now
+                          </Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -1637,35 +1950,56 @@ export default function ImagingScreenWeb({ navigation, route }) {
           {viewMode === 'providers' && selectedTest && (
             <View style={styles.sectionWrap}>
               {/* Selected Test Summary Banner (Redesigned & Responsive) */}
-              <View style={styles.selectedTestHeroCard}>
+              <View
+                style={[
+                  styles.selectedTestHeroCard,
+                  {
+                    backgroundColor: activeCategoryDesign.bg,
+                    backgroundImage: activeCategoryDesign.gradient,
+                    borderColor: activeCategoryDesign.border,
+                    borderLeftWidth: 4,
+                    borderLeftColor: activeCategoryDesign.btnBg,
+                    boxShadow: `0 8px 24px -4px ${activeCategoryDesign.cardShadow}`,
+                  },
+                ]}
+              >
                 {/* Header Row: Category Badge & Quick Actions */}
                 <View style={styles.selectedTestHeroTopRow}>
-                  <View style={styles.selectedTestModalityPill}>
-                    <Ionicons name="scan-outline" size={13} color="#00B894" />
-                    <Text style={styles.selectedTestModalityText}>
+                  <View
+                    style={[
+                      styles.selectedTestModalityPill,
+                      {
+                        backgroundColor: '#FFFFFF',
+                        borderColor: activeCategoryDesign.border,
+                        borderWidth: 1,
+                      },
+                    ]}
+                  >
+                    <Ionicons name="scan-outline" size={13} color={activeCategoryDesign.btnBg} />
+                    <Text style={[styles.selectedTestModalityText, { color: activeCategoryDesign.btnBg }]}>
                       {selectedCategory?.name?.toUpperCase() || 'RADIOLOGY SCAN'}
                     </Text>
                   </View>
 
                   <View style={styles.selectedTestHeroActions}>
                     <TouchableOpacity
-                      style={styles.changeTestPillBtn}
+                      style={[styles.changeTestPillBtn, { borderColor: activeCategoryDesign.border }]}
                       onPress={() => navigateToView('tests')}
                       activeOpacity={0.8}
                       accessibilityLabel="Change selected test"
                     >
-                      <Ionicons name="swap-horizontal" size={13} color="#1E3A8A" />
-                      <Text style={styles.changeTestPillBtnText}>Change Scan</Text>
+                      <Ionicons name="swap-horizontal" size={13} color={activeCategoryDesign.btnBg} />
+                      <Text style={[styles.changeTestPillBtnText, { color: activeCategoryDesign.btnBg }]}>Change Scan</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
-                      style={styles.viewProtocolBtn}
+                      style={[styles.viewProtocolBtn, { borderColor: activeCategoryDesign.border }]}
                       onPress={() => setTestDetailsModal(selectedTest)}
                       activeOpacity={0.8}
                       accessibilityLabel="View scan details"
                     >
-                      <Ionicons name="information-circle-outline" size={14} color="#00B894" />
-                      <Text style={styles.viewProtocolBtnText}>Details</Text>
+                      <Ionicons name="information-circle-outline" size={14} color={activeCategoryDesign.btnBg} />
+                      <Text style={[styles.viewProtocolBtnText, { color: activeCategoryDesign.btnBg }]}>Details</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -1703,16 +2037,20 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     style={[
                       styles.heroEquipmentThumbContainer,
                       width >= 768 && styles.heroEquipmentThumbContainerWide,
+                      { backgroundColor: 'transparent', borderWidth: 0 },
                     ]}
                   >
                     {RADIOLOGY_3D_ICONS[selectedCategory?.id] ? (
                       <Image
                         source={RADIOLOGY_3D_ICONS[selectedCategory.id]}
-                        style={styles.heroEquipmentImage}
+                        style={[
+                          styles.heroEquipmentImage,
+                          { filter: 'drop-shadow(0 4px 10px rgba(0,0,0,0.12))' },
+                        ]}
                         resizeMode="contain"
                       />
                     ) : (
-                      <Ionicons name="medical" size={32} color="#00B894" />
+                      <Ionicons name="medical" size={32} color={activeCategoryDesign.btnBg} />
                     )}
                   </View>
                 </View>
@@ -1798,7 +2136,20 @@ export default function ImagingScreenWeb({ navigation, route }) {
                 <View style={styles.providersList}>
                   {displayedProviders.map((provider) => {
                     return (
-                      <View key={provider.id} style={[styles.compactCentreCard, { width: getProviderCardWidth() }]}>
+                      <View
+                        key={provider.id}
+                        className="rad-provider-card"
+                        style={[
+                          styles.compactCentreCard,
+                          {
+                            width: getProviderCardWidth(),
+                            borderColor: activeCategoryDesign.border,
+                            backgroundColor: activeCategoryDesign.bg,
+                            backgroundImage: activeCategoryDesign.gradient,
+                            boxShadow: `0 8px 24px -4px ${activeCategoryDesign.cardShadow}`,
+                          },
+                        ]}
+                      >
                         {/* Top: Centre Name & Rating */}
                         <View style={styles.compactCardTopRow}>
                           <TouchableOpacity
@@ -1822,29 +2173,38 @@ export default function ImagingScreenWeb({ navigation, route }) {
                           ) : null}
                         </View>
 
-                        {/* Location and distance */}
+                        {/* Location (km removed as requested) */}
                         <View style={styles.compactLocationRow}>
-                          <Ionicons name="location-outline" size={13} color="#64748B" style={styles.compactMetaIcon} />
+                          <Ionicons name="location-outline" size={13} color="#475569" style={styles.compactMetaIcon} />
                           <Text style={styles.compactMetaText} numberOfLines={1}>
-                            {provider.area} · {provider.distance} away
+                            {provider.area}
                           </Text>
                         </View>
 
                         {/* Price Row: Prominent current price, original price, discount */}
-                        <View style={styles.compactPriceRow}>
-                          <Text style={styles.compactCurrentPrice}>
-                            ₹{provider.price.toLocaleString('en-IN')}
-                          </Text>
-                          {provider.discountPercent ? (
-                            <Text style={styles.compactDiscountText}>
-                              {' '}· {provider.discountPercent}% off
+                        <View
+                          style={[
+                            styles.compactPriceRow,
+                            { borderTopColor: 'rgba(0, 0, 0, 0.07)' },
+                          ]}
+                        >
+                          <View style={styles.compactPriceLeft}>
+                            <Text style={styles.compactCurrentPrice}>
+                              ₹{provider.price.toLocaleString('en-IN')}
                             </Text>
-                          ) : null}
-                          {provider.mrp && provider.mrp > provider.price ? (
-                            <Text style={styles.compactStrikeMrp}>
-                              {' '}₹{provider.mrp.toLocaleString('en-IN')}
-                            </Text>
-                          ) : null}
+                            {provider.mrp && provider.mrp > provider.price ? (
+                              <Text style={styles.compactStrikeMrp}>
+                                ₹{provider.mrp.toLocaleString('en-IN')}
+                              </Text>
+                            ) : null}
+                            {provider.discountPercent ? (
+                              <View style={styles.discountBadge}>
+                                <Text style={styles.discountBadgeText}>
+                                  {provider.discountPercent}% OFF
+                                </Text>
+                              </View>
+                            ) : null}
+                          </View>
                         </View>
 
                         {/* Essential Actions: Directions & Book Now */}
@@ -1857,17 +2217,22 @@ export default function ImagingScreenWeb({ navigation, route }) {
                             }}
                             activeOpacity={0.7}
                           >
-                            <Ionicons name="navigate-outline" size={14} color="#00B894" />
+                            <Ionicons name="navigate-outline" size={13} color="#475569" />
                             <Text style={styles.compactSecondaryBtnText}>Directions</Text>
                           </TouchableOpacity>
 
                           <TouchableOpacity
-                            style={styles.compactPrimaryBtn}
+                            className="rad-cta-btn"
+                            style={styles.organicCtaBtn}
                             onPress={() => handleStartBooking(provider, selectedTest)}
-                            activeOpacity={0.85}
+                            activeOpacity={0.8}
                           >
-                            <Text style={styles.compactPrimaryBtnText}>Book Now</Text>
-                            <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
+                            <View style={[styles.organicArrowCircle, { borderColor: activeCategoryDesign.btnBg }]}>
+                              <Ionicons name="arrow-forward" size={11} color={activeCategoryDesign.btnBg} />
+                            </View>
+                            <Text style={[styles.organicCtaText, { color: activeCategoryDesign.btnBg }]}>
+                              Book Now
+                            </Text>
                           </TouchableOpacity>
                         </View>
                       </View>
@@ -1910,7 +2275,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                 <View style={styles.centreAccredRow}>
                   {selectedProvider.accreditations?.[0] && (
                     <View style={styles.centreAccredChip}>
-                      <Ionicons name="shield-checkmark" size={12} color="#00B894" />
+                      <Ionicons name="shield-checkmark" size={12} color="#00BB95" />
                       <Text style={styles.centreAccredText}>{selectedProvider.accreditations[0]}</Text>
                     </View>
                   )}
@@ -1929,9 +2294,9 @@ export default function ImagingScreenWeb({ navigation, route }) {
                   }}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="navigate" size={16} color="#00B894" />
+                  <Ionicons name="navigate" size={16} color="#00BB95" />
                   <Text style={styles.centreDirectionsBtnText}>Get Directions</Text>
-                  <Ionicons name="open-outline" size={14} color="#00B894" />
+                  <Ionicons name="open-outline" size={14} color="#00BB95" />
                 </TouchableOpacity>
 
                 <View style={styles.centreDivider} />
@@ -1941,7 +2306,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                 <View style={styles.centreFacilitiesList}>
                   {selectedProvider.facilities?.slice(0, 3).map((fac) => (
                     <View key={fac} style={styles.centreFacilityItem}>
-                      <Ionicons name="checkmark-circle" size={14} color="#00B894" />
+                      <Ionicons name="checkmark-circle" size={14} color="#00BB95" />
                       <Text style={styles.centreFacilityText}>{fac}</Text>
                     </View>
                   ))}
@@ -1971,8 +2336,8 @@ export default function ImagingScreenWeb({ navigation, route }) {
                       <Text style={styles.centreMetaText}>Duration: {selectedTest.duration}</Text>
                     </View>
                     <View style={styles.centreMetaItem}>
-                      <Ionicons name="document-text-outline" size={13} color="#00B894" />
-                      <Text style={[styles.centreMetaText, { color: '#00B894', fontWeight: '700' }]}>
+                      <Ionicons name="document-text-outline" size={13} color="#00BB95" />
+                      <Text style={[styles.centreMetaText, { color: '#00BB95', fontWeight: '700' }]}>
                         Report in {selectedProvider.turnaroundTime?.replace(/^Within\s+/i, '') || '24 hrs'}
                       </Text>
                     </View>
@@ -2082,7 +2447,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                   {bookingStep === 1 && (
                     <View style={styles.wizardCard}>
                       <View style={styles.wizardStepTitleRow}>
-                        <Ionicons name="person-circle-outline" size={24} color="#00B894" />
+                        <Ionicons name="person-circle-outline" size={24} color="#00BB95" />
                         <Text style={styles.wizardStepHeading}>Select Patient</Text>
                       </View>
 
@@ -2106,7 +2471,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                               activeOpacity={0.8}
                             >
                               <View style={[styles.patientAvatarWrap, isSelected && styles.patientAvatarWrapSelected]}>
-                                <Ionicons name="person" size={18} color={isSelected ? '#00B894' : '#64748B'} />
+                                <Ionicons name="person" size={18} color={isSelected ? '#00BB95' : '#64748B'} />
                               </View>
 
                               <View style={styles.patientInfoCol}>
@@ -2142,7 +2507,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                           onPress={() => setShowAddPatientForm(true)}
                           activeOpacity={0.8}
                         >
-                          <Ionicons name="add" size={18} color="#00B894" />
+                          <Ionicons name="add" size={18} color="#00BB95" />
                           <Text style={styles.addNewPatientBtnText}>Add Family Member</Text>
                         </TouchableOpacity>
                       ) : (
@@ -2243,7 +2608,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                       <View style={styles.prescriptionUploadCard}>
                         <View style={styles.prescriptionCardHeaderRow}>
                           <View style={styles.prescriptionIconWrap}>
-                            <Ionicons name="document-text-outline" size={20} color="#00B894" />
+                            <Ionicons name="document-text-outline" size={20} color="#00BB95" />
                           </View>
                           <View style={{ flex: 1 }}>
                             <Text style={styles.prescriptionTitle}>Upload prescription (optional)</Text>
@@ -2270,14 +2635,14 @@ export default function ImagingScreenWeb({ navigation, route }) {
                               }}
                               activeOpacity={0.8}
                             >
-                              <Ionicons name="cloud-upload-outline" size={16} color="#00B894" />
+                              <Ionicons name="cloud-upload-outline" size={16} color="#00BB95" />
                               <Text style={styles.prescriptionAttachPillText}>Attach File</Text>
                             </TouchableOpacity>
                           )}
                         </View>
                         {prescriptionDoc && (
                           <View style={styles.attachedFilePill}>
-                            <Ionicons name="checkmark-circle" size={16} color="#00B894" />
+                            <Ionicons name="checkmark-circle" size={16} color="#00BB95" />
                             <Text style={styles.attachedFileName} numberOfLines={1}>{prescriptionDoc.name}</Text>
                             <Text style={styles.attachedFileSize}>({prescriptionDoc.size})</Text>
                           </View>
@@ -2311,14 +2676,14 @@ export default function ImagingScreenWeb({ navigation, route }) {
                   {bookingStep === 2 && (
                     <View style={styles.wizardCard}>
                       <View style={styles.wizardStepTitleRow}>
-                        <Ionicons name="calendar-outline" size={24} color="#00B894" />
+                        <Ionicons name="calendar-outline" size={24} color="#00BB95" />
                         <Text style={styles.wizardStepHeading}>Choose Date & Time</Text>
                       </View>
 
                       {/* Compact Summary of Selected Scan & Centre */}
                       <View style={styles.stepSummaryBanner}>
                         <View style={styles.stepSummaryItem}>
-                          <Ionicons name="scan-outline" size={15} color="#00B894" />
+                          <Ionicons name="scan-outline" size={15} color="#00BB95" />
                           <Text style={styles.stepSummaryMain} numberOfLines={1}>{selectedTest.name}</Text>
                         </View>
                         <Text style={styles.stepSummaryDivider}>•</Text>
@@ -2580,7 +2945,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                   {bookingStep === 3 && (
                     <View style={styles.wizardCard}>
                       <View style={styles.wizardStepTitleRow}>
-                        <Ionicons name="checkmark-done-circle-outline" size={24} color="#00B894" />
+                        <Ionicons name="checkmark-done-circle-outline" size={24} color="#00BB95" />
                         <Text style={styles.wizardStepHeading}>Review Booking</Text>
                       </View>
 
@@ -2590,7 +2955,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                         <View style={styles.reviewCard}>
                           <View style={styles.reviewCardHeader}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                              <Ionicons name="person-outline" size={15} color="#00B894" />
+                              <Ionicons name="person-outline" size={15} color="#00BB95" />
                               <Text style={styles.reviewCardTitle}>Patient</Text>
                             </View>
                             <TouchableOpacity onPress={() => setBookingStep(1)}>
@@ -2607,7 +2972,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                         <View style={styles.reviewCard}>
                           <View style={styles.reviewCardHeader}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                              <Ionicons name="scan-outline" size={15} color="#00B894" />
+                              <Ionicons name="scan-outline" size={15} color="#00BB95" />
                               <Text style={styles.reviewCardTitle}>Scan & Diagnostic Centre</Text>
                             </View>
                           </View>
@@ -2621,7 +2986,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                         <View style={styles.reviewCard}>
                           <View style={styles.reviewCardHeader}>
                             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                              <Ionicons name="calendar-outline" size={15} color="#00B894" />
+                              <Ionicons name="calendar-outline" size={15} color="#00BB95" />
                               <Text style={styles.reviewCardTitle}>Date & Time</Text>
                             </View>
                             <TouchableOpacity onPress={() => setBookingStep(2)}>
@@ -2637,7 +3002,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                           <View style={styles.reviewCard}>
                             <View style={styles.reviewCardHeader}>
                               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                <Ionicons name="document-attach-outline" size={15} color="#00B894" />
+                                <Ionicons name="document-attach-outline" size={15} color="#00BB95" />
                                 <Text style={styles.reviewCardTitle}>Prescription</Text>
                               </View>
                               <TouchableOpacity onPress={() => setBookingStep(1)}>
@@ -2737,7 +3102,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
 
                     {/* Guarantee Box */}
                     <View style={styles.guaranteeBox}>
-                      <Ionicons name="shield-checkmark" size={16} color="#00B894" />
+                      <Ionicons name="shield-checkmark" size={16} color="#00BB95" />
                       <Text style={styles.guaranteeText}>
                         Free cancellation up to 2 hours before appointment.
                       </Text>
@@ -2756,7 +3121,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                 <View style={[styles.paymentMethodsCol, isDesktop && { flex: 2 }]}>
                   <View style={styles.paymentCard}>
                     <View style={styles.paymentHeaderRow}>
-                      <Ionicons name="lock-closed" size={20} color="#00B894" />
+                      <Ionicons name="lock-closed" size={20} color="#00BB95" />
                       <View>
                         <Text style={styles.paymentHeading}>Secure Payment</Text>
                         <Text style={styles.paymentSub}>
@@ -2787,7 +3152,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                             <Ionicons
                               name={tab.icon}
                               size={18}
-                              color={isSelected ? '#00B894' : '#64748B'}
+                              color={isSelected ? '#00BB95' : '#64748B'}
                             />
                             <Text
                               style={[
@@ -2905,7 +3270,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
 
                       {paymentMethod === 'pay_at_centre' && (
                         <View style={styles.payAtCentreBox}>
-                          <Ionicons name="cash" size={32} color="#00B894" />
+                          <Ionicons name="cash" size={32} color="#00BB95" />
                           <Text style={styles.payAtCentreHeading}>Pay at Centre</Text>
                           <Text style={styles.payAtCentreText}>
                             Slot reserved immediately. Settle{' '}
@@ -3096,7 +3461,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     }}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="navigate" size={16} color="#00B894" style={{ marginRight: 6 }} />
+                    <Ionicons name="navigate" size={16} color="#00BB95" style={{ marginRight: 6 }} />
                     <Text style={styles.confirmDirectionsBtnText}>Get Directions</Text>
                   </TouchableOpacity>
 
@@ -3114,7 +3479,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                     onPress={() => showAlert('Calendar', 'Appointment added to your device calendar.')}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="calendar-outline" size={16} color="#00B894" />
+                    <Ionicons name="calendar-outline" size={16} color="#00BB95" />
                     <Text style={styles.confirmCalendarBtnText}>Add to Calendar</Text>
                   </TouchableOpacity>
 
@@ -3257,8 +3622,8 @@ export default function ImagingScreenWeb({ navigation, route }) {
                           </Text>
                         </View>
                         <View style={styles.bookingMetaRow}>
-                          <Ionicons name="document-text-outline" size={14} color="#00B894" />
-                          <Text style={[styles.bookingMetaText, { color: '#00B894', fontWeight: '600' }]}>
+                          <Ionicons name="document-text-outline" size={14} color="#00BB95" />
+                          <Text style={[styles.bookingMetaText, { color: '#00BB95', fontWeight: '600' }]}>
                             Report: {b.reportStatus}
                           </Text>
                         </View>
@@ -3280,7 +3645,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
                           }}
                           activeOpacity={0.7}
                         >
-                          <Ionicons name="navigate-outline" size={14} color="#00B894" />
+                          <Ionicons name="navigate-outline" size={14} color="#00BB95" />
                           <Text style={styles.bookingActionDirectionsText}>Get Directions</Text>
                         </TouchableOpacity>
 
@@ -3336,7 +3701,7 @@ export default function ImagingScreenWeb({ navigation, route }) {
         {/* ============================================================
             WEB FOOTER
         ============================================================ */}
-        <WebFooter />
+        <WebFooter navigation={navigation} />
       </ScrollView>
 
       {/* ============================================================
@@ -3426,15 +3791,15 @@ export default function ImagingScreenWeb({ navigation, route }) {
             <View style={styles.modalFooter}>
               {testDetailsModal?.provider && (
                 <TouchableOpacity
-                  style={styles.modalDirectionsBtn}
+                  style={[styles.modalDirectionsBtn, { borderColor: activeCategoryDesign.border }]}
                   onPress={() => {
                     const url = getGoogleMapsDirectionsUrl(testDetailsModal.provider);
                     Linking.openURL(url);
                   }}
                   activeOpacity={0.8}
                 >
-                  <Ionicons name="navigate" size={15} color="#00B894" style={{ marginRight: 6 }} />
-                  <Text style={styles.modalDirectionsBtnText}>Directions</Text>
+                  <Ionicons name="navigate" size={15} color={activeCategoryDesign.btnBg} style={{ marginRight: 6 }} />
+                  <Text style={[styles.modalDirectionsBtnText, { color: activeCategoryDesign.btnBg }]}>Directions</Text>
                 </TouchableOpacity>
               )}
 
@@ -3446,7 +3811,14 @@ export default function ImagingScreenWeb({ navigation, route }) {
               </TouchableOpacity>
 
               <TouchableOpacity
-                style={styles.modalBookCtaBtn}
+                style={[
+                  styles.modalBookCtaBtn,
+                  {
+                    backgroundColor: activeCategoryDesign.btnBg,
+                    backgroundImage: activeCategoryDesign.btnGradient,
+                    boxShadow: `0 4px 14px ${activeCategoryDesign.btnShadow}`,
+                  },
+                ]}
                 onPress={() => {
                   const testToBook = testDetailsModal;
                   setTestDetailsModal(null);
@@ -3796,11 +4168,19 @@ export default function ImagingScreenWeb({ navigation, route }) {
 const styles = StyleSheet.create({
   safeContainer: {
     flex: 1,
-    backgroundColor: '#FAFCFD',
+    backgroundColor: '#F0FDF9',
+    ...(Platform.OS === 'web'
+      ? {
+          backgroundImage:
+            'linear-gradient(135deg, #F0FDF9 0%, #FFFFFF 45%, #E6FAF4 100%)',
+          minHeight: '100vh',
+        }
+      : {}),
   },
   scrollContent: {
     flexGrow: 1,
-    paddingBottom: Platform.OS === 'web' ? 140 : 180,
+    backgroundColor: 'transparent',
+    paddingBottom: Platform.OS === 'web' ? 0 : 180,
   },
 
   // Pinned Top App Bar (iOS, Android, Tablet, Web)
@@ -3881,7 +4261,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -4,
     right: -4,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     minWidth: 16,
     height: 16,
     borderRadius: 8,
@@ -3993,7 +4373,7 @@ const styles = StyleSheet.create({
   centreDirectionsBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
   },
   centreDivider: {
     height: 1,
@@ -4057,7 +4437,7 @@ const styles = StyleSheet.create({
   centreFinalPrice: {
     fontSize: 20,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#00BB95',
   },
   centreMrpPrice: {
     fontSize: 11,
@@ -4134,7 +4514,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 10,
@@ -4148,15 +4528,61 @@ const styles = StyleSheet.create({
   // Hero Section
   heroBannerWrap: {
     width: '100%',
-    paddingVertical: 28,
+    paddingVertical: 26,
     paddingHorizontal: 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
+    borderBottomWidth: 0,
+    position: 'relative',
+    overflow: 'hidden',
+    backgroundColor: 'transparent',
+  },
+  heroWatermarkContainer: {
+    position: 'absolute',
+    top: -24,
+    right: -24,
+    width: 260,
+    height: 240,
+    alignItems: 'center',
+    justifyContent: 'center',
+    pointerEvents: 'none',
+    overflow: 'hidden',
+    zIndex: 1,
+  },
+  heroWatermarkGlow: {
+    position: 'absolute',
+    width: 220,
+    height: 220,
+    borderRadius: 110,
+    backgroundColor: 'rgba(167, 243, 208, 0.45)',
+    ...(Platform.OS === 'web' ? { filter: 'blur(35px)' } : {}),
+  },
+  heroCrossWrap: {
+    width: 84,
+    height: 84,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+    opacity: 0.5,
+  },
+  heroCrossH: {
+    position: 'absolute',
+    width: 78,
+    height: 24,
+    borderRadius: 12,
+    backgroundColor: '#5EEAD4',
+  },
+  heroCrossV: {
+    position: 'absolute',
+    width: 24,
+    height: 78,
+    borderRadius: 12,
+    backgroundColor: '#5EEAD4',
   },
   heroInnerContainer: {
     maxWidth: 1200,
     width: '100%',
     alignSelf: 'center',
+    position: 'relative',
+    zIndex: 2,
   },
   topNavRow: {
     flexDirection: 'row',
@@ -4198,7 +4624,7 @@ const styles = StyleSheet.create({
     borderRadius: 12,
   },
   cityOptionBtnActive: {
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
   },
   cityOptionText: {
     fontSize: 11,
@@ -4232,7 +4658,7 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   bookingCountBadge: {
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     paddingHorizontal: 6,
     paddingVertical: 1,
     borderRadius: 10,
@@ -4268,7 +4694,7 @@ const styles = StyleSheet.create({
   accreditedTagText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
   },
   pacsTag: {
     flexDirection: 'row',
@@ -4295,76 +4721,90 @@ const styles = StyleSheet.create({
   cityLocationText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
   },
   heroHeading: {
-    fontSize: 28,
-    fontWeight: '800',
-    color: '#1E3A8A',
-    marginBottom: 8,
-    letterSpacing: -0.5,
+    fontSize: 32,
+    fontWeight: '900',
+    color: '#113247',
+    marginBottom: 6,
+    letterSpacing: -0.6,
   },
   heroSubheading: {
     fontSize: 14,
     color: '#475569',
-    lineHeight: 22,
+    lineHeight: 20,
     maxWidth: 820,
     marginBottom: 18,
+    fontWeight: '500',
   },
   heroSearchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 50,
     borderWidth: 1.5,
-    borderColor: '#00B894',
-    paddingHorizontal: 14,
+    borderColor: '#00BB95',
+    paddingLeft: 16,
+    paddingRight: 6,
     height: 50,
-    shadowColor: '#00B894',
-    shadowOpacity: 0.1,
-    shadowRadius: 10,
+    shadowColor: '#00BB95',
+    shadowOpacity: 0.08,
+    shadowRadius: 12,
     shadowOffset: { width: 0, height: 4 },
-    marginBottom: 12,
+    marginBottom: 14,
+    maxWidth: 860,
   },
   searchIcon: {
     marginRight: 10,
   },
   heroSearchInput: {
     flex: 1,
-    fontSize: 14,
+    fontSize: 14.5,
     color: '#1E293B',
     outlineStyle: 'none',
   },
   clearSearchBtn: {
     padding: 6,
+    marginRight: 4,
+  },
+  heroSearchSubmitBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#00BB95',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   popularChipsWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
+    flexWrap: 'wrap',
   },
   popularChipsLabel: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#64748B',
   },
-  popularChipsScroll: {
+  popularChipsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 8,
+    flexWrap: 'wrap',
   },
   popularChipPill: {
-    backgroundColor: 'rgba(255, 255, 255, 0.85)',
+    backgroundColor: '#EFF6FF',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 14,
+    borderColor: '#BFDBFE',
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 20,
   },
   popularChipText: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '600',
-    color: '#1E3A8A',
+    color: '#1D4ED8',
   },
 
   // Main Body
@@ -4373,46 +4813,154 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
     paddingHorizontal: 16,
-    paddingTop: 24,
+    paddingTop: 16,
+    position: 'relative',
   },
   sectionWrap: {
     width: '100%',
+    position: 'relative',
+  },
+  categoriesAmbientGlow: {
+    position: 'absolute',
+    top: 20,
+    right: -20,
+    width: 380,
+    height: 380,
+    borderRadius: 190,
+    backgroundColor: 'rgba(167, 243, 208, 0.4)',
+    ...(Platform.OS === 'web' ? { filter: 'blur(60px)' } : {}),
+    pointerEvents: 'none',
+    zIndex: 0,
+  },
+  categoriesAmbientGlowLeft: {
+    position: 'absolute',
+    bottom: 40,
+    left: -40,
+    width: 320,
+    height: 320,
+    borderRadius: 160,
+    backgroundColor: 'rgba(204, 251, 241, 0.35)',
+    ...(Platform.OS === 'web' ? { filter: 'blur(55px)' } : {}),
+    pointerEvents: 'none',
+    zIndex: 0,
   },
   sectionHeaderRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    alignItems: 'flex-end',
-    marginBottom: 18,
+    alignItems: 'center',
+    marginBottom: 20,
     flexWrap: 'wrap',
-    gap: 10,
+    gap: 12,
+  },
+  sectionTitleBlock: {
+    flexDirection: 'column',
+  },
+  sectionTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  sectionAccentBar: {
+    width: 4.5,
+    height: 24,
+    backgroundColor: '#00BB95',
+    borderRadius: 3,
+    marginRight: 10,
   },
   sectionTitle: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#1E3A8A',
+    color: '#1E293B',
     letterSpacing: -0.3,
   },
   sectionSubtitle: {
     fontSize: 13,
     color: '#64748B',
-    marginTop: 3,
+    marginTop: 4,
+    marginLeft: 14.5,
+  },
+  categoryCountBadge: {
+    backgroundColor: '#E6FAF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 14,
+    paddingVertical: 5,
+    borderRadius: 16,
   },
   categoryCountLabel: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
-    color: '#00B894',
-    backgroundColor: '#E6F8F2',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 12,
+    color: '#00BB95',
   },
 
   // Category Cards Grid
   categoriesGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
+    gap: 16,
+    justifyContent: 'flex-start',
+  },
+  categoryBannerCard: {
+    borderRadius: 24,
+    borderWidth: 1.5,
+    paddingLeft: 22,
+    paddingRight: 10,
+    paddingVertical: 18,
+    flexDirection: 'row',
+    alignItems: 'center',
     justifyContent: 'space-between',
-    marginHorizontal: -4,
+    minHeight: 144,
+    marginBottom: 16,
+    shadowColor: '#0F172A',
+    shadowOpacity: 0.04,
+    shadowRadius: 12,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 2,
+    overflow: 'hidden',
+    position: 'relative',
+  },
+  catBannerLeftCol: {
+    flex: 1,
+    justifyContent: 'center',
+    paddingRight: 8,
+  },
+  catBannerTitle: {
+    fontSize: 21,
+    fontWeight: '900',
+    color: '#0A1C3E',
+    letterSpacing: -0.3,
+  },
+  catBannerSubtitle: {
+    fontSize: 13.5,
+    fontWeight: '600',
+    color: '#5B7B9D',
+    marginTop: 4,
+    marginBottom: 16,
+  },
+  catExploreBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 18,
+    paddingVertical: 9,
+    borderRadius: 24,
+    gap: 7,
+  },
+  catExploreBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.1,
+  },
+  catBannerRightCol: {
+    width: 125,
+    height: 125,
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  catBannerImage: {
+    width: 122,
+    height: 122,
   },
   categoryCard: {
     backgroundColor: '#FFFFFF',
@@ -4432,21 +4980,20 @@ const styles = StyleSheet.create({
   },
   cardImageContainer: {
     width: '100%',
-    height: 92,
-    backgroundColor: '#F8FAFC',
+    height: 126,
     position: 'relative',
     overflow: 'hidden',
-    borderTopLeftRadius: 14,
-    borderTopRightRadius: 14,
+    borderTopLeftRadius: 22,
+    borderTopRightRadius: 22,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingVertical: 8,
+    paddingVertical: 12,
     paddingHorizontal: 16,
   },
   cardImage: {
     width: '100%',
     height: '100%',
-    maxHeight: 76,
+    maxHeight: 88,
   },
   catBadgePill: {
     position: 'absolute',
@@ -4504,7 +5051,7 @@ const styles = StyleSheet.create({
   cardAvailabilityText: {
     fontSize: 11.5,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
   },
   cardTestCountText: {
     fontSize: 11.5,
@@ -4521,12 +5068,55 @@ const styles = StyleSheet.create({
   cardActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+    paddingBottom: 16,
+    paddingTop: 10,
+    marginTop: 'auto',
+  },
+  cardDetailsLink: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingVertical: 6,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+  },
+  cardDetailsLinkText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  organicCtaRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
     gap: 8,
-    paddingHorizontal: 14,
-    paddingBottom: 14,
-    paddingTop: 8,
-    borderTopWidth: 1,
-    borderTopColor: '#F1F5F9',
+    marginTop: 'auto',
+  },
+  organicCtaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 6,
+    borderRadius: 20,
+  },
+  organicArrowCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  organicCtaText: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    letterSpacing: 0.1,
   },
   cardSecondaryBtn: {
     flex: 1,
@@ -4547,7 +5137,7 @@ const styles = StyleSheet.create({
     flex: 1,
     minHeight: 38,
     borderRadius: 8,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -4620,23 +5210,18 @@ const styles = StyleSheet.create({
     minWidth: 280,
   },
   catLargeIconWrap: {
-    width: 80,
-    height: 80,
-    borderRadius: 20,
+    width: 84,
+    height: 84,
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    backgroundColor: '#FFFFFF',
-    shadowColor: '#000',
-    shadowOpacity: 0.08,
-    shadowRadius: 10,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
   },
   catBanner3DImage: {
     width: '100%',
     height: '100%',
-    borderRadius: 18,
+    maxWidth: 84,
+    maxHeight: 84,
   },
   catBannerInfo: {
     flex: 1,
@@ -4698,20 +5283,17 @@ const styles = StyleSheet.create({
   },
   testCard: {
     backgroundColor: '#FFFFFF',
-    backgroundImage: 'linear-gradient(180deg, #FFFFFF 0%, #FAFCFF 70%, #F0FDF9 100%)',
-    borderRadius: 16,
+    borderRadius: 24,
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    borderTopWidth: 3.5,
-    borderTopColor: '#00B894',
     overflow: 'hidden',
-    marginBottom: 16,
+    marginBottom: 18,
     shadowColor: '#1E3A8A',
     shadowOpacity: 0.06,
-    shadowRadius: 12,
-    shadowOffset: { width: 0, height: 4 },
+    shadowRadius: 16,
+    shadowOffset: { width: 0, height: 6 },
     elevation: 3,
-    boxShadow: '0 8px 24px -3px rgba(30, 58, 138, 0.08), 0 2px 6px rgba(0, 184, 148, 0.04)',
+    boxShadow: '0 10px 28px -6px rgba(15, 23, 42, 0.08), 0 2px 8px rgba(0, 0, 0, 0.03)',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
@@ -4771,7 +5353,9 @@ const styles = StyleSheet.create({
     fontSize: 15.5,
     fontWeight: '800',
     color: '#0F172A',
-    marginBottom: 4,
+    marginBottom: 6,
+    minHeight: 40,
+    lineHeight: 20,
   },
   testCardSummary: {
     fontSize: 12,
@@ -4844,7 +5428,7 @@ const styles = StyleSheet.create({
   compareCentresBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     paddingHorizontal: 12,
     paddingVertical: 7,
     borderRadius: 8,
@@ -4891,7 +5475,7 @@ const styles = StyleSheet.create({
   selectedTestModalityText: {
     fontSize: 10.5,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#00BB95',
     letterSpacing: 0.3,
   },
   selectedTestHeroActions: {
@@ -4925,7 +5509,7 @@ const styles = StyleSheet.create({
   viewProtocolBtnText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
   },
   selectedTestHeroContentRow: {
     flexDirection: 'row',
@@ -4975,14 +5559,11 @@ const styles = StyleSheet.create({
   heroEquipmentThumbContainer: {
     width: 82,
     height: 82,
-    borderRadius: 14,
-    backgroundColor: '#F0FDFA',
-    borderWidth: 1,
-    borderColor: '#CCFBF1',
     alignItems: 'center',
     justifyContent: 'center',
-    overflow: 'hidden',
-    padding: 4,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+    padding: 2,
     flexShrink: 0,
   },
   heroEquipmentThumbContainerWide: {
@@ -5039,7 +5620,7 @@ const styles = StyleSheet.create({
     gap: 5,
   },
   filterChipActive: {
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
   },
   filterChipText: {
     fontSize: 11,
@@ -5111,19 +5692,16 @@ const styles = StyleSheet.create({
   },
   compactCentreCard: {
     backgroundColor: '#FFFFFF',
-    backgroundImage: 'linear-gradient(145deg, #FFFFFF 0%, #F8FAFC 60%, #F0FDF9 100%)',
-    borderRadius: 14,
+    borderRadius: 22,
     padding: 16,
     marginBottom: 16,
     borderWidth: 1.5,
-    borderColor: '#D1FAE5',
-    borderTopWidth: 3.5,
-    borderTopColor: '#00B894',
+    borderColor: '#E2E8F0',
     shadowColor: '#1E3A8A',
     shadowOpacity: 0.06,
-    shadowRadius: 10,
+    shadowRadius: 14,
     shadowOffset: { width: 0, height: 4 },
-    boxShadow: '0 6px 20px -2px rgba(0, 184, 148, 0.07)',
+    boxShadow: '0 8px 24px -4px rgba(15, 23, 42, 0.08), 0 2px 6px rgba(0, 0, 0, 0.02)',
     display: 'flex',
     flexDirection: 'column',
     justifyContent: 'space-between',
@@ -5134,33 +5712,33 @@ const styles = StyleSheet.create({
     justifyContent: 'space-between',
     alignItems: 'flex-start',
     marginBottom: 6,
+    gap: 10,
   },
   compactLocationRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
-    marginBottom: 14,
+    gap: 5,
+    marginBottom: 10,
   },
   compactNameContainer: {
     flex: 1,
-    marginRight: 10,
   },
   compactCentreName: {
     fontSize: 16,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#0F172A',
     lineHeight: 22,
   },
   compactRatingWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 3,
-    backgroundColor: '#FFFBEB',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
+    gap: 4,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 12,
     borderWidth: 1,
-    borderColor: '#FEF3C7',
+    borderColor: '#FDE68A',
     alignSelf: 'flex-start',
   },
   compactRatingScore: {
@@ -5214,7 +5792,7 @@ const styles = StyleSheet.create({
   moreTimesLinkText: {
     fontSize: 11,
     fontWeight: '600',
-    color: '#00B894',
+    color: '#00BB95',
   },
   compactSlotsWrap: {
     flexDirection: 'row',
@@ -5233,8 +5811,8 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   compactSlotChipSelected: {
-    backgroundColor: '#00B894',
-    borderColor: '#00B894',
+    backgroundColor: '#00BB95',
+    borderColor: '#00BB95',
   },
   compactSlotChipDisabled: {
     backgroundColor: '#F1F5F9',
@@ -5256,55 +5834,82 @@ const styles = StyleSheet.create({
   },
   compactPriceRow: {
     flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+  },
+  compactPriceLeft: {
+    flexDirection: 'row',
     alignItems: 'baseline',
-    marginBottom: 12,
-    flexWrap: 'wrap',
+    gap: 8,
   },
   compactCurrentPrice: {
-    fontSize: 20,
-    fontWeight: '800',
+    fontSize: 21,
+    fontWeight: '900',
     color: '#0F172A',
   },
-  compactDiscountText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#059669',
-  },
   compactStrikeMrp: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#94A3B8',
     textDecorationLine: 'line-through',
-    marginLeft: 6,
+  },
+  discountBadge: {
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+  },
+  discountBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#15803D',
   },
   compactCardActionsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    justifyContent: 'space-between',
+    gap: 10,
     marginTop: 'auto',
   },
   compactSecondaryBtn: {
-    flex: 1,
-    height: 40,
+    height: 38,
     borderWidth: 1,
     borderColor: '#CBD5E1',
-    backgroundColor: '#F8FAFC',
-    borderRadius: 10,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     gap: 5,
-    paddingHorizontal: 10,
+    paddingHorizontal: 14,
   },
   compactSecondaryBtnText: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#334155',
+  },
+  compactBookCtaBtn: {
+    height: 38,
+    borderWidth: 1.5,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 16,
+  },
+  compactBookCtaBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   compactPrimaryBtn: {
-    flex: 1.6,
-    height: 40,
-    backgroundColor: '#00B894',
-    borderRadius: 10,
+    height: 38,
+    backgroundColor: '#00BB95',
+    borderRadius: 20,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
@@ -5370,8 +5975,8 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   stepCircleActive: {
-    backgroundColor: '#00B894',
-    borderColor: '#00B894',
+    backgroundColor: '#00BB95',
+    borderColor: '#00BB95',
   },
   stepCircleCompleted: {
     backgroundColor: '#059669',
@@ -5402,7 +6007,7 @@ const styles = StyleSheet.create({
     marginHorizontal: 12,
   },
   stepConnectorActive: {
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
   },
 
   bookingMainLayout: {
@@ -5470,10 +6075,10 @@ const styles = StyleSheet.create({
     shadowOffset: { width: 0, height: 1 },
   },
   patientCardSelected: {
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
     backgroundColor: '#F0FDF9',
     shadowOpacity: 0.08,
-    shadowColor: '#00B894',
+    shadowColor: '#00BB95',
     shadowRadius: 8,
   },
   patientAvatarWrap: {
@@ -5501,8 +6106,8 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   patientSelectIndicatorSelected: {
-    backgroundColor: '#00B894',
-    borderColor: '#00B894',
+    backgroundColor: '#00BB95',
+    borderColor: '#00BB95',
   },
   patientInfoCol: {
     flex: 1,
@@ -5542,7 +6147,7 @@ const styles = StyleSheet.create({
     paddingVertical: 13,
     borderWidth: 1.5,
     borderStyle: 'dashed',
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
     borderRadius: 12,
     gap: 8,
     backgroundColor: '#F0FDF9',
@@ -5550,7 +6155,7 @@ const styles = StyleSheet.create({
   addNewPatientBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
   },
   newPatientFormBox: {
     backgroundColor: '#F8FAFC',
@@ -5607,7 +6212,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   genderPillActive: {
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
     backgroundColor: '#E6F8F2',
   },
   genderPillText: {
@@ -5616,7 +6221,7 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   genderPillTextActive: {
-    color: '#00B894',
+    color: '#00BB95',
     fontWeight: '700',
   },
   formActionsRow: {
@@ -5636,7 +6241,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
   },
   savePatientBtn: {
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 8,
@@ -5683,12 +6288,12 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     gap: 8,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     paddingHorizontal: 18,
     paddingVertical: 12,
     borderRadius: 10,
     minHeight: 46,
-    shadowColor: '#00B894',
+    shadowColor: '#00BB95',
     shadowOpacity: 0.2,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
@@ -5741,13 +6346,13 @@ const styles = StyleSheet.create({
     paddingVertical: 8,
     borderRadius: 8,
     borderWidth: 1.5,
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
     backgroundColor: '#FFFFFF',
   },
   prescriptionAttachPillText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
   },
   prescriptionRemoveBtn: {
     flexDirection: 'row',
@@ -5856,9 +6461,9 @@ const styles = StyleSheet.create({
     gap: 2,
   },
   datePillCardActive: {
-    backgroundColor: '#00B894',
-    borderColor: '#00B894',
-    shadowColor: '#00B894',
+    backgroundColor: '#00BB95',
+    borderColor: '#00BB95',
+    shadowColor: '#00BB95',
     shadowOpacity: 0.25,
     shadowRadius: 6,
     shadowOffset: { width: 0, height: 2 },
@@ -5936,9 +6541,9 @@ const styles = StyleSheet.create({
     borderColor: '#CBD5E1',
   },
   timeSlotBtnActive: {
-    backgroundColor: '#00B894',
-    borderColor: '#00B894',
-    shadowColor: '#00B894',
+    backgroundColor: '#00BB95',
+    borderColor: '#00BB95',
+    shadowColor: '#00BB95',
     shadowOpacity: 0.2,
     shadowRadius: 4,
   },
@@ -6004,7 +6609,7 @@ const styles = StyleSheet.create({
   reviewEditLink: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
     paddingHorizontal: 8,
     paddingVertical: 2,
     borderRadius: 4,
@@ -6064,7 +6669,7 @@ const styles = StyleSheet.create({
     borderWidth: 1.5,
     borderColor: '#D1FAE5',
     borderTopWidth: 3.5,
-    borderTopColor: '#00B894',
+    borderTopColor: '#00BB95',
     shadowColor: '#1E3A8A',
     shadowOpacity: 0.06,
     shadowRadius: 12,
@@ -6123,12 +6728,12 @@ const styles = StyleSheet.create({
     flex: 1,
     fontSize: 13,
     fontWeight: '600',
-    color: '#00B894',
+    color: '#00BB95',
   },
   summaryDiscountValue: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#00BB95',
     textAlign: 'right',
   },
   summaryFreeValue: {
@@ -6154,7 +6759,7 @@ const styles = StyleSheet.create({
   summaryTotalValue: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#00BB95',
   },
   guaranteeBox: {
     flexDirection: 'row',
@@ -6230,7 +6835,7 @@ const styles = StyleSheet.create({
   },
   paymentTabBtnActive: {
     backgroundColor: '#E6F8F2',
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
   },
   paymentTabText: {
     fontSize: 12,
@@ -6238,7 +6843,7 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   paymentTabTextActive: {
-    color: '#00B894',
+    color: '#00BB95',
     fontWeight: '800',
   },
   paymentMethodFormArea: {
@@ -6350,7 +6955,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     paddingVertical: 14,
     borderRadius: 12,
     gap: 8,
@@ -6409,11 +7014,11 @@ const styles = StyleSheet.create({
     width: 72,
     height: 72,
     borderRadius: 36,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     alignItems: 'center',
     justifyContent: 'center',
     marginBottom: 16,
-    shadowColor: '#00B894',
+    shadowColor: '#00BB95',
     shadowOpacity: 0.3,
     shadowRadius: 12,
   },
@@ -6539,13 +7144,13 @@ const styles = StyleSheet.create({
   confirmCalendarBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
   },
   confirmMyBookingsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     paddingHorizontal: 16,
     paddingVertical: 10,
     borderRadius: 8,
@@ -6577,7 +7182,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     paddingHorizontal: 14,
     paddingVertical: 8,
     borderRadius: 10,
@@ -6601,8 +7206,8 @@ const styles = StyleSheet.create({
     borderColor: '#CBD5E1',
   },
   myBookingsTabBtnActive: {
-    backgroundColor: '#00B894',
-    borderColor: '#00B894',
+    backgroundColor: '#00BB95',
+    borderColor: '#00BB95',
   },
   myBookingsTabText: {
     fontSize: 13,
@@ -6621,7 +7226,7 @@ const styles = StyleSheet.create({
     borderColor: '#E2E8F0',
   },
   emptyExploreBtn: {
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 8,
@@ -6697,7 +7302,7 @@ const styles = StyleSheet.create({
   userBookingCategory: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#00B894',
+    color: '#00BB95',
     marginBottom: 10,
   },
   userBookingDetailsCol: {
@@ -6765,7 +7370,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     paddingHorizontal: 12,
     paddingVertical: 6,
     borderRadius: 6,
@@ -6843,7 +7448,7 @@ const styles = StyleSheet.create({
   modalHeaderBadge: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#00BB95',
     textTransform: 'uppercase',
   },
   modalHeaderTitle: {
@@ -6939,7 +7544,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 8,
@@ -6965,7 +7570,7 @@ const styles = StyleSheet.create({
   letterheadSub: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
   },
   letterheadAddress: {
     fontSize: 11,
@@ -7026,7 +7631,7 @@ const styles = StyleSheet.create({
   impressionBox: {
     backgroundColor: '#F0F9FF',
     borderLeftWidth: 3,
-    borderLeftColor: '#00B894',
+    borderLeftColor: '#00BB95',
     padding: 10,
     marginVertical: 8,
   },
@@ -7084,7 +7689,7 @@ const styles = StyleSheet.create({
   receiptBrand: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#00BB95',
   },
   receiptGst: {
     fontSize: 11,
@@ -7150,13 +7755,13 @@ const styles = StyleSheet.create({
   },
   tdDiscount: {
     fontSize: 11,
-    color: '#00B894',
+    color: '#00BB95',
     fontWeight: '600',
   },
   tdDiscountAmount: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
   },
   receiptTotalRow: {
     flexDirection: 'row',
@@ -7174,7 +7779,7 @@ const styles = StyleSheet.create({
   receiptTotalAmount: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#00BB95',
   },
   receiptPaymentMode: {
     fontSize: 11,
@@ -7227,7 +7832,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -3,
     right: -3,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     borderRadius: 9,
     minWidth: 18,
     height: 18,
@@ -7279,7 +7884,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
     paddingVertical: 10,
     paddingHorizontal: 16,
     borderRadius: 10,
@@ -7287,14 +7892,14 @@ const styles = StyleSheet.create({
   modalDirectionsBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
   },
   confirmDirectionsBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ECFDF5',
     borderWidth: 1.5,
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
     paddingVertical: 12,
     paddingHorizontal: 18,
     borderRadius: 12,
@@ -7302,7 +7907,7 @@ const styles = StyleSheet.create({
   confirmDirectionsBtnText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#00BB95',
   },
   bookingActionDirectionsBtn: {
     flexDirection: 'row',
@@ -7321,3 +7926,19 @@ const styles = StyleSheet.create({
     color: '#059669',
   },
 });
+
+
+// ============================================================
+// RESPONSIVE WRAPPER (Desktop Web vs Mobile Application/Browser)
+// ============================================================
+const ImagingScreenResponsive = (props) => {
+  const { width } = useWindowDimensions();
+  const desktopSiteMode = isDesktopSiteRequested();
+  
+  if (!desktopSiteMode && !isDesktopLayout(width)) {
+    return <ImagingScreenMobile {...props} />;
+  }
+  return <ImagingScreenWeb {...props} />;
+};
+
+export default ImagingScreenResponsive;

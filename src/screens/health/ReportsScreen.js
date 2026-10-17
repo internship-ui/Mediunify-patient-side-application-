@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,12 +7,16 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { showAlert } from '../../utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 
 import colors from '../../theme/colors';
+import WebFooter from '../../components/web/WebFooter';
+import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 
 const SAMPLE_REPORTS = [
   {
@@ -84,6 +88,8 @@ const SAMPLE_REPORTS = [
 ];
 
 const ReportsScreen = ({ navigation }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const [reports, setReports] = useState(SAMPLE_REPORTS);
   const [selectedReport, setSelectedReport] = useState(null);
   const [activeTab, setActiveTab] = useState('All');
@@ -115,51 +121,56 @@ const ReportsScreen = ({ navigation }) => {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.secondary} />
-        </TouchableOpacity>
+      <View style={[styles.header, Platform.OS === 'web' && { alignItems: 'center' }]}>
+        <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }, Platform.OS === 'web' && styles.webInnerContainer]}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-back" size={22} color={isDarkMode ? theme.text : colors.secondary} />
+          </TouchableOpacity>
 
-        <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Lab & Diagnostic Reports</Text>
-          <Text style={styles.headerSubtitle}>Verified clinical test results</Text>
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.headerTitle}>Lab & Diagnostic Reports</Text>
+            <Text style={styles.headerSubtitle}>Verified clinical test results</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.uploadHeaderBtn}
+            onPress={handleUploadReport}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="cloud-upload-outline" size={22} color={colors.primary} />
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={styles.uploadHeaderBtn}
-          onPress={handleUploadReport}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="cloud-upload-outline" size={22} color={colors.primary} />
-        </TouchableOpacity>
       </View>
 
       {/* FILTER TABS */}
-      <View style={styles.filterRow}>
-        {['All', 'Normal', 'Attention'].map((tab) => (
-          <TouchableOpacity
-            key={tab}
-            style={[styles.filterPill, activeTab === tab && styles.filterPillActive]}
-            onPress={() => setActiveTab(tab)}
-            activeOpacity={0.8}
-          >
-            <Text
-              style={[styles.filterText, activeTab === tab && styles.filterTextActive]}
+      <View style={[styles.filterRow, Platform.OS === 'web' && { alignItems: 'center' }]}>
+        <View style={[{ flexDirection: 'row', gap: 8, width: '100%' }, Platform.OS === 'web' && styles.webInnerContainer]}>
+          {['All', 'Normal', 'Attention'].map((tab) => (
+            <TouchableOpacity
+              key={tab}
+              style={[styles.filterPill, activeTab === tab && styles.filterPillActive]}
+              onPress={() => setActiveTab(tab)}
+              activeOpacity={0.8}
             >
-              {tab} ({reports.filter((r) => tab === 'All' || r.status === tab).length})
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[styles.filterText, activeTab === tab && styles.filterTextActive]}
+              >
+                {tab} ({reports.filter((r) => tab === 'All' || r.status === tab).length})
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        <View style={Platform.OS === 'web' ? styles.webInnerContainer : null}>
         {filteredReports.map((report) => (
           <TouchableOpacity
             key={report.id}
@@ -225,7 +236,10 @@ const ReportsScreen = ({ navigation }) => {
           </TouchableOpacity>
         ))}
 
-        <View style={{ height: 40 }} />
+          <View style={{ height: 40 }} />
+        </View>
+
+        {Platform.OS === 'web' && <WebFooter navigation={navigation} />}
       </ScrollView>
 
       {/* DETAILED REPORT VIEW MODAL */}
@@ -322,7 +336,7 @@ const ReportsScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F4F8FA',
@@ -395,6 +409,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
+    paddingBottom: Platform.OS === 'web' ? 0 : 40,
+    paddingHorizontal: Platform.OS === 'web' ? 0 : 16,
+  },
+  webInnerContainer: {
+    maxWidth: 1080,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: Platform.OS === 'web' ? 16 : 0,
   },
   reportCard: {
     backgroundColor: colors.white,

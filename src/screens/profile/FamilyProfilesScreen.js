@@ -12,6 +12,7 @@ import {
   Keyboard,
   KeyboardAvoidingView,
   TouchableWithoutFeedback,
+  useWindowDimensions,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { showAlert } from '../../utils/alert';
@@ -20,11 +21,14 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import colors from '../../theme/colors';
 import { isGuestUser, promptLoginRequired } from '../../utils/authHelper';
+import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import {
   syncSaveFamilyMembers,
   syncFetchFamilyMembers,
   syncDeleteFamilyMember,
 } from '../../services/dataSyncService';
+import WebFooter from '../../components/web/WebFooter';
 
 const RELATIONSHIPS = ['Spouse', 'Father', 'Mother', 'Son', 'Daughter', 'Sibling', 'Grandparent', 'Other'];
 const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
@@ -32,6 +36,10 @@ const BLOOD_GROUPS = ['A+', 'A-', 'B+', 'B-', 'AB+', 'AB-', 'O+', 'O-'];
 import { useKeyboardVisibility } from '../../utils/keyboardUtils';
 
 const FamilyProfilesScreen = ({ navigation }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
+  const { width } = useWindowDimensions();
+  const isDesktop = Platform.OS === 'web' && width >= 768;
   const modalScrollRef = useRef(null);
   const isKeyboardVisible = useKeyboardVisibility();
 
@@ -342,39 +350,41 @@ const FamilyProfilesScreen = ({ navigation }) => {
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-back" size={20} color="#1E293B" />
-        </TouchableOpacity>
+        <View style={styles.webHeaderInner}>
+          <View style={styles.headerLeftGroup}>
+            <TouchableOpacity
+              style={styles.backBtn}
+              onPress={() => navigation.goBack()}
+              activeOpacity={0.8}
+            >
+              <Ionicons name="arrow-back" size={20} color={isDarkMode ? theme.text : "#1E293B"} />
+            </TouchableOpacity>
+            <Text style={styles.headerTitle}>Family Profiles</Text>
+          </View>
 
-        <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Family Profiles</Text>
+          <TouchableOpacity
+            style={styles.addHeaderBtn}
+            onPress={async () => {
+              const isGuest = await isGuestUser();
+              if (isGuest) {
+                promptLoginRequired(navigation, { service: 'family' });
+                return;
+              }
+              setShowAddModal(true);
+            }}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="add" size={16} color="#FFFFFF" />
+            <Text style={styles.addHeaderBtnText}>Add Member</Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={styles.addHeaderBtn}
-          onPress={async () => {
-            const isGuest = await isGuestUser();
-            if (isGuest) {
-              promptLoginRequired(navigation, { service: 'family' });
-              return;
-            }
-            setShowAddModal(true);
-          }}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="add" size={16} color="#FFFFFF" />
-          <Text style={styles.addHeaderBtnText}>Add</Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        <View style={Platform.OS === 'web' ? styles.webInnerContainer : null}>
         {/* BANNER */}
         <View style={styles.banner}>
           <View style={styles.bannerIconCircle}>
@@ -418,88 +428,95 @@ const FamilyProfilesScreen = ({ navigation }) => {
             </TouchableOpacity>
           </View>
         ) : (
-          members.map((member) => {
-          const isActive = activeMemberId === member.id;
-          return (
-            <TouchableOpacity
-              key={member.id}
-              style={[styles.memberCard, isActive && styles.memberCardActive]}
-              activeOpacity={0.9}
-              onPress={() => handleSelectActiveMember(member)}
-            >
-              <View style={styles.cardTop}>
-                <View style={[styles.avatarCircle, isActive && styles.avatarCircleActive]}>
-                  <Ionicons
-                    name={
-                      member.relation === 'Self'
-                        ? 'person'
-                        : member.gender === 'Female'
-                        ? 'woman'
-                        : 'man'
-                    }
-                    size={20}
-                    color={isActive ? '#00B894' : '#0D9488'}
-                  />
-                </View>
+          <View style={[styles.membersGrid, isDesktop && styles.membersGridDesktop]}>
+            {members.map((member) => {
+              const isActive = activeMemberId === member.id;
+              return (
+                <TouchableOpacity
+                  key={member.id}
+                  style={[
+                    styles.memberCard,
+                    isDesktop && styles.memberCardDesktop,
+                    isActive && styles.memberCardActive,
+                  ]}
+                  activeOpacity={0.9}
+                  onPress={() => handleSelectActiveMember(member)}
+                >
+                  <View style={styles.cardTop}>
+                    <View style={[styles.avatarCircle, isActive && styles.avatarCircleActive]}>
+                      <Ionicons
+                        name={
+                          member.relation === 'Self'
+                            ? 'person'
+                            : member.gender === 'Female'
+                            ? 'woman'
+                            : 'man'
+                        }
+                        size={20}
+                        color={isActive ? '#00B894' : '#0D9488'}
+                      />
+                    </View>
 
-                <View style={styles.memberInfo}>
-                  <View style={styles.nameRow}>
-                    <Text style={styles.memberName} numberOfLines={1}>{member.name}</Text>
-                    {member.isPrimary && (
-                      <View style={styles.primaryBadge}>
-                        <Text style={styles.primaryBadgeText}>Primary</Text>
+                    <View style={styles.memberInfo}>
+                      <View style={styles.nameRow}>
+                        <Text style={styles.memberName} numberOfLines={1}>{member.name}</Text>
+                        {member.isPrimary && (
+                          <View style={styles.primaryBadge}>
+                            <Text style={styles.primaryBadgeText}>Primary</Text>
+                          </View>
+                        )}
                       </View>
+                      <Text style={styles.memberMeta}>
+                        {member.relation} • {member.age} • {member.gender}
+                      </Text>
+                    </View>
+
+                    {!member.isPrimary && (
+                      <TouchableOpacity
+                        onPress={() => handleDeleteMember(member)}
+                        style={styles.trashBtn}
+                        hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
+                      >
+                        <Ionicons name="trash-outline" size={17} color="#EF4444" />
+                      </TouchableOpacity>
                     )}
                   </View>
-                  <Text style={styles.memberMeta}>
-                    {member.relation} • {member.age} • {member.gender}
-                  </Text>
-                </View>
 
-                {!member.isPrimary && (
-                  <TouchableOpacity
-                    onPress={() => handleDeleteMember(member)}
-                    style={styles.trashBtn}
-                    hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-                  >
-                    <Ionicons name="trash-outline" size={17} color="#EF4444" />
-                  </TouchableOpacity>
-                )}
-              </View>
+                  {/* MEDICAL STATS CHIPS */}
+                  <View style={styles.statsChipsRow}>
+                    <View style={styles.statChip}>
+                      <Ionicons name="water" size={11} color="#EF4444" />
+                      <Text style={styles.statChipText}>Blood: {member.bloodGroup || 'N/A'}</Text>
+                    </View>
+                    <View style={styles.statChip}>
+                      <Ionicons name="medical-outline" size={11} color="#0D9488" />
+                      <Text style={styles.statChipText}>Allergies: {member.allergies || 'None'}</Text>
+                    </View>
+                  </View>
 
-              {/* MEDICAL STATS CHIPS */}
-              <View style={styles.statsChipsRow}>
-                <View style={styles.statChip}>
-                  <Ionicons name="water" size={11} color="#EF4444" />
-                  <Text style={styles.statChipText}>Blood: {member.bloodGroup || 'N/A'}</Text>
-                </View>
-                <View style={styles.statChip}>
-                  <Ionicons name="medical-outline" size={11} color="#0D9488" />
-                  <Text style={styles.statChipText}>Allergies: {member.allergies || 'None'}</Text>
-                </View>
-              </View>
-
-              {/* SWITCH / ACTIVE BUTTON */}
-              <View style={styles.cardBottomAction}>
-                <View style={[styles.activeStatusPill, isActive && styles.activeStatusPillActive]}>
-                  <Ionicons
-                    name={isActive ? 'checkmark-circle' : 'radio-button-off'}
-                    size={15}
-                    color={isActive ? '#FFFFFF' : '#64748B'}
-                  />
-                  <Text
-                    style={[
-                      styles.activeStatusText,
-                      isActive && styles.activeStatusTextActive,
-                    ]}
-                  >
-                    {isActive ? 'Active Booking Patient' : 'Tap to Select as Active'}
-                  </Text>
-                </View>
-              </View>
-            </TouchableOpacity>
-          );
-        }))}
+                  {/* SWITCH / ACTIVE BUTTON */}
+                  <View style={styles.cardBottomAction}>
+                    <View style={[styles.activeStatusPill, isActive && styles.activeStatusPillActive]}>
+                      <Ionicons
+                        name={isActive ? 'checkmark-circle' : 'radio-button-off'}
+                        size={15}
+                        color={isActive ? '#FFFFFF' : '#64748B'}
+                      />
+                      <Text
+                        style={[
+                          styles.activeStatusText,
+                          isActive && styles.activeStatusTextActive,
+                        ]}
+                      >
+                        {isActive ? 'Active Booking Patient' : 'Tap to Select as Active'}
+                      </Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              );
+            })}
+          </View>
+        )}
 
         {/* ADD MEMBER BUTTON */}
         {!isGuestMode && (
@@ -520,7 +537,10 @@ const FamilyProfilesScreen = ({ navigation }) => {
           </TouchableOpacity>
         )}
 
-        <View style={{ height: 30 }} />
+          <View style={{ height: 30 }} />
+        </View>
+
+        {Platform.OS === 'web' && <WebFooter navigation={navigation} />}
       </ScrollView>
 
       {/* ADD MEMBER MODAL */}
@@ -729,7 +749,7 @@ const FamilyProfilesScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
@@ -738,11 +758,23 @@ const styles = StyleSheet.create({
     minHeight: 56,
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingHorizontal: 16,
+    justifyContent: 'center',
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
     borderBottomColor: '#E2E8F0',
+  },
+  webHeaderInner: {
+    maxWidth: 1080,
+    width: '100%',
+    paddingHorizontal: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  headerLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
   },
   backBtn: {
     padding: 8,
@@ -773,6 +805,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 14,
+    paddingBottom: Platform.OS === 'web' ? 0 : 30,
+    paddingHorizontal: Platform.OS === 'web' ? 0 : 14,
+  },
+  webInnerContainer: {
+    maxWidth: 1080,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: Platform.OS === 'web' ? 16 : 0,
   },
   banner: {
     backgroundColor: '#F0FDFA',
@@ -829,10 +869,18 @@ const styles = StyleSheet.create({
     fontSize: 11,
     fontWeight: '800',
   },
+  membersGrid: {
+    width: '100%',
+  },
+  membersGridDesktop: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 16,
+  },
   memberCard: {
     backgroundColor: '#FFFFFF',
     borderRadius: 14,
-    padding: 12,
+    padding: 14,
     marginBottom: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -841,6 +889,10 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.04,
     shadowRadius: 6,
     elevation: 2,
+  },
+  memberCardDesktop: {
+    width: Platform.OS === 'web' ? 'calc(50% - 8px)' : '48%',
+    marginBottom: 0,
   },
   memberCardActive: {
     borderColor: '#00B894',

@@ -35,9 +35,11 @@ const MyFeedbackScreenWeb = ({ navigation, route }) => {
   const ITEMS_PER_PAGE = 4;
   const [currentPage, setCurrentPage] = useState(1);
 
-  // Modals
+  // Modals & Controls
   const [viewingFeedback, setViewingFeedback] = useState(null);
   const [isSubmitModalOpen, setIsSubmitModalOpen] = useState(false);
+  const [activeFilter, setActiveFilter] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
 
   // New feedback state
   const [serviceName, setServiceName] = useState('');
@@ -116,11 +118,41 @@ const MyFeedbackScreenWeb = ({ navigation, route }) => {
     showToast('Your feedback has been submitted successfully!');
   };
 
+  // Filter tabs definition
+  const filterTabs = useMemo(() => [
+    { id: 'All', label: 'All Reviews', count: feedbackList.length },
+    { id: '5 Stars', label: '5 Stars', count: feedbackList.filter((f) => f.rating === 5).length },
+    { id: '4 Stars', label: '4 Stars', count: feedbackList.filter((f) => f.rating === 4).length },
+    { id: 'With Response', label: 'With Response', count: feedbackList.filter((f) => Boolean(f.response)).length },
+  ], [feedbackList]);
+
+  // Filter & Search logic
+  const filteredFeedback = useMemo(() => {
+    return feedbackList.filter((item) => {
+      if (searchQuery.trim()) {
+        const q = searchQuery.toLowerCase().trim();
+        const matchName = (item.serviceName || '').toLowerCase().includes(q);
+        const matchFacility = (item.facility || '').toLowerCase().includes(q);
+        const matchReview = (item.review || '').toLowerCase().includes(q);
+        if (!matchName && !matchFacility && !matchReview) return false;
+      }
+      if (activeFilter === '5 Stars') return item.rating === 5;
+      if (activeFilter === '4 Stars') return item.rating === 4;
+      if (activeFilter === 'With Response') return Boolean(item.response);
+      return true;
+    });
+  }, [feedbackList, activeFilter, searchQuery]);
+
+  // Reset pagination when filter or search changes
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [activeFilter, searchQuery]);
+
   // Slice reviews for current page (4 reviews per page)
   const paginatedFeedback = useMemo(() => {
     const startIndex = (currentPage - 1) * ITEMS_PER_PAGE;
-    return feedbackList.slice(startIndex, startIndex + ITEMS_PER_PAGE);
-  }, [feedbackList, currentPage]);
+    return filteredFeedback.slice(startIndex, startIndex + ITEMS_PER_PAGE);
+  }, [filteredFeedback, currentPage]);
 
   return (
     <SafeAreaView style={styles.safeArea}>
@@ -133,63 +165,96 @@ const MyFeedbackScreenWeb = ({ navigation, route }) => {
       ) : null}
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={true}>
-        {/* Breadcrumb Bar */}
-        <View style={styles.breadcrumbBar}>
-          <View style={[styles.innerContainer, styles.breadcrumbContent]}>
-            <TouchableOpacity onPress={() => navigation?.navigate('Home')} activeOpacity={0.7} style={styles.breadcrumbItem}>
-              <Ionicons name="home-outline" size={14} color="#64748B" />
-              <Text style={styles.breadcrumbText}>Home</Text>
-            </TouchableOpacity>
-            <Ionicons name="chevron-forward" size={12} color="#94A3B8" />
-            <Text style={styles.breadcrumbActive}>My Feedback & Reviews</Text>
-          </View>
-        </View>
-
         {/* Page Hero Banner */}
         <View style={styles.innerContainer}>
           <PatientPageBanner
             onBack={() => navigation?.canGoBack?.() ? navigation.goBack() : navigation?.navigate('Home')}
             title="My Feedback & Reviews"
-            subtitle="Review past feedback submitted for doctors, clinics, diagnostics, and pharmacies. Your insights help maintain high medical standards across Karnataka."
-            badgeText="PATIENT EXPERIENCE & QUALITY ASSURANCE"
+            subtitle="Your verified doctor ratings, clinic feedback, and provider responses."
+            badgeText="Verified Reviews"
             badgeIcon="star"
             iconName="chatbubbles"
-            theme="freshGreen"
+            theme="teal"
             pills={[
               {
-                label: `Submitted Reviews: ${feedbackList.length}`,
-                bgColor: '#EBF8E7',
-                borderColor: '#C2EDB7',
-                textColor: '#15803D',
+                label: `${feedbackList.length} Reviews`,
+                bgColor: '#ECFDF5',
+                borderColor: '#A7F3D0',
+                textColor: '#13BE9C',
                 icon: 'star',
               },
               {
-                label: 'Verified Ratings',
-                bgColor: '#ECFDF5',
-                borderColor: '#A7F3D0',
-                textColor: '#008B94',
+                label: '100% Verified',
+                bgColor: '#EFF6FF',
+                borderColor: '#BFDBFE',
+                textColor: '#1E3A8A',
                 icon: 'shield-checkmark',
               },
             ]}
             rightContent={
               <TouchableOpacity
-                style={styles.newFeedbackBtn}
+                style={styles.organicHeroBtn}
                 onPress={handleOpenNewFeedback}
                 activeOpacity={0.85}
               >
-                <Ionicons name="create-outline" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.newFeedbackBtnText}>Write New Review</Text>
+                <View style={styles.organicHeroArrowCircle}>
+                  <Ionicons name="create-outline" size={13} color="#13BE9C" />
+                </View>
+                <Text style={styles.organicHeroBtnText}>Write New Review</Text>
               </TouchableOpacity>
             }
           />
         </View>
 
         <View style={[styles.innerContainer, { paddingTop: 8, paddingBottom: 60 }]}>
+          {/* Controls: Filter Tabs & Search */}
+          <View style={styles.controlsCard}>
+            <View style={styles.tabsRow}>
+              {filterTabs.map((tab) => {
+                const active = activeFilter === tab.id;
+                return (
+                  <TouchableOpacity
+                    key={tab.id}
+                    style={[styles.tabBtn, active && styles.tabBtnActive]}
+                    onPress={() => setActiveFilter(tab.id)}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>
+                      {tab.label}
+                    </Text>
+                    <View style={[styles.tabCountBadge, active && styles.tabCountBadgeActive]}>
+                      <Text style={[styles.tabCountText, active && styles.tabCountTextActive]}>
+                        {tab.count}
+                      </Text>
+                    </View>
+                  </TouchableOpacity>
+                );
+              })}
+            </View>
+
+            <View style={styles.searchBar}>
+              <Ionicons name="search-outline" size={18} color="#13BE9C" style={{ marginRight: 10 }} />
+              <TextInput
+                style={styles.searchInput}
+                placeholder="Search reviews by doctor, clinic, or service..."
+                placeholderTextColor="#94A3B8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+              />
+              {searchQuery ? (
+                <TouchableOpacity onPress={() => setSearchQuery('')} style={{ padding: 4 }}>
+                  <Ionicons name="close-circle" size={16} color="#94A3B8" />
+                </TouchableOpacity>
+              ) : null}
+            </View>
+          </View>
 
           {/* Feedback Items List */}
           {isGuestMode ? (
             <View style={styles.emptyCard}>
-              <Ionicons name="chatbubbles-outline" size={48} color="#00B894" />
+              <View style={[styles.emptyIconCircle, { backgroundColor: '#E6F8F4' }]}>
+                <Ionicons name="chatbubbles-outline" size={42} color="#13BE9C" />
+              </View>
               <Text style={styles.emptyTitle}>Login to view your feedback & reviews</Text>
               <Text style={styles.emptyDesc}>
                 Please sign in to view your past feedback, doctor reviews, and provider responses.
@@ -208,34 +273,45 @@ const MyFeedbackScreenWeb = ({ navigation, route }) => {
             </View>
           ) : loading ? (
             <View style={styles.loadingContainer}>
-              <ActivityIndicator size="large" color="#00B894" />
+              <ActivityIndicator size="large" color="#13BE9C" />
               <Text style={styles.loadingText}>Loading your feedback history...</Text>
             </View>
-          ) : feedbackList.length === 0 ? (
+          ) : filteredFeedback.length === 0 ? (
             <View style={styles.emptyCard}>
-              <Ionicons name="chatbubbles-outline" size={48} color="#94A3B8" />
-              <Text style={styles.emptyTitle}>No feedback submitted yet</Text>
-              <Text style={styles.emptyDesc}>
-                You haven't left any feedback or ratings for previous appointments or orders.
+              <View style={styles.emptyIconCircle}>
+                <Ionicons name="chatbubbles-outline" size={42} color="#94A3B8" />
+              </View>
+              <Text style={styles.emptyTitle}>
+                {searchQuery || activeFilter !== 'All' ? 'No matching reviews found' : 'No feedback submitted yet'}
               </Text>
-              <TouchableOpacity
-                style={styles.submitFirstBtn}
-                onPress={handleOpenNewFeedback}
-              >
-                <Text style={styles.submitFirstBtnText}>Share Your First Experience</Text>
-              </TouchableOpacity>
+              <Text style={styles.emptyDesc}>
+                {searchQuery || activeFilter !== 'All'
+                  ? 'Try adjusting your search terms or filter selection.'
+                  : "You haven't left any feedback or ratings for previous appointments or orders."}
+              </Text>
+              {!searchQuery && activeFilter === 'All' && (
+                <TouchableOpacity
+                  style={styles.submitFirstBtn}
+                  onPress={handleOpenNewFeedback}
+                >
+                  <Text style={styles.submitFirstBtnText}>Share Your First Experience</Text>
+                </TouchableOpacity>
+              )}
             </View>
           ) : (
             <View style={styles.feedbackGrid}>
               {paginatedFeedback.map((item) => (
                 <View key={item.id} style={styles.feedbackCard}>
                   <View style={styles.cardHeader}>
-                    <View style={{ flex: 1 }}>
+                    <View style={{ flex: 1, paddingRight: 12 }}>
                       <Text style={styles.serviceName}>{item.serviceName}</Text>
-                      <Text style={styles.facilityName}>{item.facility}</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 4 }}>
+                        <Ionicons name="location-outline" size={13} color="#64748B" />
+                        <Text style={styles.facilityName}>{item.facility}</Text>
+                      </View>
                     </View>
                     <View style={styles.ratingBadge}>
-                      <Ionicons name="star" size={14} color="#F59E0B" style={{ marginRight: 4 }} />
+                      <Ionicons name="star" size={13} color="#F59E0B" style={{ marginRight: 4 }} />
                       <Text style={styles.ratingBadgeText}>{item.rating}.0 / 5.0</Text>
                     </View>
                   </View>
@@ -244,28 +320,31 @@ const MyFeedbackScreenWeb = ({ navigation, route }) => {
 
                   {item.response && (
                     <View style={styles.responseBox}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 2 }}>
-                        <Ionicons name="arrow-undo" size={12} color="#00B894" style={{ marginRight: 4 }} />
-                        <Text style={styles.responseAuthor}>Healthcare Provider Response:</Text>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 4, gap: 5 }}>
+                        <Ionicons name="arrow-undo" size={13} color="#13BE9C" />
+                        <Text style={styles.responseAuthor}>Provider Response</Text>
                       </View>
                       <Text style={styles.responseBody}>{item.response}</Text>
                     </View>
                   )}
 
                   <View style={styles.cardFooter}>
-                    <Text style={styles.dateText}>Submitted on {item.date}</Text>
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                      <Ionicons name="calendar-outline" size={13} color="#94A3B8" />
+                      <Text style={styles.dateText}>Submitted on {item.date}</Text>
+                    </View>
                     <View style={styles.statusPill}>
-                      <Ionicons name="checkmark-circle" size={12} color="#00B894" style={{ marginRight: 4 }} />
+                      <Ionicons name="checkmark-circle" size={13} color="#13BE9C" style={{ marginRight: 4 }} />
                       <Text style={styles.statusPillText}>{item.status}</Text>
                     </View>
                   </View>
                 </View>
               ))}
 
-              {feedbackList.length > 0 && (
+              {filteredFeedback.length > 0 && (
                 <PaginationBar
                   currentPage={currentPage}
-                  totalItems={feedbackList.length}
+                  totalItems={filteredFeedback.length}
                   pageSize={ITEMS_PER_PAGE}
                   onPageChange={setCurrentPage}
                   itemLabel="reviews"
@@ -362,8 +441,7 @@ export default MyFeedbackScreenWeb;
 const styles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#E8F1F8',
-    backgroundImage: 'linear-gradient(180deg, #E6F0F7 0%, #EBF4FA 35%, #F0F6FA 100%)',
+    backgroundColor: '#F5FEFB',
   },
   scrollContent: {
     flexGrow: 1,
@@ -374,32 +452,6 @@ const styles = StyleSheet.create({
     width: '100%',
     alignSelf: 'center',
     paddingHorizontal: 16,
-  },
-  breadcrumbBar: {
-    backgroundColor: 'transparent',
-    borderBottomWidth: 0,
-    paddingTop: 16,
-    paddingBottom: 4,
-  },
-  breadcrumbContent: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  breadcrumbItem: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-  },
-  breadcrumbText: {
-    fontSize: 12.5,
-    color: '#64748B',
-    fontWeight: '500',
-  },
-  breadcrumbActive: {
-    fontSize: 12.5,
-    color: '#0F172A',
-    fontWeight: '700',
   },
   toastContainer: {
     position: 'absolute',
@@ -420,65 +472,110 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '600',
   },
-  heroSection: {
+
+  // Image 2 Exact Hero CTA (Circular Outline Arrow + Bold Text in #13BE9C)
+  organicHeroBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'space-between',
-    flexWrap: 'wrap',
-    gap: 20,
-    marginTop: 8,
-    marginBottom: 18,
-  },
-  categoryBadgeRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  feedbackBadgePill: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#D1FAE5',
-    paddingHorizontal: 10,
-    paddingVertical: 4.5,
-    borderRadius: 6,
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 9,
+    paddingHorizontal: 16,
+    borderRadius: 24,
+    boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
     borderWidth: 1,
-    borderColor: '#A7F3D0',
+    borderColor: '#E2E8F0',
+    gap: 8,
   },
-  categoryBadgeText: {
-    fontSize: 11.5,
-    fontWeight: '800',
-    color: '#00B894',
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
+  organicHeroArrowCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: '#13BE9C',
+    alignItems: 'center',
+    justifyContent: 'center',
   },
-  pageTitle: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: '#1E3A8A',
-    letterSpacing: -0.6,
-  },
-  pageSubtitle: {
+  organicHeroBtnText: {
+    color: '#13BE9C',
     fontSize: 13.5,
-    color: '#647488',
-    marginTop: 6,
-    maxWidth: 680,
-    lineHeight: 20,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
-  newFeedbackBtn: {
+
+  // Controls Card (Tabs & Search)
+  controlsCard: {
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 16,
+    marginBottom: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
+    gap: 14,
+  },
+  tabsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 10,
+  },
+  tabBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#00B894',
-    paddingHorizontal: 20,
-    paddingVertical: 12,
-    borderRadius: 12,
-    boxShadow: '0 4px 14px rgba(0, 184, 148, 0.3)',
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 7,
   },
-  newFeedbackBtnText: {
+  tabBtnActive: {
+    backgroundColor: '#13BE9C',
+    borderColor: '#13BE9C',
+  },
+  tabBtnText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  tabBtnTextActive: {
     color: '#FFFFFF',
-    fontSize: 14,
     fontWeight: '700',
   },
+  tabCountBadge: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 7,
+    paddingVertical: 1.5,
+    borderRadius: 10,
+  },
+  tabCountBadgeActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  tabCountText: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#475569',
+  },
+  tabCountTextActive: {
+    color: '#FFFFFF',
+  },
+  searchBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 12,
+    paddingHorizontal: 14,
+    paddingVertical: 10,
+  },
+  searchInput: {
+    flex: 1,
+    fontSize: 13.5,
+    color: '#0F172A',
+    outlineStyle: 'none',
+  },
+
   loadingContainer: {
     paddingVertical: 60,
     alignItems: 'center',
@@ -499,29 +596,40 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
+  emptyIconCircle: {
+    width: 72,
+    height: 72,
+    borderRadius: 36,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 12,
+  },
   emptyTitle: {
     fontSize: 17,
     fontWeight: '800',
     color: '#0F172A',
-    marginTop: 12,
+    marginTop: 4,
   },
   emptyDesc: {
     fontSize: 13,
     color: '#64748B',
     textAlign: 'center',
-    maxWidth: 400,
-    marginTop: 4,
+    maxWidth: 420,
+    marginTop: 6,
+    lineHeight: 18,
   },
   submitFirstBtn: {
-    marginTop: 16,
-    backgroundColor: '#00B894',
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 8,
+    marginTop: 18,
+    backgroundColor: '#13BE9C',
+    paddingHorizontal: 18,
+    paddingVertical: 10,
+    borderRadius: 20,
+    boxShadow: '0 4px 12px rgba(19, 190, 156, 0.25)',
   },
   submitFirstBtnText: {
     color: '#FFFFFF',
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '700',
   },
   feedbackGrid: {
@@ -529,88 +637,96 @@ const styles = StyleSheet.create({
   },
   feedbackCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 16,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 18,
-    boxShadow: '0 2px 8px rgba(15,23,42,0.03)',
+    padding: 20,
+    boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
   },
   cardHeader: {
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 10,
-    gap: 12,
+    marginBottom: 12,
   },
   serviceName: {
-    fontSize: 15,
+    fontSize: 15.5,
     fontWeight: '800',
     color: '#0F172A',
+    lineHeight: 21,
   },
   facilityName: {
     fontSize: 12.5,
     color: '#64748B',
-    marginTop: 2,
+    fontWeight: '500',
   },
   ratingBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FEF3C7',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FEF3C7',
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
+    borderRadius: 14,
   },
   ratingBadgeText: {
     fontSize: 12,
     fontWeight: '800',
-    color: '#B45309',
+    color: '#D97706',
   },
   reviewText: {
-    fontSize: 13,
+    fontSize: 13.5,
     color: '#334155',
-    lineHeight: 19,
+    lineHeight: 20,
     fontStyle: 'italic',
   },
   responseBox: {
-    backgroundColor: '#F0FDF4',
+    backgroundColor: '#F0FDF9',
     borderLeftWidth: 3,
-    borderLeftColor: '#00B894',
-    padding: 10,
-    borderRadius: 6,
-    marginTop: 10,
+    borderLeftColor: '#13BE9C',
+    padding: 12,
+    borderRadius: 8,
+    marginTop: 12,
   },
   responseAuthor: {
-    fontSize: 11,
+    fontSize: 12,
     fontWeight: '700',
-    color: '#166534',
+    color: '#0F766E',
   },
   responseBody: {
-    fontSize: 12,
-    color: '#166534',
-    lineHeight: 16,
+    fontSize: 12.5,
+    color: '#334155',
+    lineHeight: 18,
   },
   cardFooter: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 10,
-    marginTop: 12,
+    paddingTop: 12,
+    marginTop: 14,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
   dateText: {
-    fontSize: 11.5,
+    fontSize: 12,
     color: '#94A3B8',
+    fontWeight: '500',
   },
   statusPill: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 12,
   },
   statusPillText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#13BE9C',
   },
+
   // Modal Common
   modalBackdrop: {
     flex: 1,
@@ -690,7 +806,7 @@ const styles = StyleSheet.create({
   modalPrimaryBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#00B894',
+    backgroundColor: '#13BE9C',
     paddingHorizontal: 18,
     paddingVertical: 10,
     borderRadius: 8,

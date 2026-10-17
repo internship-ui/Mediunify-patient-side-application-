@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   View,
   Text,
@@ -103,6 +103,7 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
 
   const [patient, setPatient] = useState(null);
   const [familyMembers, setFamilyMembers] = useState([]);
+  const [selectedFamilyMember, setSelectedFamilyMember] = useState('all');
   const [appointments, setAppointments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isGuestMode, setIsGuestMode] = useState(false);
@@ -248,7 +249,63 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
     }
   };
 
-  // Dynamically calculated status counts from actual appointment data
+  // Helper to reliably resolve which family member an appointment belongs to
+  const getApptMember = useCallback((appt) => {
+    if (patient && Array.isArray(familyMembers) && familyMembers.length > 0) {
+      const match = matchAppointmentToAccount(appt, patient, familyMembers);
+      if (match?.member) return match.member;
+    }
+    const ptId = String(appt?.patientId || '').toLowerCase().trim();
+    if (ptId && Array.isArray(familyMembers)) {
+      const foundById = familyMembers.find((m) => String(m.id).toLowerCase() === ptId);
+      if (foundById) return foundById;
+    }
+    const ptName = (typeof appt?.patient === 'string' ? appt.patient : (appt?.patient?.name || appt?.patientName || '')).toLowerCase();
+    if (ptName && Array.isArray(familyMembers)) {
+      const foundByName = familyMembers.find((m) => ptName.includes((m.name || '').toLowerCase()));
+      if (foundByName) return foundByName;
+    }
+
+    const selfMember = Array.isArray(familyMembers) ? familyMembers.find((m) => m.id === 'self' || m.relation?.toLowerCase() === 'self') : null;
+    return selfMember || { id: 'self', name: patient?.name || 'Self', relation: 'Self' };
+  }, [patient, familyMembers]);
+
+  // Dynamic appointment counts for each family member
+  const familyMemberCounts = useMemo(() => {
+    const counts = { all: 0 };
+    if (!Array.isArray(familyMembers)) return counts;
+
+    familyMembers.forEach((m) => {
+      counts[m.id] = 0;
+    });
+
+    const physicalOnly = appointments.filter((item) => {
+      if (item.serviceType?.toLowerCase().includes('video') || item.type?.toLowerCase().includes('video')) {
+        return false;
+      }
+      if (patient && Array.isArray(familyMembers) && familyMembers.length > 0) {
+        const match = matchAppointmentToAccount(item, patient, familyMembers);
+        if (!match) return false;
+      }
+      return true;
+    });
+
+    counts.all = physicalOnly.length;
+
+    physicalOnly.forEach((item) => {
+      const mem = getApptMember(item);
+      const mId = mem?.id || 'self';
+      if (counts[mId] !== undefined) {
+        counts[mId] += 1;
+      } else {
+        counts['self'] = (counts['self'] || 0) + 1;
+      }
+    });
+
+    return counts;
+  }, [appointments, patient, familyMembers, getApptMember]);
+
+  // Dynamically calculated status counts from actual appointment data (respects selectedFamilyMember)
   const statusCounts = useMemo(() => {
     const counts = {
       All: 0,
@@ -266,6 +323,10 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
       if (patient && Array.isArray(familyMembers) && familyMembers.length > 0) {
         const match = matchAppointmentToAccount(item, patient, familyMembers);
         if (!match) return false;
+      }
+      if (selectedFamilyMember !== 'all') {
+        const mem = getApptMember(item);
+        if (mem?.id !== selectedFamilyMember) return false;
       }
       return true;
     });
@@ -290,9 +351,9 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
     });
 
     return counts;
-  }, [appointments, currentTime, patient, familyMembers]);
+  }, [appointments, currentTime, patient, familyMembers, selectedFamilyMember, getApptMember]);
 
-  // Filtered Appointments (Strict Security Filtering for Logged-In User + Linked Family Members)
+  // Filtered Appointments (Strict Security Filtering for Logged-In User + Linked Family Members + Family Filter)
   const filteredAppointments = useMemo(() => {
     return appointments.filter((item) => {
       // Exclude video calls if any leaked
@@ -304,6 +365,14 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
       if (patient && Array.isArray(familyMembers) && familyMembers.length > 0) {
         const match = matchAppointmentToAccount(item, patient, familyMembers);
         if (!match) return false;
+      }
+
+      // Family member filter
+      if (selectedFamilyMember !== 'all') {
+        const mem = getApptMember(item);
+        if (mem?.id !== selectedFamilyMember) {
+          return false;
+        }
       }
 
       const dynamicStatus = getAppointmentDynamicStatus(item, currentTime);
@@ -347,7 +416,7 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
 
       return true;
     });
-  }, [appointments, selectedStatus, searchQuery, patient, familyMembers, currentTime]);
+  }, [appointments, selectedStatus, selectedFamilyMember, searchQuery, patient, familyMembers, currentTime, getApptMember]);
 
   // Paginated Appointments (3-5 items per page)
   const paginatedAppointments = useMemo(() => {
@@ -459,36 +528,14 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
       ) : null}
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={true}>
-        {/* Breadcrumb Bar */}
-        <View style={styles.breadcrumbBar}>
-          <View style={[styles.innerContainer, styles.breadcrumbContent]}>
-            <TouchableOpacity onPress={() => navigation?.navigate('Home')} activeOpacity={0.7} style={styles.breadcrumbItem}>
-              <Ionicons name="home-outline" size={14} color="#64748B" />
-              <Text style={styles.breadcrumbText}>{t('Home')}</Text>
-            </TouchableOpacity>
-            <Ionicons name="chevron-forward" size={12} color="#94A3B8" />
-            <Text style={[styles.breadcrumbActive, isIndic && { lineHeight: 18 }]}>{t('booking.my_appointments', 'My Physical Appointments')}</Text>
-          </View>
-        </View>
 
         {/* Page Hero Banner */}
         <View style={styles.innerContainer}>
           <PatientPageBanner
             onBack={() => navigation?.canGoBack?.() ? navigation.goBack() : navigation?.navigate('Home')}
             title={t('booking.my_appointments', 'My Appointments')}
-            subtitle={
-              <Text style={[styles.pageSubtitle, isIndic && { lineHeight: 20 }]}>
-                {t('Manage your physical walk-in visits at hospitals, partner clinics, and diagnostic centres.')} ({t('Online video consultations are managed under')}{' '}
-                <Text
-                  style={{ color: '#008B94', fontWeight: '700', cursor: 'pointer' }}
-                  onPress={() => navigation?.navigate('MyOnlineConsultations')}
-                >
-                  {t('navigation.my_online_consultations', 'My Online Consultations')}
-                </Text>
-                ).
-              </Text>
-            }
-            badgeText={t('IN-PERSON VISITS • CLINICS & HOSPITALS')}
+            subtitle={t('Manage your in-person clinic and hospital appointments.')}
+            badgeText={t('In-Person Visits')}
             badgeIcon="business"
             iconName="calendar"
             theme="teal"
@@ -517,12 +564,14 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
             ]}
             rightContent={
               <TouchableOpacity
-                style={styles.bookDoctorBtn}
+                style={styles.organicHeroBtn}
                 onPress={() => navigation?.navigate('DoctorList')}
                 activeOpacity={0.85}
               >
-                <Ionicons name="add-circle-outline" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={[styles.bookDoctorBtnText, isIndic && { lineHeight: 18 }]}>{t('doctors.book_in_clinic', 'Book In-Clinic Visit')}</Text>
+                <View style={styles.organicHeroArrowCircle}>
+                  <Ionicons name="arrow-forward" size={13} color="#13BE9C" />
+                </View>
+                <Text style={styles.organicHeroBtnText}>{t('doctors.book_in_clinic', 'Book In-Clinic Visit')}</Text>
               </TouchableOpacity>
             }
           />
@@ -530,11 +579,11 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
 
         <View style={[styles.innerContainer, { paddingTop: 6, paddingBottom: 60 }]}>
 
-          {/* Search & Filter Controls */}
+          {/* Redesigned Search & Filter Controls */}
           <View style={styles.controlsCard}>
-            {/* Search Input */}
+            {/* 1. Search Bar */}
             <View style={styles.searchBar}>
-              <Ionicons name="search-outline" size={18} color="#64748B" style={{ marginRight: 8 }} />
+              <Ionicons name="search-outline" size={18} color="#13BE9C" style={{ marginRight: 10 }} />
               <TextInput
                 style={styles.searchInput}
                 placeholder={t('Search by clinic, hospital, doctor name, department, or appointment ID...')}
@@ -550,32 +599,142 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
               ) : null}
             </View>
 
-            {/* Status Filter Chips */}
-            <View style={styles.filterChipRow}>
-              {STATUS_FILTERS.map((status) => {
-                const count = statusCounts[status] ?? 0;
-                const active = selectedStatus === status;
-                return (
-                  <TouchableOpacity
-                    key={status}
-                    accessibilityRole="button"
-                    style={[styles.filterChip, active && styles.filterChipActive]}
-                    onPress={() => {
-                      setSelectedStatus(status);
-                      setCurrentPage(1);
-                    }}
-                    onClick={() => {
-                      setSelectedStatus(status);
-                      setCurrentPage(1);
-                    }}
-                    activeOpacity={0.75}
-                  >
-                    <Text style={[styles.filterChipText, active && styles.filterChipTextActive, isIndic && { lineHeight: 16 }]}>
-                      {t(status, status)} ({count})
+            {/* 2. Family Members Filter Row (Sleek Single-Line Pills) */}
+            {Array.isArray(familyMembers) && familyMembers.length > 0 && (
+              <View style={styles.familyFilterSection}>
+                <View style={styles.filterSectionHeader}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                    <Ionicons name="people-outline" size={15} color="#13BE9C" />
+                    <Text style={[styles.filterSectionTitle, isIndic && { lineHeight: 18 }]}>
+                      {t('Family Members')}
                     </Text>
+                  </View>
+                  {selectedFamilyMember !== 'all' && (
+                    <TouchableOpacity
+                      onPress={() => {
+                        setSelectedFamilyMember('all');
+                        setCurrentPage(1);
+                      }}
+                      activeOpacity={0.7}
+                    >
+                      <Text style={[styles.filterResetLink, isIndic && { lineHeight: 16 }]}>
+                        {t('Reset to All')}
+                      </Text>
+                    </TouchableOpacity>
+                  )}
+                </View>
+
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  contentContainerStyle={styles.familyPillsRow}
+                >
+                  {/* All Members Option */}
+                  <TouchableOpacity
+                    style={[styles.familyPill, selectedFamilyMember === 'all' && styles.familyPillActive]}
+                    onPress={() => {
+                      setSelectedFamilyMember('all');
+                      setCurrentPage(1);
+                    }}
+                    activeOpacity={0.8}
+                  >
+                    <View style={[styles.familyAvatar, selectedFamilyMember === 'all' && styles.familyAvatarActive]}>
+                      <Ionicons name="people" size={12} color={selectedFamilyMember === 'all' ? '#FFFFFF' : '#13BE9C'} />
+                    </View>
+                    <Text style={[styles.familyPillText, selectedFamilyMember === 'all' && styles.familyPillTextActive, isIndic && { lineHeight: 16 }]}>
+                      {t('All Members')}
+                    </Text>
+                    <View style={[styles.familyCountBadge, selectedFamilyMember === 'all' && styles.familyCountBadgeActive]}>
+                      <Text style={[styles.familyCountText, selectedFamilyMember === 'all' && styles.familyCountTextActive]}>
+                        {familyMemberCounts.all || 0}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
-                );
-              })}
+
+                  {/* Individual Family Members */}
+                  {familyMembers.map((member) => {
+                    const isSelected = selectedFamilyMember === member.id;
+                    const count = familyMemberCounts[member.id] || 0;
+                    const relation = member.relation || (member.id === 'self' ? 'Self' : 'Family');
+                    const initial = (member.name || 'M').charAt(0).toUpperCase();
+
+                    return (
+                      <TouchableOpacity
+                        key={member.id}
+                        style={[styles.familyPill, isSelected && styles.familyPillActive]}
+                        onPress={() => {
+                          setSelectedFamilyMember(member.id);
+                          setCurrentPage(1);
+                        }}
+                        activeOpacity={0.8}
+                      >
+                        <View style={[styles.familyAvatar, isSelected && styles.familyAvatarActive]}>
+                          <Text style={[styles.familyAvatarInitial, isSelected && { color: '#FFFFFF' }]}>
+                            {initial}
+                          </Text>
+                        </View>
+                        <Text style={[styles.familyPillText, isSelected && styles.familyPillTextActive, isIndic && { lineHeight: 16 }]}>
+                          {member.name}
+                        </Text>
+                        <View style={[styles.familyRelationPill, isSelected && styles.familyRelationPillActive]}>
+                          <Text style={[styles.familyRelationPillText, isSelected && styles.familyRelationPillTextActive]}>
+                            {relation}
+                          </Text>
+                        </View>
+                        <View style={[styles.familyCountBadge, isSelected && styles.familyCountBadgeActive]}>
+                          <Text style={[styles.familyCountText, isSelected && styles.familyCountTextActive]}>
+                            {count}
+                          </Text>
+                        </View>
+                      </TouchableOpacity>
+                    );
+                  })}
+                </ScrollView>
+              </View>
+            )}
+
+            {/* 3. Status Filter Tabs */}
+            <View style={styles.statusFilterSection}>
+              <View style={styles.filterSectionHeader}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                  <Ionicons name="funnel-outline" size={14} color="#13BE9C" />
+                  <Text style={[styles.filterSectionTitle, isIndic && { lineHeight: 18 }]}>
+                    {t('Filter by Status')}
+                  </Text>
+                </View>
+              </View>
+
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.filterChipRow}
+              >
+                {STATUS_FILTERS.map((status) => {
+                  const count = statusCounts[status] ?? 0;
+                  const active = selectedStatus === status;
+                  return (
+                    <TouchableOpacity
+                      key={status}
+                      accessibilityRole="button"
+                      style={[styles.filterChip, active && styles.filterChipActive]}
+                      onPress={() => {
+                        setSelectedStatus(status);
+                        setCurrentPage(1);
+                      }}
+                      activeOpacity={0.75}
+                    >
+                      <Text style={[styles.filterChipText, active && styles.filterChipTextActive, isIndic && { lineHeight: 16 }]}>
+                        {t(status, status)}
+                      </Text>
+                      <View style={[styles.statusChipCountBadge, active && styles.statusChipCountBadgeActive]}>
+                        <Text style={[styles.statusChipCountText, active && styles.statusChipCountTextActive]}>
+                          {count}
+                        </Text>
+                      </View>
+                    </TouchableOpacity>
+                  );
+                })}
+              </ScrollView>
             </View>
           </View>
 
@@ -615,29 +774,33 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
               </View>
               <Text style={[styles.emptyTitle, isIndic && { lineHeight: 22 }]}>{t('booking.no_appointments_found', 'No appointments found for you or your family members.')}</Text>
               <Text style={[styles.emptyDesc, isIndic && { lineHeight: 18 }]}>
-                {searchQuery || selectedStatus !== 'All'
+                {searchQuery || selectedStatus !== 'All' || selectedFamilyMember !== 'all'
                   ? t('No physical visits match your search criteria. Try resetting filters.')
                   : t('Appointments booked by you or for your linked family members will appear here.')}
               </Text>
               <View style={{ flexDirection: 'row', gap: 12, marginTop: 16 }}>
-                {(searchQuery || selectedStatus !== 'All') && (
+                {(searchQuery || selectedStatus !== 'All' || selectedFamilyMember !== 'all') && (
                   <TouchableOpacity
                     style={styles.resetFilterBtn}
                     onPress={() => {
                       setSearchQuery('');
                       setSelectedStatus('All');
+                      setSelectedFamilyMember('all');
+                      setCurrentPage(1);
                     }}
                   >
                     <Text style={[styles.resetFilterBtnText, isIndic && { lineHeight: 16 }]}>{t('common.clear_all', 'Clear Filters')}</Text>
                   </TouchableOpacity>
                 )}
                 <TouchableOpacity
-                  style={styles.bookDoctorBtn}
+                  style={styles.organicHeroBtn}
                   onPress={() => navigation?.navigate('DoctorList')}
                   activeOpacity={0.85}
                 >
-                  <Ionicons name="add-circle-outline" size={18} color="#FFFFFF" style={{ marginRight: 6 }} />
-                  <Text style={[styles.bookDoctorBtnText, isIndic && { lineHeight: 18 }]}>{t('doctors.book_in_clinic', 'Book In-Clinic Visit')}</Text>
+                  <View style={styles.organicHeroArrowCircle}>
+                    <Ionicons name="arrow-forward" size={13} color="#13BE9C" />
+                  </View>
+                  <Text style={[styles.organicHeroBtnText, isIndic && { lineHeight: 18 }]}>{t('doctors.book_in_clinic', 'Book In-Clinic Visit')}</Text>
                 </TouchableOpacity>
               </View>
             </View>
@@ -647,7 +810,7 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
                 const dynamicStatus = getAppointmentDynamicStatus(appt, currentTime);
                 const badge = getStatusBadgeConfig(dynamicStatus);
                 const isUpcomingVisit = dynamicStatus === 'Upcoming' || dynamicStatus === 'Today' || dynamicStatus === 'Rescheduled';
-                const dynamicDateTimeLabel = formatAppointmentDateTimeLabel(appt.date, appt.time, currentTime);
+                const dynamicDateLabel = formatAppointmentDateLabel(appt.date, currentTime);
                 const bookingDateLabel = formatBookingDateLabel(appt.bookingDate);
 
                 return (
@@ -657,7 +820,7 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
                       <View style={styles.idBadgeGroup}>
                         <Text style={styles.apptIdText}>{appt.id}</Text>
                         <View style={styles.typeBadge}>
-                          <Ionicons name="business-outline" size={12} color="#1E3A8A" style={{ marginRight: 4 }} />
+                          <Ionicons name="business-outline" size={12} color="#13BE9C" style={{ marginRight: 4 }} />
                           <Text style={styles.typeBadgeText}>{appt.serviceType}</Text>
                         </View>
                       </View>
@@ -674,37 +837,42 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
                         <Image source={{ uri: appt.doctor.image }} style={styles.doctorImg} />
                       ) : (
                         <View style={styles.facilityAvatar}>
-                          <Ionicons name="medical" size={24} color="#00B894" />
+                          <Ionicons name="medical" size={24} color="#13BE9C" />
                         </View>
                       )}
 
-                      <View style={{ flex: 1 }}>
+                      <View style={{ flex: 1, minWidth: 260 }}>
                         <Text style={styles.facilityName}>{appt.facilityName}</Text>
                         {appt.doctor?.name && (
                           <Text style={styles.doctorName}>
-                            {appt.doctor.name}{' '}
-                            <Text style={styles.doctorSpecialty}>• {appt.doctor.specialty}</Text>
+                            {appt.doctor.name}
+                            {appt.doctor.specialty ? (
+                              <Text style={styles.doctorSpecialty}> • {appt.doctor.specialty}</Text>
+                            ) : null}
                           </Text>
                         )}
-                        <Text style={styles.departmentName}>{appt.department}</Text>
+                        {/* Only show department if distinct from doctor specialty */}
+                        {appt.department && (!appt.doctor?.specialty || appt.department.trim().toLowerCase() !== appt.doctor.specialty.trim().toLowerCase()) ? (
+                          <Text style={styles.departmentName}>{appt.department}</Text>
+                        ) : null}
 
-                        {/* Location / Address */}
+                        {/* Location / Address (clean 1-line) */}
                         <View style={styles.addressRow}>
-                          <Ionicons name="location-outline" size={14} color="#64748B" style={{ marginRight: 4, marginTop: 1 }} />
-                          <Text style={styles.addressText} numberOfLines={2}>
+                          <Ionicons name="location-outline" size={13} color="#94A3B8" style={{ marginRight: 4, marginTop: 1 }} />
+                          <Text style={styles.addressText} numberOfLines={1}>
                             {renderSafeAddress(appt.address)}
                           </Text>
                         </View>
                       </View>
 
-                      {/* Prominent Date & Time Pillar */}
+                      {/* Prominent Date & Time Pillar (No duplicate time) */}
                       <View style={[styles.dateTimePillar, isUpcomingVisit && styles.dateTimePillarUpcoming]}>
                         <View style={styles.dateRow}>
-                          <Ionicons name="calendar" size={16} color={isUpcomingVisit ? '#00B894' : '#1E3A8A'} style={{ marginRight: 6 }} />
-                          <Text style={[styles.dateText, isUpcomingVisit && { color: '#00B894' }]}>{dynamicDateTimeLabel}</Text>
+                          <Ionicons name="calendar" size={15} color={isUpcomingVisit ? '#13BE9C' : '#0F172A'} style={{ marginRight: 6 }} />
+                          <Text style={[styles.dateText, isUpcomingVisit && { color: '#13BE9C' }]}>{dynamicDateLabel}</Text>
                         </View>
                         <View style={styles.timeRow}>
-                          <Ionicons name="time-outline" size={15} color="#475569" style={{ marginRight: 6 }} />
+                          <Ionicons name="time-outline" size={14} color="#64748B" style={{ marginRight: 6 }} />
                           <Text style={styles.timeText}>{appt.timeSlot || appt.time}</Text>
                         </View>
                         <View style={styles.paymentPill}>
@@ -715,8 +883,8 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
 
                     {/* Patient & Instructions banner */}
                     <View style={styles.patientMetaRow}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                        <Ionicons name="person-outline" size={13} color="#64748B" style={{ marginRight: 4 }} />
+                      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
+                        <Ionicons name="person-outline" size={13} color="#64748B" style={{ marginRight: 2 }} />
                         <Text style={[styles.patientMetaText, isIndic && { lineHeight: 16 }]}>
                           {t('doctors.patient_details', 'Patient:')}{' '}
                           <Text style={{ fontWeight: '700', color: '#0F172A' }}>
@@ -725,75 +893,111 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
                               : (appt.patient?.name || appt.patientName || patient?.name || 'Hemanth Gowda')}
                           </Text>
                         </Text>
+                        {(() => {
+                          const mem = getApptMember(appt);
+                          if (mem && mem.relation) {
+                            const isSelf = mem.relation.toLowerCase() === 'self' || mem.id === 'self';
+                            return (
+                              <View style={[styles.patientRelationBadge, isSelf && styles.patientRelationBadgeSelf]}>
+                                <Text style={[styles.patientRelationBadgeText, isSelf && styles.patientRelationBadgeTextSelf]}>
+                                  {mem.relation}
+                                </Text>
+                              </View>
+                            );
+                          }
+                          return null;
+                        })()}
                       </View>
                       <Text style={[styles.bookingDateText, isIndic && { lineHeight: 14 }]}>{t('Booked on:')} {bookingDateLabel}</Text>
                     </View>
 
-                    {/* Action Buttons Row */}
+                    {/* Action Buttons Row matching Image 2 (Circular Outline Arrow + Bold Action Text in #13BE9C) */}
                     <View style={styles.actionBtnRow}>
-                      <View style={{ flexDirection: 'row', gap: 8, flexWrap: 'wrap' }}>
+                      <View style={{ flexDirection: 'row', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+                        {/* Image 2 Primary Action: Circular Arrow & Book Again */}
                         <TouchableOpacity
-                          style={styles.detailsBtn}
+                          style={styles.organicBookNowBtn}
+                          onPress={() => navigation?.navigate('DoctorList')}
+                          activeOpacity={0.8}
+                        >
+                          <View style={styles.organicArrowCircle}>
+                            <Ionicons name="arrow-forward" size={12} color="#13BE9C" />
+                          </View>
+                          <Text style={styles.organicBookNowText}>{t('Book Again')}</Text>
+                        </TouchableOpacity>
+
+                        <TouchableOpacity
+                          style={styles.organicActionBtn}
                           onPress={() => {
                             setSelectedAppt(appt);
                             setActiveModal('details');
                           }}
                           activeOpacity={0.8}
                         >
-                          <Ionicons name="document-text-outline" size={15} color="#1E3A8A" style={{ marginRight: 4 }} />
-                          <Text style={[styles.detailsBtnText, isIndic && { lineHeight: 16 }]}>{t('common.view_details', 'View Details')}</Text>
+                          <View style={styles.organicActionIconCircle}>
+                            <Ionicons name="document-text-outline" size={12} color="#13BE9C" />
+                          </View>
+                          <Text style={styles.organicActionText}>{t('common.view_details', 'View Details')}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                          style={styles.directionsBtn}
+                          style={styles.organicActionBtn}
                           onPress={() => {
                             setSelectedAppt(appt);
                             setActiveModal('directions');
                           }}
                           activeOpacity={0.8}
                         >
-                          <Ionicons name="navigate-outline" size={15} color="#00B894" style={{ marginRight: 4 }} />
-                          <Text style={[styles.directionsBtnText, isIndic && { lineHeight: 16 }]}>{t('booking.view_directions', 'Get Directions')}</Text>
+                          <View style={styles.organicActionIconCircle}>
+                            <Ionicons name="navigate-outline" size={12} color="#13BE9C" />
+                          </View>
+                          <Text style={styles.organicActionText}>{t('booking.view_directions', 'View Directions')}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                          style={styles.contactBtn}
+                          style={styles.organicActionBtn}
                           onPress={() => {
                             setSelectedAppt(appt);
                             setActiveModal('contact');
                           }}
                           activeOpacity={0.8}
                         >
-                          <Ionicons name="call-outline" size={14} color="#64748B" style={{ marginRight: 4 }} />
-                          <Text style={[styles.contactBtnText, isIndic && { lineHeight: 16 }]}>{t('Contact Centre')}</Text>
+                          <View style={styles.organicActionIconCircle}>
+                            <Ionicons name="call-outline" size={12} color="#13BE9C" />
+                          </View>
+                          <Text style={styles.organicActionText}>{t('Contact Centre')}</Text>
                         </TouchableOpacity>
                       </View>
 
                       {/* Reschedule & Cancel actions (available for active/upcoming) */}
                       {isUpcomingVisit && (
-                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                        <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
                           <TouchableOpacity
-                            style={styles.rescheduleBtn}
+                            style={styles.organicActionBtn}
                             onPress={() => {
                               setSelectedAppt(appt);
                               setActiveModal('reschedule');
                             }}
                             activeOpacity={0.8}
                           >
-                            <Ionicons name="calendar-outline" size={14} color="#D97706" style={{ marginRight: 4 }} />
-                            <Text style={[styles.rescheduleBtnText, isIndic && { lineHeight: 16 }]}>{t('booking.reschedule_btn', 'Reschedule')}</Text>
+                            <View style={[styles.organicActionIconCircle, { borderColor: '#F59E0B' }]}>
+                              <Ionicons name="calendar-outline" size={12} color="#D97706" />
+                            </View>
+                            <Text style={[styles.organicActionText, { color: '#D97706' }]}>{t('booking.reschedule_btn', 'Reschedule')}</Text>
                           </TouchableOpacity>
 
                           <TouchableOpacity
-                            style={styles.cancelBtn}
+                            style={styles.organicActionBtn}
                             onPress={() => {
                               setSelectedAppt(appt);
                               setActiveModal('cancel');
                             }}
                             activeOpacity={0.8}
                           >
-                            <Ionicons name="close-circle-outline" size={14} color="#EF4444" style={{ marginRight: 4 }} />
-                            <Text style={[styles.cancelBtnText, isIndic && { lineHeight: 16 }]}>{t('common.cancel', 'Cancel')}</Text>
+                            <View style={[styles.organicActionIconCircle, { borderColor: '#EF4444' }]}>
+                              <Ionicons name="close-circle-outline" size={12} color="#DC2626" />
+                            </View>
+                            <Text style={[styles.organicActionText, { color: '#DC2626' }]}>{t('common.cancel', 'Cancel')}</Text>
                           </TouchableOpacity>
                         </View>
                       )}
@@ -1367,40 +1571,153 @@ const styles = StyleSheet.create({
   },
   controlsCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
+    borderRadius: 20,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    padding: 14,
+    padding: 18,
     marginBottom: 20,
-    gap: 12,
-    boxShadow: '0 2px 8px rgba(15,23,42,0.03)',
+    gap: 14,
+    boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.04)',
   },
   searchBar: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    borderWidth: 1,
+    borderRadius: 12,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    paddingHorizontal: 12,
-    height: 42,
+    paddingHorizontal: 14,
+    height: 44,
   },
   searchInput: {
     flex: 1,
-    fontSize: 13,
+    fontSize: 13.5,
     color: '#0F172A',
     outlineStyle: 'none',
   },
+  familyFilterSection: {
+    gap: 8,
+  },
+  statusFilterSection: {
+    gap: 8,
+    paddingTop: 4,
+  },
+  filterSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 2,
+  },
+  filterSectionTitle: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#475569',
+    textTransform: 'uppercase',
+    letterSpacing: 0.4,
+  },
+  filterResetLink: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#13BE9C',
+    cursor: 'pointer',
+  },
+  familyPillsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 10,
+    paddingVertical: 2,
+  },
+  familyPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    height: 36,
+    paddingHorizontal: 12,
+    borderRadius: 18,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
+    backgroundColor: '#F8FAFC',
+    cursor: 'pointer',
+    userSelect: 'none',
+  },
+  familyPillActive: {
+    backgroundColor: '#13BE9C',
+    borderColor: '#13BE9C',
+    boxShadow: '0 4px 12px rgba(19, 190, 156, 0.25)',
+  },
+  familyAvatar: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    backgroundColor: '#E6F8F4',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  familyAvatarActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  familyAvatarInitial: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#13BE9C',
+  },
+  familyPillText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#334155',
+    userSelect: 'none',
+  },
+  familyPillTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '800',
+  },
+  familyRelationPill: {
+    backgroundColor: '#EEF2F6',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 4,
+  },
+  familyRelationPillActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.22)',
+  },
+  familyRelationPillText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748B',
+  },
+  familyRelationPillTextActive: {
+    color: '#FFFFFF',
+  },
+  familyCountBadge: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 7,
+    paddingVertical: 1,
+    borderRadius: 10,
+  },
+  familyCountBadgeActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+  },
+  familyCountText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#475569',
+  },
+  familyCountTextActive: {
+    color: '#FFFFFF',
+  },
   filterChipRow: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
     alignItems: 'center',
+    gap: 8,
+    paddingVertical: 2,
   },
   filterChip: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 16,
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E2E8F0',
@@ -1408,18 +1725,36 @@ const styles = StyleSheet.create({
     userSelect: 'none',
   },
   filterChipActive: {
-    backgroundColor: '#00B894',
-    borderColor: '#00B894',
+    backgroundColor: '#13BE9C',
+    borderColor: '#13BE9C',
+    boxShadow: '0 2px 8px rgba(19, 190, 156, 0.2)',
   },
   filterChipText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#475569',
     userSelect: 'none',
   },
   filterChipTextActive: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
+  },
+  statusChipCountBadge: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+  },
+  statusChipCountBadgeActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+  },
+  statusChipCountText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#475569',
+  },
+  statusChipCountTextActive: {
+    color: '#FFFFFF',
   },
   loadingContainer: {
     paddingVertical: 60,
@@ -1494,93 +1829,103 @@ const styles = StyleSheet.create({
   },
   apptCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 1,
+    borderRadius: 18,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    padding: 18,
-    boxShadow: '0 2px 10px rgba(15,23,42,0.04)',
-    transition: 'all 0.2s ease',
+    padding: 22,
+    boxShadow: '0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.03)',
+    transition: 'all 0.25s ease',
   },
   apptCardHighlight: {
-    borderColor: '#A7F3D0',
-    borderLeftWidth: 4,
-    borderLeftColor: '#00B894',
+    borderColor: '#13BE9C',
+    borderLeftWidth: 5,
+    borderLeftColor: '#13BE9C',
+    boxShadow: '0 8px 25px -4px rgba(19, 190, 156, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.05)',
   },
   cardTopRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingBottom: 12,
+    paddingBottom: 14,
     borderBottomWidth: 1,
     borderBottomColor: '#F1F5F9',
-    marginBottom: 14,
+    marginBottom: 16,
   },
   idBadgeGroup: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 8,
+    gap: 10,
   },
   apptIdText: {
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '800',
-    color: '#1E3A8A',
+    color: '#0F172A',
     fontFamily: 'monospace',
+    letterSpacing: 0.5,
   },
   typeBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#EEF2FF',
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 10,
+    paddingVertical: 3.5,
+    borderRadius: 8,
   },
   typeBadgeText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '700',
-    color: '#3730A3',
+    color: '#13BE9C',
   },
   statusBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
+    paddingHorizontal: 12,
+    paddingVertical: 5,
     borderRadius: 20,
     borderWidth: 1,
   },
   statusBadgeText: {
-    fontSize: 11.5,
-    fontWeight: '700',
+    fontSize: 12,
+    fontWeight: '800',
+    letterSpacing: 0.2,
   },
   cardMainRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
-    gap: 16,
+    gap: 18,
     flexWrap: 'wrap',
   },
   facilityAvatar: {
-    width: 52,
-    height: 52,
-    borderRadius: 10,
-    backgroundColor: '#E6F8F4',
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1.5,
+    borderColor: '#A7F3D0',
     alignItems: 'center',
     justifyContent: 'center',
   },
   doctorImg: {
-    width: 52,
-    height: 52,
-    borderRadius: 26,
+    width: 54,
+    height: 54,
+    borderRadius: 27,
+    borderWidth: 1.5,
+    borderColor: '#E2E8F0',
     backgroundColor: '#E2E8F0',
   },
   facilityName: {
-    fontSize: 16,
+    fontSize: 16.5,
     fontWeight: '800',
     color: '#0F172A',
+    letterSpacing: -0.2,
   },
   doctorName: {
     fontSize: 13.5,
     fontWeight: '700',
-    color: '#1E3A8A',
-    marginTop: 2,
+    color: '#13BE9C',
+    marginTop: 3,
   },
   doctorSpecialty: {
     fontWeight: '500',
@@ -1589,14 +1934,14 @@ const styles = StyleSheet.create({
   departmentName: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#00B894',
+    color: '#059669',
     marginTop: 2,
   },
   addressRow: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     marginTop: 6,
-    maxWidth: 500,
+    maxWidth: 520,
   },
   addressText: {
     fontSize: 12,
@@ -1607,64 +1952,87 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    borderRadius: 10,
+    borderRadius: 12,
     padding: 12,
-    minWidth: 200,
+    minWidth: 190,
     alignItems: 'flex-start',
-    gap: 4,
+    gap: 5,
   },
   dateTimePillarUpcoming: {
-    backgroundColor: '#F0FDF4',
-    borderColor: '#BBF7D0',
+    backgroundColor: '#ECFDF5',
+    borderColor: '#A7F3D0',
   },
   dateRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   dateText: {
-    fontSize: 14,
+    fontSize: 13.5,
     fontWeight: '800',
-    color: '#1E3A8A',
+    color: '#0F172A',
   },
   timeRow: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   timeText: {
-    fontSize: 13,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#334155',
   },
   paymentPill: {
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#CBD5E1',
+    borderColor: '#A7F3D0',
     paddingHorizontal: 8,
-    paddingVertical: 2,
-    borderRadius: 4,
-    marginTop: 4,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    marginTop: 2,
   },
   paymentPillText: {
     fontSize: 10.5,
-    fontWeight: '600',
-    color: '#475569',
+    fontWeight: '700',
+    color: '#13BE9C',
   },
   patientMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     backgroundColor: '#F8FAFC',
-    borderRadius: 8,
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    marginTop: 14,
+    borderRadius: 10,
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    marginTop: 16,
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
   },
   patientMetaText: {
-    fontSize: 12,
+    fontSize: 12.5,
     color: '#64748B',
   },
+  patientRelationBadge: {
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 6,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    marginLeft: 2,
+  },
+  patientRelationBadgeSelf: {
+    backgroundColor: '#EFF6FF',
+    borderColor: '#BFDBFE',
+  },
+  patientRelationBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#13BE9C',
+  },
+  patientRelationBadgeTextSelf: {
+    color: '#1E3A8A',
+  },
   bookingDateText: {
-    fontSize: 11,
+    fontSize: 11.5,
     color: '#94A3B8',
   },
   actionBtnRow: {
@@ -1672,12 +2040,96 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'space-between',
     flexWrap: 'wrap',
-    gap: 8,
-    marginTop: 14,
-    paddingTop: 12,
+    gap: 14,
+    marginTop: 16,
+    paddingTop: 14,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
+
+  // Image 2 Exact Button Design (Circular Outline Arrow + Bold Action Text in #13BE9C)
+  organicHeroBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 24,
+    borderWidth: 1.8,
+    borderColor: '#13BE9C',
+    boxShadow: '0 2px 8px rgba(19, 190, 156, 0.15)',
+    cursor: 'pointer',
+  },
+  organicHeroArrowCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.8,
+    borderColor: '#13BE9C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  organicHeroBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#13BE9C',
+    letterSpacing: 0.1,
+  },
+
+  // Primary Action in Image 2 Style (no bulky outer container box)
+  organicBookNowBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    cursor: 'pointer',
+  },
+  organicArrowCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.8,
+    borderColor: '#13BE9C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  organicBookNowText: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: '#13BE9C',
+    letterSpacing: 0.1,
+  },
+
+  // Secondary Card Actions matching Image 2 circular outline aesthetic
+  organicActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    cursor: 'pointer',
+  },
+  organicActionIconCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: '#13BE9C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  organicActionText: {
+    fontSize: 13,
+    fontWeight: '700',
+    color: '#334155',
+  },
+
+  // Legacy Action Buttons Support
   detailsBtn: {
     flexDirection: 'row',
     alignItems: 'center',

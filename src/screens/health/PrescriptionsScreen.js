@@ -1,4 +1,4 @@
-﻿import React, { useState } from 'react';
+import React, { useState } from 'react';
 import {
   View,
   Text,
@@ -7,6 +7,7 @@ import {
   TouchableOpacity,
   Modal,
   Alert,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { showAlert } from '../../utils/alert';
@@ -15,6 +16,9 @@ import * as ImagePicker from 'expo-image-picker';
 
 import colors from '../../theme/colors';
 import { useCart } from '../../context/CartContext';
+import WebFooter from '../../components/web/WebFooter';
+import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 
 const INITIAL_PRESCRIPTIONS = [
   {
@@ -95,6 +99,8 @@ const INITIAL_PRESCRIPTIONS = [
 ];
 
 const PrescriptionsScreen = ({ navigation }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { addToCart } = useCart();
   const [prescriptions, setPrescriptions] = useState(INITIAL_PRESCRIPTIONS);
   const [selectedRx, setSelectedRx] = useState(null);
@@ -168,49 +174,54 @@ const PrescriptionsScreen = ({ navigation }) => {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.secondary} />
-        </TouchableOpacity>
-        <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>My Prescriptions</Text>
-          <Text style={styles.headerSubtitle}>Doctor advice & medicines</Text>
+      <View style={[styles.header, Platform.OS === 'web' && { alignItems: 'center' }]}>
+        <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }, Platform.OS === 'web' && styles.webInnerContainer]}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-back" size={22} color={isDarkMode ? theme.text : colors.secondary} />
+          </TouchableOpacity>
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.headerTitle}>My Prescriptions</Text>
+            <Text style={styles.headerSubtitle}>Doctor advice & medicines</Text>
+          </View>
+          <TouchableOpacity
+            style={styles.uploadHeaderBtn}
+            onPress={handleUploadPrescription}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="cloud-upload-outline" size={22} color={colors.primary} />
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity
-          style={styles.uploadHeaderBtn}
-          onPress={handleUploadPrescription}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="cloud-upload-outline" size={22} color={colors.primary} />
-        </TouchableOpacity>
       </View>
 
       {/* FILTER TABS */}
-      <View style={styles.filterRow}>
-        {['All', 'Active', 'Expired'].map((filter) => (
-          <TouchableOpacity
-            key={filter}
-            style={[styles.filterPill, activeFilter === filter && styles.filterPillActive]}
-            onPress={() => setActiveFilter(filter)}
-            activeOpacity={0.8}
-          >
-            <Text
-              style={[styles.filterText, activeFilter === filter && styles.filterTextActive]}
+      <View style={[styles.filterRow, Platform.OS === 'web' && { alignItems: 'center' }]}>
+        <View style={[{ flexDirection: 'row', gap: 8, width: '100%' }, Platform.OS === 'web' && styles.webInnerContainer]}>
+          {['All', 'Active', 'Expired'].map((filter) => (
+            <TouchableOpacity
+              key={filter}
+              style={[styles.filterPill, activeFilter === filter && styles.filterPillActive]}
+              onPress={() => setActiveFilter(filter)}
+              activeOpacity={0.8}
             >
-              {filter}
-            </Text>
-          </TouchableOpacity>
-        ))}
+              <Text
+                style={[styles.filterText, activeFilter === filter && styles.filterTextActive]}
+              >
+                {filter}
+              </Text>
+            </TouchableOpacity>
+          ))}
+        </View>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        <View style={Platform.OS === 'web' ? styles.webInnerContainer : null}>
         {filteredList.map((rx) => (
           <View key={rx.id} style={styles.rxCard}>
             {/* RX CARD TOP */}
@@ -299,7 +310,10 @@ const PrescriptionsScreen = ({ navigation }) => {
           </View>
         ))}
 
-        <View style={{ height: 40 }} />
+          <View style={{ height: 40 }} />
+        </View>
+
+        {Platform.OS === 'web' && <WebFooter navigation={navigation} />}
       </ScrollView>
 
       {/* DETAILED PRESCRIPTION MODAL */}
@@ -378,7 +392,7 @@ const PrescriptionsScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F4F8FA',
@@ -451,6 +465,14 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     padding: 16,
+    paddingBottom: Platform.OS === 'web' ? 0 : 40,
+    paddingHorizontal: Platform.OS === 'web' ? 0 : 16,
+  },
+  webInnerContainer: {
+    maxWidth: 1080,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: Platform.OS === 'web' ? 16 : 0,
   },
   rxCard: {
     backgroundColor: colors.white,

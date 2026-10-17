@@ -22,6 +22,8 @@ import {
 import colors from '../../../theme/colors';
 import { useCart } from '../../../context/CartContext';
 import WebBackButton from '../../../components/web/WebBackButton';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 
 const DEFAULT_LOCATION = {
   latitude: 12.2958,
@@ -29,6 +31,8 @@ const DEFAULT_LOCATION = {
 };
 
 const PharmacyLocationScreen = ({ navigation, route }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { updateAddress, selectedAddress } = useCart();
 
   const [location, setLocation] = useState(DEFAULT_LOCATION);
@@ -236,7 +240,7 @@ const PharmacyLocationScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',

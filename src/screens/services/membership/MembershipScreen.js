@@ -22,6 +22,7 @@ import { saveTransaction } from '../../../services/transactionService';
 import { showAlert } from '../../../utils/alert';
 import { isGuestUser, promptLoginRequired } from '../../../utils/authHelper';
 import { useTheme } from '../../../context/ThemeContext';
+import WebFooter from '../../../components/web/WebFooter';
 
 const PAYMENT_METHODS = [
   { id: 'upi-gpay', name: 'Google Pay / PhonePe / UPI', icon: 'flash-outline', iconType: 'ionicons' },
@@ -205,29 +206,28 @@ const MembershipScreen = ({ navigation }) => {
           TOP HEADER
       ============================================================ */}
       <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.headerBackBtn}
-          onPress={() => navigation.goBack()}
-          hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
-          accessibilityLabel="Back"
-        >
-          <Ionicons name="arrow-back" size={22} color="#0F172A" />
-        </TouchableOpacity>
-        <View style={styles.headerTitleWrap}>
-          <Text style={[styles.headerTitle, isIndic && { lineHeight: 22 }]}>{t('profile.membership', 'MediUnify Membership')}</Text>
-          <Text style={[styles.headerSub, isIndic && { lineHeight: 18 }]}>{t('Get more benefits with your membership')}</Text>
+        <View style={styles.webHeaderInner}>
+          <TouchableOpacity
+            style={styles.headerBackBtn}
+            onPress={() => navigation.goBack()}
+            hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
+            accessibilityLabel="Back"
+          >
+            <Ionicons name="arrow-back" size={22} color="#0F172A" />
+          </TouchableOpacity>
+          <View style={styles.headerTitleWrap}>
+            <Text style={[styles.headerTitle, isIndic && { lineHeight: 22 }]}>{t('profile.membership', 'MediUnify Care Membership')}</Text>
+            <Text style={[styles.headerSub, isIndic && { lineHeight: 18 }]}>{t('Get more benefits with your membership')}</Text>
+          </View>
         </View>
-        <View style={{ width: 36 }} />
       </View>
 
       <ScrollView
         ref={scrollViewRef}
         showsVerticalScrollIndicator={false}
-        contentContainerStyle={[
-          styles.scrollContent,
-          isDesktop && { maxWidth: 960, alignSelf: 'center', width: '100%' },
-        ]}
+        contentContainerStyle={styles.scrollContent}
       >
+        <View style={[styles.mainInnerContent, isDesktop && { maxWidth: 1080, alignSelf: 'center', width: '100%' }]}>
         {/* ============================================================
             5 & 6 & 8. MY MEMBERSHIP STATUS
         ============================================================ */}
@@ -360,7 +360,7 @@ const MembershipScreen = ({ navigation }) => {
           <Text style={styles.plansSectionSub}>Select from our curated healthcare plans</Text>
         </View>
 
-        <View style={[styles.plansGrid, isTablet && styles.plansGridTablet]}>
+        <View style={[styles.plansGrid, isTablet && styles.plansGridTablet, isDesktop && styles.plansGridDesktop]}>
           {MEMBERSHIP_PLANS.map((plan) => {
             const isCurrentActive = activeMembership?.status === 'active' && activeMembership?.tierId === plan.id;
             return (
@@ -369,6 +369,7 @@ const MembershipScreen = ({ navigation }) => {
                 style={[
                   styles.planCard,
                   isTablet && styles.planCardTablet,
+                  isDesktop && styles.planCardDesktop,
                   isCurrentActive && styles.planCardActiveBorder,
                 ]}
               >
@@ -452,8 +453,9 @@ const MembershipScreen = ({ navigation }) => {
             })}
           </View>
         </View>
+        </View>
 
-        <View style={{ height: 40 }} />
+        {Platform.OS === 'web' && <WebFooter navigation={navigation} />}
       </ScrollView>
 
       {/* ============================================================
@@ -691,11 +693,18 @@ const styles = StyleSheet.create({
   header: {
     height: 60,
     backgroundColor: '#FFFFFF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    width: '100%',
+  },
+  webHeaderInner: {
+    maxWidth: 1080,
+    width: '100%',
     flexDirection: 'row',
     alignItems: 'center',
     paddingHorizontal: 16,
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
   },
   headerBackBtn: {
     width: 36,
@@ -703,10 +712,11 @@ const styles = StyleSheet.create({
     borderRadius: 18,
     alignItems: 'center',
     justifyContent: 'center',
+    backgroundColor: '#F1F5F9',
   },
   headerTitleWrap: {
     flex: 1,
-    marginLeft: 8,
+    marginLeft: 12,
   },
   headerTitle: {
     fontSize: 16,
@@ -720,9 +730,15 @@ const styles = StyleSheet.create({
   },
 
   scrollContent: {
+    paddingHorizontal: 0,
+    paddingTop: 0,
+    paddingBottom: Platform.OS === 'web' ? 0 : 80,
+    width: '100%',
+  },
+  mainInnerContent: {
     paddingHorizontal: 16,
     paddingTop: 16,
-    paddingBottom: 80,
+    width: '100%',
   },
 
   // MY MEMBERSHIP CARD
@@ -969,6 +985,11 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     gap: 12,
   },
+  plansGridDesktop: {
+    flexDirection: 'row',
+    flexWrap: 'nowrap',
+    gap: 14,
+  },
 
   // PLAN CARD
   planCard: {
@@ -984,7 +1005,12 @@ const styles = StyleSheet.create({
     elevation: 1,
   },
   planCardTablet: {
-    width: '48.5%',
+    width: Platform.OS === 'web' ? 'calc(50% - 6px)' : '48.5%',
+  },
+  planCardDesktop: {
+    flex: 1,
+    minWidth: 0,
+    justifyContent: 'space-between',
   },
   planCardActiveBorder: {
     borderColor: '#007D69',

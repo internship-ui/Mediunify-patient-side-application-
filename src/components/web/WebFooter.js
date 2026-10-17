@@ -47,7 +47,7 @@ const SOCIAL_LINKS = [
 
 const WebFooter = ({ navigation, style }) => {
   const { width } = useWindowDimensions();
-  const { t, isIndic } = useTheme();
+  const { t, isIndic, isDarkMode, theme } = useTheme();
   const desktopSiteMode = isDesktopSiteRequested();
 
   // Responsive device categorization
@@ -99,9 +99,60 @@ const WebFooter = ({ navigation, style }) => {
     }
   };
 
-  const scrollToTop = () => {
+  const scrollToTop = (e) => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
+      // 1. Scroll window and document elements
+      try {
+        window.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+      } catch (err) {
+        try { window.scrollTo(0, 0); } catch (_) {}
+      }
+
+      try {
+        if (document.documentElement && document.documentElement.scrollTop > 0) {
+          document.documentElement.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        }
+        if (document.body && document.body.scrollTop > 0) {
+          document.body.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+        }
+      } catch (err) {}
+
+      // 2. Walk up the DOM tree from the footer to find parent ScrollView containers
+      try {
+        const clickedTarget = e?.target || e?.nativeEvent?.target;
+        const footerElem = clickedTarget || document.getElementById('mediunify-footer');
+        let current = footerElem;
+        while (current) {
+          if (current.scrollTop > 0) {
+            try {
+              current.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+            } catch (err) {
+              current.scrollTop = 0;
+            }
+          }
+          current = current.parentElement;
+        }
+      } catch (err) {}
+
+      // 3. Scan all scrollable elements in the document to ensure ANY scrolled container returns to top
+      try {
+        const allElements = document.querySelectorAll('*');
+        for (let i = 0; i < allElements.length; i++) {
+          const el = allElements[i];
+          if (el && el.scrollTop > 0) {
+            try {
+              el.scrollTo({ top: 0, left: 0, behavior: 'smooth' });
+            } catch (err) {
+              el.scrollTop = 0;
+            }
+          }
+        }
+      } catch (err) {}
+
+      // 4. Dispatch a custom window event for any custom listeners
+      try {
+        window.dispatchEvent(new CustomEvent('mediunify_scroll_to_top'));
+      } catch (_) {}
     }
   };
 
@@ -111,10 +162,12 @@ const WebFooter = ({ navigation, style }) => {
     <View
       style={[
         styles.footerWrapper,
+        isDarkMode && { backgroundColor: '#0B1120', backgroundImage: 'none', borderTopColor: '#334155' },
         desktopSiteMode && { minWidth: 1200, width: '100%' },
         style,
       ]}
       nativeID="mediunify-footer"
+      {...(Platform.OS === 'web' ? { id: 'mediunify-footer' } : {})}
     >
       <View
         style={[
@@ -318,22 +371,25 @@ const styles = StyleSheet.create({
     borderTopWidth: 1.5,
     borderTopColor: '#C4D8E7',
     width: '100%',
-    paddingTop: 54,
-    paddingBottom: 30,
+    alignSelf: 'stretch',
+    paddingTop: 36,
+    paddingBottom: 22,
     boxSizing: 'border-box',
     overflow: 'hidden',
   },
   footerContainer: {
+    maxWidth: 1280,
     width: '100%',
+    alignSelf: 'center',
     boxSizing: 'border-box',
   },
   colsRow: {
     flexDirection: 'row',
     flexWrap: 'nowrap',
-    gap: 28,
+    gap: 24,
     justifyContent: 'space-between',
     width: '100%',
-    marginBottom: 44,
+    marginBottom: 26,
   },
   colsRowTablet: {
     flexWrap: 'wrap',
@@ -559,13 +615,19 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   scrollTopBtn: {
-    width: 34,
-    height: 34,
+    width: 36,
+    height: 36,
     borderRadius: 8,
-    backgroundColor: '#00B894',
+    backgroundColor: '#13BE9C',
     justifyContent: 'center',
     alignItems: 'center',
     cursor: 'pointer',
+    shadowColor: '#13BE9C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 4,
+    elevation: 3,
+    zIndex: 999,
   },
 });
 

@@ -28,12 +28,14 @@ import {
 
 import HealthRecordsScreenMobile from './HealthRecordsScreen';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import { isDesktopLayout, isDesktopSiteRequested } from '../../utils/responsiveLayoutHelper';
 
 const RECORD_TABS = ['All Records', 'Lab Reports', 'Radiology & Scans', 'Prescriptions', 'Other Records'];
 
 const MyMedicalRecordsScreenWeb = ({ navigation, route, ...props }) => {
-  const { t, isIndic } = useTheme();
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const desktopSiteMode = isDesktopSiteRequested();
   const isDesktop = desktopSiteMode || width >= 1024;
@@ -234,25 +236,13 @@ const MyMedicalRecordsScreenWeb = ({ navigation, route, ...props }) => {
       ) : null}
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={true}>
-        {/* Breadcrumb Bar */}
-        <View style={styles.breadcrumbBar}>
-          <View style={[styles.innerContainer, styles.breadcrumbContent]}>
-            <TouchableOpacity onPress={() => navigation?.navigate('Home')} activeOpacity={0.7} style={styles.breadcrumbItem}>
-              <Ionicons name="home-outline" size={14} color="#64748B" />
-              <Text style={styles.breadcrumbText}>{t('Home')}</Text>
-            </TouchableOpacity>
-            <Ionicons name="chevron-forward" size={12} color="#94A3B8" />
-            <Text style={styles.breadcrumbActive}>{t('My Medical Records & Prescriptions')}</Text>
-          </View>
-        </View>
-
         {/* Page Hero Banner */}
         <View style={styles.innerContainer}>
           <PatientPageBanner
             onBack={() => navigation?.canGoBack?.() ? navigation.goBack() : navigation?.navigate('Home')}
             title={t('My Medical Records')}
-            subtitle={t('Store, view, and act upon all prescriptions, diagnostic scans, and clinical summaries. Order prescribed medicines or book referred lab tests in one tap.')}
-            badgeText={t('CENTRAL HEALTH VAULT & ACTIONABLE DOCUMENTS')}
+            subtitle={t('View and manage your prescriptions, lab reports, and scans.')}
+            badgeText={t('Health Records')}
             badgeIcon="folder-open"
             iconName="document-text"
             theme="teal"
@@ -274,12 +264,14 @@ const MyMedicalRecordsScreenWeb = ({ navigation, route, ...props }) => {
             ]}
             rightContent={
               <TouchableOpacity
-                style={styles.uploadDocBtn}
+                style={styles.organicHeroBtn}
                 onPress={() => showToast('Select PDF or camera scan to upload to your MediUnify vault.')}
                 activeOpacity={0.85}
               >
-                <Ionicons name="cloud-upload" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.uploadDocBtnText}>{t('Upload New Document')}</Text>
+                <View style={styles.organicHeroArrowCircle}>
+                  <Ionicons name="cloud-upload" size={13} color="#13BE9C" />
+                </View>
+                <Text style={styles.organicHeroBtnText}>{t('Upload Document')}</Text>
               </TouchableOpacity>
             }
           />
@@ -311,8 +303,13 @@ const MyMedicalRecordsScreenWeb = ({ navigation, route, ...props }) => {
                     activeOpacity={0.8}
                   >
                     <Text style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>
-                      {t(tab)} ({count})
+                      {t(tab)}
                     </Text>
+                    <View style={[styles.tabCountBadge, active && styles.tabCountBadgeActive]}>
+                      <Text style={[styles.tabCountText, active && styles.tabCountTextActive]}>
+                        {count}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
                 );
               })}
@@ -321,10 +318,10 @@ const MyMedicalRecordsScreenWeb = ({ navigation, route, ...props }) => {
             {/* Search & Family Filter Row */}
             <View style={styles.filterRow}>
               <View style={styles.searchBar}>
-                <Ionicons name="search-outline" size={18} color="#64748B" style={{ marginRight: 8 }} />
+                <Ionicons name="search-outline" size={18} color="#13BE9C" style={{ marginRight: 10 }} />
                 <TextInput
                   style={styles.searchInput}
-                  placeholder={t('Search records by document name, doctor, clinic, or medicine...')}
+                  placeholder={t('Search records, doctors, or medicines...')}
                   placeholderTextColor="#94A3B8"
                   value={searchQuery}
                   onChangeText={setSearchQuery}
@@ -338,14 +335,19 @@ const MyMedicalRecordsScreenWeb = ({ navigation, route, ...props }) => {
 
               {/* Family Dropdown / Buttons */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
-                <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569' }}>{t('Family Member:')}</Text>
+                <Text style={{ fontSize: 12, fontWeight: '700', color: '#475569' }}>{t('Family:')}</Text>
                 <TouchableOpacity
                   style={[styles.memberChip, selectedFamilyMember === 'all' && styles.memberChipActive]}
                   onPress={() => setSelectedFamilyMember('all')}
                 >
                   <Text style={[styles.memberChipText, selectedFamilyMember === 'all' && styles.memberChipTextActive]}>
-                    {t('All')} ({records.length})
+                    {t('All')}
                   </Text>
+                  <View style={[styles.memberCountBadge, selectedFamilyMember === 'all' && styles.memberCountBadgeActive]}>
+                    <Text style={[styles.memberCountText, selectedFamilyMember === 'all' && styles.memberCountTextActive]}>
+                      {records.length}
+                    </Text>
+                  </View>
                 </TouchableOpacity>
                 {familyMembers.map((m) => {
                   const isSel = selectedFamilyMember === m.id;
@@ -357,8 +359,13 @@ const MyMedicalRecordsScreenWeb = ({ navigation, route, ...props }) => {
                       onPress={() => setSelectedFamilyMember(m.id)}
                     >
                       <Text style={[styles.memberChipText, isSel && styles.memberChipTextActive]}>
-                        {m.name.split(' ')[0]} ({c})
+                        {m.name.split(' ')[0]}
                       </Text>
+                      <View style={[styles.memberCountBadge, isSel && styles.memberCountBadgeActive]}>
+                        <Text style={[styles.memberCountText, isSel && styles.memberCountTextActive]}>
+                          {c}
+                        </Text>
+                      </View>
                     </TouchableOpacity>
                   );
                 })}
@@ -495,71 +502,79 @@ const MyMedicalRecordsScreenWeb = ({ navigation, route, ...props }) => {
                     ========================================================= */}
                     {record.hasMedicines && record.medicines && (
                       <View style={styles.actionablePrescriptionBox}>
-                        <View style={{ flex: 1 }}>
+                        <View style={{ flex: 1, minWidth: 200 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Ionicons name="medkit" size={16} color="#00B894" />
-                            <Text style={styles.actionBoxTitle}>Prescription Contains {record.medicines.length} Medicines</Text>
+                            <Ionicons name="medkit-outline" size={15} color="#13BE9C" />
+                            <Text style={styles.actionBoxTitle}>{record.medicines.length} Prescribed Medicines</Text>
                           </View>
-                          <Text style={styles.actionBoxSubtitle}>
+                          <Text style={styles.actionBoxSubtitle} numberOfLines={1}>
                             {record.medicines.map((m) => m.name).join(', ')}
                           </Text>
                         </View>
 
                         <TouchableOpacity
-                          style={styles.orderMedsActionBtn}
+                          style={styles.organicActionBtn}
                           onPress={() => handleOpenOrderMedicines(record)}
-                          activeOpacity={0.85}
+                          activeOpacity={0.8}
                         >
-                          <Ionicons name="cart" size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
-                          <Text style={styles.orderMedsActionBtnText}>{t('Order Medicines →')}</Text>
+                          <View style={styles.organicArrowCircle}>
+                            <Ionicons name="cart-outline" size={12} color="#13BE9C" />
+                          </View>
+                          <Text style={styles.organicPrimaryActionText}>{t('Order Medicines')}</Text>
                         </TouchableOpacity>
                       </View>
                     )}
 
                     {record.hasReferredTest && record.referredTest && (
                       <View style={styles.actionableReferredLabBox}>
-                        <View style={{ flex: 1 }}>
+                        <View style={{ flex: 1, minWidth: 200 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Ionicons name="flask" size={16} color="#2563EB" />
-                            <Text style={[styles.actionBoxTitle, { color: '#1E40AF' }]}>
-                              {t('Referred Lab Test')}: {record.referredTest.testName}
+                            <Ionicons name="flask-outline" size={15} color="#13BE9C" />
+                            <Text style={[styles.actionBoxTitle, { color: '#0F172A' }]}>
+                              {t('Referred Test')}: {record.referredTest.testName}
                             </Text>
                           </View>
-                          <Text style={styles.actionBoxSubtitle}>{record.referredTest.reason}</Text>
+                          <Text style={styles.actionBoxSubtitle} numberOfLines={1}>{record.referredTest.reason}</Text>
                         </View>
 
                         <TouchableOpacity
-                          style={styles.bookLabActionBtn}
+                          style={styles.organicActionBtn}
                           onPress={() => handleOpenBookLabTest(record)}
-                          activeOpacity={0.85}
+                          activeOpacity={0.8}
                         >
-                          <Ionicons name="calendar" size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
-                          <Text style={styles.bookLabActionBtnText}>{t('Book Lab Test →')}</Text>
+                          <View style={styles.organicArrowCircle}>
+                            <Ionicons name="calendar-outline" size={12} color="#13BE9C" />
+                          </View>
+                          <Text style={styles.organicPrimaryActionText}>{t('Book Lab Test')}</Text>
                         </TouchableOpacity>
                       </View>
                     )}
 
                     {/* Actions: View & Download */}
                     <View style={styles.recordActionsRow}>
-                      <Text style={styles.fileSizeText}>Certified Medical PDF • {record.fileSize}</Text>
+                      <Text style={styles.fileSizeText}>PDF • {record.fileSize}</Text>
 
-                      <View style={{ flexDirection: 'row', gap: 8 }}>
+                      <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
                         <TouchableOpacity
-                          style={styles.viewDocBtn}
+                          style={styles.organicActionBtn}
                           onPress={() => setViewingRecord(record)}
                           activeOpacity={0.8}
                         >
-                          <Ionicons name="eye-outline" size={14} color="#1E3A8A" style={{ marginRight: 4 }} />
-                          <Text style={styles.viewDocBtnText}>{t('View Document')}</Text>
+                          <View style={styles.organicActionIconCircle}>
+                            <Ionicons name="eye-outline" size={12} color="#13BE9C" />
+                          </View>
+                          <Text style={styles.organicActionText}>{t('View Document')}</Text>
                         </TouchableOpacity>
 
                         <TouchableOpacity
-                          style={styles.downloadDocBtn}
+                          style={styles.organicActionBtn}
                           onPress={() => showToast(`Downloading ${record.name}... (PDF)`)}
                           activeOpacity={0.8}
                         >
-                          <Ionicons name="cloud-download-outline" size={14} color="#00B894" style={{ marginRight: 4 }} />
-                          <Text style={styles.downloadDocBtnText}>{t('Download')}</Text>
+                          <View style={styles.organicActionIconCircle}>
+                            <Ionicons name="cloud-download-outline" size={12} color="#13BE9C" />
+                          </View>
+                          <Text style={styles.organicActionText}>{t('Download')}</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -928,7 +943,7 @@ const MyMedicalRecordsScreenResponsive = (props) => {
 
 export default MyMedicalRecordsScreenResponsive;
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#E8F1F8',
@@ -944,31 +959,75 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingHorizontal: 16,
   },
-  breadcrumbBar: {
-    backgroundColor: 'transparent',
-    borderBottomWidth: 0,
-    paddingTop: 16,
-    paddingBottom: 4,
-  },
-  breadcrumbContent: {
+  // Image 2 Exact Hero CTA (Circular Outline Arrow + Bold Text in #13BE9C)
+  organicHeroBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 24,
+    borderWidth: 1.8,
+    borderColor: '#13BE9C',
+    boxShadow: '0 2px 8px rgba(19, 190, 156, 0.15)',
+    cursor: 'pointer',
   },
-  breadcrumbItem: {
+  organicHeroArrowCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.8,
+    borderColor: '#13BE9C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  organicHeroBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#13BE9C',
+    letterSpacing: 0.1,
+  },
+  // Image 2 Exact Action Buttons (Circular Outline Icon Ring + Bold Text in #13BE9C)
+  organicActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 7,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    cursor: 'pointer',
   },
-  breadcrumbText: {
-    fontSize: 12.5,
-    color: '#64748B',
-    fontWeight: '500',
+  organicArrowCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.8,
+    borderColor: '#13BE9C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
-  breadcrumbActive: {
-    fontSize: 12.5,
-    color: '#0F172A',
+  organicActionIconCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: '#13BE9C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  organicPrimaryActionText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#13BE9C',
+    letterSpacing: 0.1,
+  },
+  organicActionText: {
+    fontSize: 13,
     fontWeight: '700',
+    color: '#334155',
   },
   toastContainer: {
     position: 'absolute',
@@ -1062,25 +1121,49 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tabBtn: {
-    paddingHorizontal: 14,
-    paddingVertical: 7,
-    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 16,
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    cursor: 'pointer',
+    userSelect: 'none',
   },
   tabBtnActive: {
-    backgroundColor: '#1E3A8A',
-    borderColor: '#1E3A8A',
+    backgroundColor: '#13BE9C',
+    borderColor: '#13BE9C',
+    boxShadow: '0 2px 8px rgba(19, 190, 156, 0.2)',
   },
   tabBtnText: {
     fontSize: 12,
-    fontWeight: '600',
+    fontWeight: '700',
     color: '#475569',
+    userSelect: 'none',
   },
   tabBtnTextActive: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
+  },
+  tabCountBadge: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+  },
+  tabCountBadgeActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+  },
+  tabCountText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#475569',
+  },
+  tabCountTextActive: {
+    color: '#FFFFFF',
   },
   filterRow: {
     flexDirection: 'row',
@@ -1108,16 +1191,20 @@ const styles = StyleSheet.create({
     outlineStyle: 'none',
   },
   memberChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
     paddingHorizontal: 10,
     paddingVertical: 5,
-    borderRadius: 6,
+    borderRadius: 16,
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    cursor: 'pointer',
   },
   memberChipActive: {
-    backgroundColor: '#00B894',
-    borderColor: '#00B894',
+    backgroundColor: '#13BE9C',
+    borderColor: '#13BE9C',
   },
   memberChipText: {
     fontSize: 11.5,
@@ -1127,6 +1214,23 @@ const styles = StyleSheet.create({
   memberChipTextActive: {
     color: '#FFFFFF',
     fontWeight: '700',
+  },
+  memberCountBadge: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 5,
+    paddingVertical: 0.5,
+    borderRadius: 6,
+  },
+  memberCountBadgeActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+  },
+  memberCountText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#475569',
+  },
+  memberCountTextActive: {
+    color: '#FFFFFF',
   },
   loadingContainer: {
     paddingVertical: 60,

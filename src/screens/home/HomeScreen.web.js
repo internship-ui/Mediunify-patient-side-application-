@@ -14,7 +14,7 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
-import HomeScreenMobile from './HomeScreenMobile';
+import HomeScreenMobile from './HomeScreen.js';
 import { filterLocations } from '../../data/locations';
 import { FEATURED_SPECIALTIES } from '../../data/featuredSpecialties';
 import SpecialtyIcon from '../../components/common/SpecialtyIcon';
@@ -895,11 +895,17 @@ const HomeScreenWeb = ({ navigation }) => {
         <View
           style={[
             styles.heroSearchSection,
-            Platform.OS === 'web' ? {
-              backgroundColor: '#D8EEF6',
-              backgroundImage: 'linear-gradient(135deg, #CCE8F5 0%, #D4F3EB 45%, #DFFAF3 100%)',
-              borderBottomColor: '#BFDFEB',
-            } : {},
+            Platform.OS === 'web' ? (
+              isDarkMode ? {
+                backgroundColor: '#0F172A',
+                backgroundImage: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
+                borderBottomColor: '#334155',
+              } : {
+                backgroundColor: '#D8EEF6',
+                backgroundImage: 'linear-gradient(135deg, #CCE8F5 0%, #D4F3EB 45%, #DFFAF3 100%)',
+                borderBottomColor: '#BFDFEB',
+              }
+            ) : {},
           ]}
           // @ts-ignore
           className="hero-search-section-bg"
@@ -1383,7 +1389,6 @@ const HomeScreenWeb = ({ navigation }) => {
                 {/* Journey Connecting Wave behind cards */}
                 {Platform.OS === 'web' && (
                   <View style={styles.journeyWaveContainer} pointerEvents="none">
-                    <View style={styles.journeyStartDot} />
                     {/* @ts-ignore */}
                     <svg
                       style={{

@@ -7,18 +7,19 @@
 // 3D HIGH-RESOLUTION MEDICAL ICON ASSETS
 // ==================================================
 export const RADIOLOGY_3D_ICONS = {
-  mri: require('../../assets/radiology/rad_mri.jpg'),
-  ct: require('../../assets/radiology/rad_ct.jpg'),
-  xray: require('../../assets/radiology/rad_xray.jpg'),
-  usg: require('../../assets/radiology/rad_usg.jpg'),
-  mammo: require('../../assets/radiology/rad_mammo.jpg'),
-  pet: require('../../assets/radiology/rad_pet.jpg'),
-  dexa: require('../../assets/radiology/rad_dexa.jpg'),
-  doppler: require('../../assets/radiology/rad_doppler.jpg'),
-  ecg: require('../../assets/radiology/rad_ecg.jpg'),
-  echo: require('../../assets/radiology/rad_echo.jpg'),
-  cardio: require('../../assets/radiology/rad_cardio.jpg'),
-  other: require('../../assets/radiology/rad_other.jpg'),
+  mri: require('../../assets/radiology/rad_mri.png'),
+  ct: require('../../assets/radiology/rad_ct.png'),
+  xray: require('../../assets/radiology/rad_xray.png'),
+  usg: require('../../assets/radiology/rad_usg.png'),
+  mammo: require('../../assets/radiology/rad_mammo.png'),
+  pet: require('../../assets/radiology/rad_pet.png'),
+  dexa: require('../../assets/radiology/rad_dexa.png'),
+  doppler: require('../../assets/radiology/rad_doppler.png'),
+  ecg: require('../../assets/radiology/rad_ecg.png'),
+  echo: require('../../assets/radiology/rad_echo.png'),
+  cardio: require('../../assets/radiology/rad_cardio.png'),
+  cardiology: require('../../assets/radiology/rad_cardio.png'),
+  other: require('../../assets/radiology/rad_other.png'),
 };
 
 export const RADIOLOGY_CATEGORIES = [
@@ -28,7 +29,7 @@ export const RADIOLOGY_CATEGORIES = [
     tagline: 'Magnetic Resonance Imaging',
     description: 'High-definition 1.5T & 3.0T multi-sequence scans for brain, spine, joints, and soft tissue.',
     icon: 'scan-outline',
-    image3D: require('../../assets/radiology/rad_mri.jpg'),
+    image3D: require('../../assets/radiology/rad_mri.png'),
     badge: '3T Available',
     color: '#1E3A8A',
     bg: '#E0F7FA',
@@ -41,7 +42,7 @@ export const RADIOLOGY_CATEGORIES = [
     tagline: 'Computed Tomography',
     description: 'Ultra-fast 128-slice low-radiation scans for brain, chest, abdomen, pelvis, and angiography.',
     icon: 'radio-outline',
-    image3D: require('../../assets/radiology/rad_ct.jpg'),
+    image3D: require('../../assets/radiology/rad_ct.png'),
     badge: 'Low Radiation',
     color: '#00B894',
     bg: '#E6F8F5',
@@ -54,7 +55,7 @@ export const RADIOLOGY_CATEGORIES = [
     tagline: 'High-Frequency Digital Radiography',
     description: 'Instant computerized bone, joint, and chest imaging with same-hour certified digital report.',
     icon: 'body-outline',
-    image3D: require('../../assets/radiology/rad_xray.jpg'),
+    image3D: require('../../assets/radiology/rad_xray.png'),
     badge: 'Instant Report',
     color: '#64748B',
     bg: '#F1F5F9',
@@ -67,7 +68,7 @@ export const RADIOLOGY_CATEGORIES = [
     tagline: 'High-Res 3D/4D Sonography',
     description: 'Non-invasive acoustic imaging for abdomen, pelvis, obstetrics, pregnancy, thyroid, and small parts.',
     icon: 'water-outline',
-    image3D: require('../../assets/radiology/rad_usg.jpg'),
+    image3D: require('../../assets/radiology/rad_usg.png'),
     badge: 'No Radiation',
     color: '#7BC96F',
     bg: '#F2FAF0',
@@ -80,7 +81,7 @@ export const RADIOLOGY_CATEGORIES = [
     tagline: 'Digital Breast Imaging & Tomosynthesis',
     description: 'Low-dose 3D breast screening for early detection with dedicated lady radiologist on staff.',
     icon: 'female-outline',
-    image3D: require('../../assets/radiology/rad_mammo.jpg'),
+    image3D: require('../../assets/radiology/rad_mammo.png'),
     badge: 'Female Staff',
     color: '#FF7F50',
     bg: '#FFF2ED',
@@ -93,7 +94,7 @@ export const RADIOLOGY_CATEGORIES = [
     tagline: 'Positron Emission Tomography',
     description: 'Whole-body metabolic tumor staging, cardiac viability, and neurological assessment.',
     icon: 'nuclear-outline',
-    image3D: require('../../assets/radiology/rad_pet.jpg'),
+    image3D: require('../../assets/radiology/rad_pet.png'),
     badge: 'Advanced Oncology',
     color: '#1E3A8A',
     bg: '#E0F7FA',
@@ -106,7 +107,7 @@ export const RADIOLOGY_CATEGORIES = [
     tagline: 'Dual-Energy X-ray Absorptiometry',
     description: 'Gold-standard bone mineral density (BMD) measurement for osteoporosis & fracture risk.',
     icon: 'fitness-outline',
-    image3D: require('../../assets/radiology/rad_dexa.jpg'),
+    image3D: require('../../assets/radiology/rad_dexa.png'),
     badge: 'Quick 15 Min',
     color: '#7BC96F',
     bg: '#F2FAF0',
@@ -119,7 +120,7 @@ export const RADIOLOGY_CATEGORIES = [
     tagline: 'Color Flow Vascular Sonography',
     description: 'Circulation and vascular blood flow analysis for DVT, varicose veins, carotid, and renal arteries.',
     icon: 'pulse-outline',
-    image3D: require('../../assets/radiology/rad_doppler.jpg'),
+    image3D: require('../../assets/radiology/rad_doppler.png'),
     badge: 'Vascular Study',
     color: '#00C2CB',
     bg: '#E0F7FA',
@@ -132,7 +133,7 @@ export const RADIOLOGY_CATEGORIES = [
     tagline: 'Digital Electrocardiogram',
     description: 'Instant 12-lead cardiac rhythm evaluation, arrhythmia detection, and pre-op clearance.',
     icon: 'heart-outline',
-    image3D: require('../../assets/radiology/rad_ecg.jpg'),
+    image3D: require('../../assets/radiology/rad_ecg.png'),
     badge: 'Instant Results',
     color: '#FF7F50',
     bg: '#FFF2ED',
@@ -145,7 +146,7 @@ export const RADIOLOGY_CATEGORIES = [
     tagline: '2D / 4D Cardiovascular Echo',
     description: 'Detailed heart wall motion, valve functionality, and ejection fraction (EF%) analysis.',
     icon: 'analytics-outline',
-    image3D: require('../../assets/radiology/rad_echo.jpg'),
+    image3D: require('../../assets/radiology/rad_echo.png'),
     badge: 'Cardiologist Signed',
     color: '#00C2CB',
     bg: '#E0F7FA',
@@ -158,7 +159,7 @@ export const RADIOLOGY_CATEGORIES = [
     tagline: 'TMT, Holter & Cardiac Stress',
     description: 'Treadmill stress testing, 24-hr Holter ECG, and non-invasive cardiac risk assessment.',
     icon: 'speedometer-outline',
-    image3D: require('../../assets/radiology/rad_cardio.jpg'),
+    image3D: require('../../assets/radiology/rad_cardio.png'),
     badge: 'Cardiac Lab',
     color: '#FF7F50',
     bg: '#FFF2ED',
@@ -171,7 +172,7 @@ export const RADIOLOGY_CATEGORIES = [
     tagline: 'Specialized Fluoroscopy & Biopsy',
     description: 'Barium swallow, HSG (Hysterosalpingography), CT/USG guided FNAC & core needle biopsies.',
     icon: 'medkit-outline',
-    image3D: require('../../assets/radiology/rad_other.jpg'),
+    image3D: require('../../assets/radiology/rad_other.png'),
     badge: 'Interventional',
     color: '#64748B',
     bg: '#F1F5F9',
@@ -1561,10 +1562,75 @@ export const getGoogleMapsDirectionsUrl = (centre) => {
   return `https://www.google.com/maps/dir/?api=1&destination=${destination}`;
 };
 
+// Normalize city / locality to supported parent hubs
+export const normalizeRadiologyCity = (rawCity = 'Mysuru') => {
+  if (!rawCity || typeof rawCity !== 'string') return 'Mysuru';
+  const c = rawCity.toLowerCase().trim();
+  if (c === 'all' || c === 'all cities') return 'All Cities';
+
+  // Mysuru localities & aliases
+  if (
+    c.includes('mys') ||
+    c.includes('kuvempu') ||
+    c.includes('gokulam') ||
+    c.includes('jayalakshmi') ||
+    c.includes('saraswathi') ||
+    c.includes('hebbal') ||
+    c.includes('vijayanagar') ||
+    c.includes('chamundi') ||
+    c.includes('nazarbad') ||
+    c.includes('vontikoppal') ||
+    c.includes('yadavagiri') ||
+    c.includes('jp nagar')
+  ) {
+    return 'Mysuru';
+  }
+
+  // Bengaluru localities & aliases
+  if (
+    c.includes('bengal') ||
+    c.includes('bangal') ||
+    c.includes('blr') ||
+    c.includes('koramangala') ||
+    c.includes('indiranagar') ||
+    c.includes('whitefield') ||
+    c.includes('hsr') ||
+    c.includes('electronic city') ||
+    c.includes('marathahalli') ||
+    c.includes('jayanagar') ||
+    c.includes('malleshwaram') ||
+    c.includes('rajajinagar') ||
+    c.includes('btm') ||
+    c.includes('yelahanka')
+  ) {
+    return 'Bengaluru';
+  }
+
+  // Hassan localities & aliases
+  if (c.includes('hassan')) {
+    return 'Hassan';
+  }
+
+  // Mandya
+  if (c.includes('mandya')) {
+    return 'Mandya';
+  }
+
+  // Mangaluru
+  if (c.includes('mangal')) {
+    return 'Mangaluru';
+  }
+
+  return rawCity.trim();
+};
+
 export const RADIOLOGY_CENTRES_FILTERED = (city = 'Mysuru') => {
   if (!city || city === 'All Cities') return RADIOLOGY_PROVIDERS;
-  const lower = city.toLowerCase().trim();
-  const matched = RADIOLOGY_PROVIDERS.filter((p) => {
+  const normalized = normalizeRadiologyCity(city);
+  if (normalized === 'All Cities') return RADIOLOGY_PROVIDERS;
+
+  const lower = normalized.toLowerCase().trim();
+  let matched = RADIOLOGY_PROVIDERS.filter((p) => {
     const pCity = (p.city || '').toLowerCase();
     if (lower.includes('mys') && pCity.includes('mys')) return true;
     if ((lower.includes('bengal') || lower.includes('bangal')) && (pCity.includes('bengal') || pCity.includes('bangal'))) return true;
@@ -1573,47 +1639,65 @@ export const RADIOLOGY_CENTRES_FILTERED = (city = 'Mysuru') => {
     if (lower.includes('mangal') && pCity.includes('mangal')) return true;
     return pCity === lower;
   });
+
+  // Safe fallback: If no centres exist specifically for this city (e.g. Mangaluru, Belagavi, Hubballi),
+  // fallback to Mysuru centres so the user can still browse and access scans
+  if (matched.length === 0) {
+    matched = RADIOLOGY_PROVIDERS.filter((p) => (p.city || '').toLowerCase().includes('mys'));
+    if (matched.length === 0) matched = RADIOLOGY_PROVIDERS;
+  }
   return matched;
 };
 
 export const getAvailableCategoriesForCity = (city = 'Mysuru') => {
   const centres = RADIOLOGY_CENTRES_FILTERED(city);
-  if (!centres || centres.length === 0) return [];
+  if (!centres || centres.length === 0) return RADIOLOGY_CATEGORIES;
   const supportedCatSet = new Set();
   centres.forEach((c) => {
     (c.supportedCategories || []).forEach((catId) => supportedCatSet.add(catId));
   });
-  return RADIOLOGY_CATEGORIES.filter((cat) => supportedCatSet.has(cat.id));
+  const filtered = RADIOLOGY_CATEGORIES.filter((cat) => supportedCatSet.has(cat.id));
+  return filtered.length > 0 ? filtered : RADIOLOGY_CATEGORIES;
 };
 
 export const getAvailableTestsForCity = (city = 'Mysuru') => {
   const centres = RADIOLOGY_CENTRES_FILTERED(city);
-  if (!centres || centres.length === 0) return [];
+  if (!centres || centres.length === 0) return RADIOLOGY_TESTS;
   const supportedCatSet = new Set();
   centres.forEach((c) => {
     (c.supportedCategories || []).forEach((catId) => supportedCatSet.add(catId));
   });
-  return RADIOLOGY_TESTS.filter((test) => supportedCatSet.has(test.categoryId));
+  const filtered = RADIOLOGY_TESTS.filter((test) => supportedCatSet.has(test.categoryId));
+  return filtered.length > 0 ? filtered : RADIOLOGY_TESTS;
 };
 
 export const getProvidersForTest = (test, city = 'Mysuru') => {
-  const filtered = RADIOLOGY_CENTRES_FILTERED(city);
-  const eligible = filtered.filter((provider) => {
+  let filtered = RADIOLOGY_CENTRES_FILTERED(city);
+  if (!filtered || filtered.length === 0) {
+    filtered = RADIOLOGY_PROVIDERS;
+  }
+  let eligible = filtered.filter((provider) => {
     if (!test || !test.categoryId) return true;
     if (!provider.supportedCategories || !Array.isArray(provider.supportedCategories)) return true;
     return provider.supportedCategories.includes(test.categoryId);
   });
+  if (eligible.length === 0) {
+    eligible = filtered;
+  }
   return eligible.map((provider) => {
-    const discountedPrice = Math.round(test.typicalPrice * provider.discountMultiplier);
-    const mrp = test.mrp;
-    const discountPercent = Math.round(((mrp - discountedPrice) / mrp) * 100);
+    const typical = test?.typicalPrice || 1000;
+    const mult = provider.discountMultiplier || 0.9;
+    const discountedPrice = Math.round(typical * mult);
+    const mrp = test?.mrp || Math.round(discountedPrice * 1.25);
+    const discountPercent = Math.max(5, Math.round(((mrp - discountedPrice) / mrp) * 100));
     return {
       ...provider,
-      testId: test.id,
-      testName: test.name,
+      testId: test?.id,
+      testName: test?.name,
       mrp,
       price: discountedPrice,
       discountPercent,
     };
   });
 };
+

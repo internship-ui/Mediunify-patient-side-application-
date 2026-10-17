@@ -684,6 +684,7 @@ export const kn = {
     explore_plans: 'ಎಲ್ಲಾ ಯೋಜನೆಗಳನ್ನು ವೀಕ್ಷಿಸಿ',
     health_wallet: 'ಮೆಡಿಕಾಯಿನ್ಸ್ ವಾಲೆಟ್',
     wallet_balance: 'ಲಭ್ಯವಿರುವ ವಾಲೆಟ್ ಬ್ಯಾಲೆನ್ಸ್',
+    care_wallet: 'ಕೇರ್ ವಾಲೆಟ್',
     refer_and_earn: 'ರೆಫರ್ ಮಾಡಿ & ಬಹುಮಾನ ಪಡೆಯಿರಿ',
     share_referral_code: 'ನಿಮ್ಮ ರೆಫರಲ್ ಕೋಡ್ ಅನ್ನು ಹಂಚಿಕೊಳ್ಳಿ ಮತ್ತು ಬಹುಮಾನಗಳನ್ನು ಗಳಿಸಿ',
     copy_code: 'ಕೋಡ್ ನಕಲಿಸಿ',

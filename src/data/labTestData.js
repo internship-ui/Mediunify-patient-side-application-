@@ -618,7 +618,7 @@ import {
   NOVUS_CURATED_PACKAGES,
   getAllNovusPackages,
   NOVUS_PACKAGE_CATEGORIES,
-} from './novusPackagesData';
+} from './novusPackagesData.js';
 
 export const LAB_PACKAGES = NOVUS_POPULAR_PACKAGES.map((pkg) => ({
   ...pkg,
@@ -963,10 +963,10 @@ export const CITY_LAB_CATALOG_CONFIG = {
   },
   Hassan: {
     supportedPackages: [
-      'POP-FB-01', 'POP-FB-02',
-      'POP-DIA-01', 'POP-DIA-02',
-      'POP-HRT-01',
-      'POP-EXE-01',
+      'POP-FB-01', 'POP-FB-02', 'POP-FB-03', 'POP-FB-04',
+      'POP-DIA-01', 'POP-DIA-02', 'POP-DIA-03',
+      'POP-HRT-01', 'POP-HRT-02', 'POP-HRT-03',
+      'POP-EXE-01', 'POP-EXE-02', 'POP-EXE-03',
     ],
     supportedAllTests: true,
   },

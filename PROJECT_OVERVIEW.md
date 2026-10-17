@@ -42,9 +42,9 @@ MediUnify is an enterprise-grade healthcare mobile and web application for patie
 └───────────────────────────────────┬────────────────────────────────────┘
                                     │
 ┌───────────────────────────────────▼────────────────────────────────────┐
-│                     DATA & SYNCHRONIZATION LAYER                       │
-│   dataSyncService.js  <─── HTTP Failover ───>  syncServer.js (Node.js) │
-│   AsyncStorage (Offline Cache)               syncDatabase.json (Server)│
+│                     DATA & LOCAL PERSISTENCE LAYER                     │
+│   dataSyncService.js  (Decoupled Client-Side Storage Adapter)          │
+│   AsyncStorage (Local Cache & State — Ready for Node.js Backend API)   │
 └────────────────────────────────────────────────────────────────────────┘
 ```
 
@@ -60,9 +60,6 @@ d:/unnathi healthcare app/front-end design/
 ├── scripts/
 │   ├── patchGhPages.js         # Post-export bundle & asset patcher for GitHub Pages
 │   └── patchExpoAsset.js       # Compatibility patch for expo-asset
-├── server/
-│   ├── syncServer.js           # Central Express sync backend API (Port 5000)
-│   └── syncDatabase.json       # JSON persistence store for users, orders, bookings
 ├── src/
 │   ├── components/             # Reusable UI widgets, cards, inputs, and modals
 │   │   ├── booking/            # Doctor booking modals
@@ -307,47 +304,38 @@ Manages UI theme modes, internationalization across 5 Indian languages, biometri
 
 ---
 
-## 5. Services & Backend Synchronization
+## 5. Services & Client Persistence Architecture
 
 ### 5.1 `dataSyncService.js` (`src/services/dataSyncService.js`)
-Handles offline-first client persistence and real-time synchronization with automatic network failover.
+Decoupled client-side persistence and data access layer. It operates reliably on local storage (`AsyncStorage`) with zero network latency, and is architected to seamlessly connect to your upcoming **Node.js (Express / NestJS) + MongoDB / PostgreSQL** backend.
 
 | Function | Parameters | Description |
 |---|---|---|
-| `getCandidateUrls()` | None | Resolves priority API URLs dynamically based on platform (Web, Metro bundler host IP, Android emulator loopback `10.0.2.2`, LAN IP `192.168.29.61`) |
-| `getBackendUrl()` | None | Returns the currently active/first candidate URL |
-| `apiRequest(endpoint, options, timeoutMs)` | `endpoint, options, timeoutMs=2500` | HTTP client with automatic host rotation and abort timeout failover |
+| `getBackendUrl()` | None | Returns configured backend API URL (`process.env.EXPO_PUBLIC_API_URL` or `null`) |
 | `saveUserToLocalStorage(user)` | `user` | Consolidates user profile, wallet balance, appointments (video, lab, radiology, nurse), family members, orders, prescriptions, and offline fallback credentials to `AsyncStorage` |
-| `syncLogin(identifier, password)` | `identifier, password` | Submits login credentials to server; falls back to cached local credentials if offline |
-| `syncRegister(userData, password)` | `userData, password` | Registers new user account on backend and saves user session locally |
-| `pullUserData(userId)` | `userId` | Fetches latest centralized profile and state from server |
-| `syncActiveUser()` | None | Bidirectional sync: gathers all local state updates and pushes them to backend server |
-| `syncAddAppointment(appointment)` | `appointment` | Submits new doctor/lab/radiology booking to server and merges with local appointments |
-| `syncUpdateAppointmentStatus(id, status)` | `appointmentId, status` | Updates appointment status (e.g. `Cancelled`, `Completed`) |
-| `syncAddOrder(order)` | `order` | Pushes pharmacy/test order to central server database |
-| `syncUpdateWallet(amount, type, desc)` | `amount, type, description` | Credits or debits health wallet and logs transaction |
-| `syncAddFamilyMember(member)` | `member` | Synchronizes newly added family dependent |
-| `syncUploadPrescription(data)` | `prescriptionData` | Syncs prescription metadata and OCR text |
-| `syncHeartbeat()` | None | Health check ping to verify server reachability |
+| `syncLogin(identifier, password)` | `identifier, password` | Authenticates against registered or pre-seeded credentials; saves active session locally |
+| `syncRegister(userData, password)` | `userData, password` | Registers new user account in local storage and creates active session |
+| `pullUserData(userId)` | `userId` | Reads latest centralized profile and state from local storage |
+| `syncActiveUser()` | None | Reads and validates active user state from local storage |
+| `pushAppointment(appointmentData)` | `appointmentData` | Categorizes and saves appointment (Doctor, Video, Lab, Radiology, Nurse) to corresponding AsyncStorage stores and records payment ledger transaction |
+| `syncSaveFamilyMembers(updatedMembers)` | `updatedMembers` | Synchronizes family dependents list to local storage |
+| `syncFetchFamilyMembers()` | None | Retrieves all family dependents from local storage |
+| `syncDeleteFamilyMember(memberId)` | `memberId` | Removes specified family dependent from local storage |
 
 ---
 
-### 5.2 `syncServer.js` (`server/syncServer.js`)
-Lightweight central Node.js/Express synchronization microservice running on port 5000.
+### 5.2 Upcoming Backend Integration Specification
+The application frontend is structured for easy integration with a Node.js (Express / NestJS) REST API:
 
-| Route | Method | Payload / Params | Description |
+| Route Expected | Method | Payload / Params | Target Implementation |
 |---|---|---|---|
-| `/api/health` | `GET` | None | Returns server health status and active timestamp |
-| `/api/auth/login` | `POST` | `{ identifier, password }` | Authenticates patient against `syncDatabase.json` |
-| `/api/auth/register` | `POST` | `{ name, phone, email, password }` | Creates new user record with initial wallet & MediCoins |
-| `/api/user/:userId` | `GET` | `userId` in URL | Returns consolidated user record |
-| `/api/sync/user` | `POST` | Full user object | Merges and persists user profile, bookings, and orders |
-| `/api/appointments` | `POST` | `{ userId, appointment }` | Saves new appointment in server database |
-| `/api/appointments/:id` | `PUT` | `{ status }` | Updates appointment status |
-| `/api/orders` | `POST` | `{ userId, order }` | Saves completed pharmacy/diagnostic order |
-| `/api/wallet/transaction`| `POST` | `{ userId, amount, type, desc }` | Updates server wallet ledger |
-| `/api/family` | `POST` | `{ userId, member }` | Appends family member |
-| `/api/prescriptions` | `POST` | `{ userId, prescription }` | Saves prescription record |
+| `/api/auth/login` | `POST` | `{ identifier, password }` | Authenticates patient against database (PostgreSQL / MongoDB) |
+| `/api/auth/register` | `POST` | `{ name, phone, email, password }` | Registers user record with initial wallet balance & referral setup |
+| `/api/user/:userId` | `GET` | `userId` in URL | Returns consolidated patient profile |
+| `/api/user/:userId/sync` | `POST` | Full user object | Merges and persists user profile, bookings, and orders |
+| `/api/user/:userId/appointment` | `POST` | `{ appointment }` | Creates new doctor/lab/radiology/nursing booking |
+| `/api/user/:userId/family` | `PUT` | `{ familyMembers }` | Updates family dependents list |
+| `/api/orders` | `POST` | `{ order }` | Saves completed pharmacy / diagnostic order |
 
 ---
 
@@ -401,6 +389,5 @@ Lightweight central Node.js/Express synchronization microservice running on port
 |---|---|---|
 | Development Server | `npm run start` / `npx expo start` | Starts Metro bundler for mobile devices and simulators |
 | Web Development | `npm run web` / `npx expo start --web` | Runs app locally in browser |
-| Sync Server | `npm run server` / `node server/syncServer.js` | Launches backend sync API on port 5000 |
 | Pre-deploy Web Build | `npm run predeploy` | Runs `npx expo export -p web`, executes `patchGhPages.js` to fix font/asset paths and creates SPA `.nojekyll` and `404.html` |
 | GitHub Pages Deploy | `npm run deploy` | Deploys static build from `dist/` to `gh-pages` branch |

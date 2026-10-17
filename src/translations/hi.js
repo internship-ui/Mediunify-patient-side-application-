@@ -684,6 +684,7 @@ export const hi = {
     explore_plans: 'सभी योजनाएं देखें',
     health_wallet: 'मेडिकॉइन्स वॉलेट',
     wallet_balance: 'उपलब्ध वॉलेट बैलेंस',
+    care_wallet: 'केयर वॉलेट',
     refer_and_earn: 'रेफर करें और पुरस्कार पाएं',
     share_referral_code: 'अपना रेफरल कोड दोस्तों के साथ साझा करें और पुरस्कार अर्जित करें',
     copy_code: 'कोड कॉपी करें',

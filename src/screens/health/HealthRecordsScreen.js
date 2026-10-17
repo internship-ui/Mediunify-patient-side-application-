@@ -18,6 +18,8 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { INITIAL_MEDICAL_RECORDS, INITIAL_TEST_REPORTS } from '../../data/patientDashboardData';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
+import WebFooter from '../../components/web/WebFooter';
 
 const CATEGORY_TABS = [
   { id: 'all',        label: 'All',          icon: 'documents-outline' },
@@ -86,7 +88,8 @@ function matchDate(d, filter) {
 }
 
 const HealthRecordsScreen = ({ navigation }) => {
-  const { t, isIndic } = useTheme();
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const isTablet = width >= 768;
 
@@ -347,7 +350,7 @@ const HealthRecordsScreen = ({ navigation }) => {
   // ── MAIN RENDER ──
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? theme.headerBg : "#FFFFFF"} />
 
       {toastMsg && (
         <View style={styles.toast}>
@@ -358,139 +361,146 @@ const HealthRecordsScreen = ({ navigation }) => {
 
       {/* HEADER */}
       <View style={styles.header}>
-        <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
-          <Ionicons name="arrow-back" size={20} color="#0F172A" />
-        </TouchableOpacity>
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>{t('Health Records')}</Text>
-          <View style={styles.headerSubRow}>
-            <View style={styles.liveDot} />
-            <Text style={styles.headerSubText}>{t('ABHA Verified • Private & Secure')}</Text>
+        <View style={styles.webHeaderInner}>
+          <View style={styles.headerLeftGroup}>
+            <TouchableOpacity style={styles.backBtn} onPress={() => navigation.goBack()} activeOpacity={0.7}>
+              <Ionicons name="arrow-back" size={20} color={isDarkMode ? theme.text : "#0F172A"} />
+            </TouchableOpacity>
+            <View style={styles.headerCenter}>
+              <Text style={styles.headerTitle}>{t('Health Records')}</Text>
+              <View style={styles.headerSubRow}>
+                <View style={styles.liveDot} />
+                <Text style={styles.headerSubText}>{t('ABHA Verified • Private & Secure')}</Text>
+              </View>
+            </View>
           </View>
+          <TouchableOpacity style={styles.uploadHeaderBtn} onPress={() => setUploadModalVisible(true)} activeOpacity={0.85}>
+            <Ionicons name="cloud-upload" size={14} color="#FFF" />
+            <Text style={styles.uploadHeaderBtnText}>{t('Upload')}</Text>
+          </TouchableOpacity>
         </View>
-        <TouchableOpacity style={styles.uploadHeaderBtn} onPress={() => setUploadModalVisible(true)} activeOpacity={0.85}>
-          <Ionicons name="cloud-upload" size={14} color="#FFF" />
-          <Text style={styles.uploadHeaderBtnText}>{t('Upload')}</Text>
-        </TouchableOpacity>
       </View>
 
       <ScrollView showsVerticalScrollIndicator={false} contentContainerStyle={styles.scroll}>
-
-        {/* FAMILY SWITCHER */}
-        <View style={{ marginTop: 16 }}>
-          <View style={styles.sectionRow}>
-            <View style={styles.sectionLabelRow}>
-              <Ionicons name="people" size={15} color="#0F766E" />
-              <Text style={styles.sectionLabel}>{t('Select Patient')}</Text>
+        <View style={Platform.OS === 'web' ? styles.webInnerContainer : null}>
+          {/* FAMILY SWITCHER */}
+          <View style={{ marginTop: 16 }}>
+            <View style={styles.sectionRow}>
+              <View style={styles.sectionLabelRow}>
+                <Ionicons name="people" size={15} color="#0F766E" />
+                <Text style={styles.sectionLabel}>{t('Select Patient')}</Text>
+              </View>
+              <TouchableOpacity style={styles.manageFamilyBtn} onPress={() => navigation.navigate('FamilyProfiles')} activeOpacity={0.8}>
+                <Ionicons name="add" size={12} color="#0F766E" />
+                <Text style={styles.manageFamilyText}>{t('Manage Family')}</Text>
+              </TouchableOpacity>
             </View>
-            <TouchableOpacity style={styles.manageFamilyBtn} onPress={() => navigation.navigate('FamilyProfiles')} activeOpacity={0.8}>
-              <Ionicons name="add" size={12} color="#0F766E" />
-              <Text style={styles.manageFamilyText}>{t('Manage Family')}</Text>
+            <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.familyScroll}>
+              {familyChips.map((chip) => {
+                const isSel = selectedPatientId === chip.id || (chip.isSelf && selectedPatientId === 'self');
+                return (
+                  <TouchableOpacity key={chip.id} style={[styles.familyChip, isSel && styles.familyChipActive]} onPress={() => setSelectedPatientId(chip.id)} activeOpacity={0.8}>
+                    <View style={[styles.chipAvatar, isSel && styles.chipAvatarActive]}>
+                      <Text style={[styles.chipInitials, isSel && styles.chipInitialsActive]}>{chip.initials}</Text>
+                      <View style={[styles.chipCount, isSel && styles.chipCountActive]}>
+                        <Text style={styles.chipCountText}>{chip.count}</Text>
+                      </View>
+                    </View>
+                    <Text style={[styles.chipName, isSel && styles.chipNameActive]} numberOfLines={1}>{chip.name}</Text>
+                    <Text style={[styles.chipRelation, isSel && styles.chipRelationActive]} numberOfLines={1}>{chip.relation}</Text>
+                  </TouchableOpacity>
+                );
+              })}
+              <TouchableOpacity style={styles.addFamilyChip} onPress={() => navigation.navigate('FamilyProfiles')} activeOpacity={0.8}>
+                <View style={styles.addFamilyCircle}><Ionicons name="person-add" size={15} color="#0F766E" /></View>
+                <Text style={styles.addFamilyText}>+ {t('Add')}</Text>
+                <Text style={styles.addFamilySub}>{t('Member')}</Text>
+              </TouchableOpacity>
+            </ScrollView>
+          </View>
+
+          {/* SEARCH + DATE FILTER */}
+          <View style={styles.searchWrap}>
+            <View style={styles.searchBox}>
+              <Ionicons name="search" size={16} color="#94A3B8" />
+              <TextInput
+                style={styles.searchInput}
+                placeholder={t('Search doctor, lab, test, prescription...')}
+                placeholderTextColor="#94A3B8"
+                value={searchQuery}
+                onChangeText={setSearchQuery}
+                returnKeyType="search"
+              />
+              {searchQuery.length > 0 && (
+                <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
+                  <Ionicons name="close-circle" size={17} color="#94A3B8" />
+                </TouchableOpacity>
+              )}
+            </View>
+            <TouchableOpacity style={styles.dateFilterPill} onPress={() => setDateModalVisible(true)} activeOpacity={0.8}>
+              <Ionicons name="calendar-outline" size={13} color="#0F766E" />
+              <Text style={styles.dateFilterText}>{t(DATE_FILTERS.find((d) => d.id === dateFilter)?.label || 'All Time')}</Text>
+              <Ionicons name="chevron-down" size={12} color="#0F766E" />
             </TouchableOpacity>
           </View>
-          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.familyScroll}>
-            {familyChips.map((chip) => {
-              const isSel = selectedPatientId === chip.id || (chip.isSelf && selectedPatientId === 'self');
+
+          {/* CATEGORY TABS */}
+          <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
+            {CATEGORY_TABS.map((tab) => {
+              const isActive = selectedCategory === tab.id;
               return (
-                <TouchableOpacity key={chip.id} style={[styles.familyChip, isSel && styles.familyChipActive]} onPress={() => setSelectedPatientId(chip.id)} activeOpacity={0.8}>
-                  <View style={[styles.chipAvatar, isSel && styles.chipAvatarActive]}>
-                    <Text style={[styles.chipInitials, isSel && styles.chipInitialsActive]}>{chip.initials}</Text>
-                    <View style={[styles.chipCount, isSel && styles.chipCountActive]}>
-                      <Text style={styles.chipCountText}>{chip.count}</Text>
-                    </View>
+                <TouchableOpacity key={tab.id} style={[styles.categoryPill, isActive && styles.categoryPillActive]} onPress={() => setSelectedCategory(tab.id)} activeOpacity={0.8}>
+                  <Ionicons name={tab.icon} size={13} color={isActive ? '#FFF' : '#64748B'} />
+                  <Text style={[styles.categoryPillText, isActive && styles.categoryPillTextActive]}>{t(tab.label)}</Text>
+                  <View style={[styles.categoryCount, isActive && styles.categoryCountActive]}>
+                    <Text style={[styles.categoryCountText, isActive && styles.categoryCountTextActive]}>{categoryCounts[tab.id] || 0}</Text>
                   </View>
-                  <Text style={[styles.chipName, isSel && styles.chipNameActive]} numberOfLines={1}>{chip.name}</Text>
-                  <Text style={[styles.chipRelation, isSel && styles.chipRelationActive]} numberOfLines={1}>{chip.relation}</Text>
                 </TouchableOpacity>
               );
             })}
-            <TouchableOpacity style={styles.addFamilyChip} onPress={() => navigation.navigate('FamilyProfiles')} activeOpacity={0.8}>
-              <View style={styles.addFamilyCircle}><Ionicons name="person-add" size={15} color="#0F766E" /></View>
-              <Text style={styles.addFamilyText}>+ {t('Add')}</Text>
-              <Text style={styles.addFamilySub}>{t('Member')}</Text>
-            </TouchableOpacity>
           </ScrollView>
-        </View>
 
-        {/* SEARCH + DATE FILTER */}
-        <View style={styles.searchWrap}>
-          <View style={styles.searchBox}>
-            <Ionicons name="search" size={16} color="#94A3B8" />
-            <TextInput
-              style={styles.searchInput}
-              placeholder={t('Search doctor, lab, test, prescription...')}
-              placeholderTextColor="#94A3B8"
-              value={searchQuery}
-              onChangeText={setSearchQuery}
-              returnKeyType="search"
-            />
-            {searchQuery.length > 0 && (
-              <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
-                <Ionicons name="close-circle" size={17} color="#94A3B8" />
-              </TouchableOpacity>
-            )}
-          </View>
-          <TouchableOpacity style={styles.dateFilterPill} onPress={() => setDateModalVisible(true)} activeOpacity={0.8}>
-            <Ionicons name="calendar-outline" size={13} color="#0F766E" />
-            <Text style={styles.dateFilterText}>{t(DATE_FILTERS.find((d) => d.id === dateFilter)?.label || 'All Time')}</Text>
-            <Ionicons name="chevron-down" size={12} color="#0F766E" />
-          </TouchableOpacity>
-        </View>
-
-        {/* CATEGORY TABS */}
-        <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.categoryScroll}>
-          {CATEGORY_TABS.map((tab) => {
-            const isActive = selectedCategory === tab.id;
-            return (
-              <TouchableOpacity key={tab.id} style={[styles.categoryPill, isActive && styles.categoryPillActive]} onPress={() => setSelectedCategory(tab.id)} activeOpacity={0.8}>
-                <Ionicons name={tab.icon} size={13} color={isActive ? '#FFF' : '#64748B'} />
-                <Text style={[styles.categoryPillText, isActive && styles.categoryPillTextActive]}>{t(tab.label)}</Text>
-                <View style={[styles.categoryCount, isActive && styles.categoryCountActive]}>
-                  <Text style={[styles.categoryCountText, isActive && styles.categoryCountTextActive]}>{categoryCounts[tab.id] || 0}</Text>
-                </View>
-              </TouchableOpacity>
-            );
-          })}
-        </ScrollView>
-
-        {/* RECORDS */}
-        <View style={[styles.recordsWrap, isTablet && styles.recordsWrapTablet]}>
-          <View style={styles.recordsHeader}>
-            <Text style={styles.recordsHeaderText}>{filteredRecords.length} {filteredRecords.length === 1 ? t('Record') : t('Records')}</Text>
-            <TouchableOpacity style={styles.syncBtn} onPress={handleSync} disabled={isSyncing} activeOpacity={0.8}>
-              {isSyncing ? <ActivityIndicator size="small" color="#0F766E" /> : <Ionicons name="sync" size={14} color="#0F766E" />}
-              <Text style={styles.syncBtnText}>{isSyncing ? t('Syncing...') : t('Sync')}</Text>
-            </TouchableOpacity>
-          </View>
-
-          {filteredRecords.length === 0 ? (
-            <View style={styles.emptyCard}>
-              <View style={styles.emptyIconCircle}><Ionicons name="folder-open-outline" size={40} color="#0D9488" /></View>
-              <Text style={styles.emptyTitle}>
-                {searchQuery
-                  ? `No records matching "${searchQuery}"`
-                  : selectedCategory !== 'all'
-                  ? `No ${t(CATEGORY_TABS.find((t) => t.id === selectedCategory)?.label || '')} found`
-                  : t('No health records found')}
-              </Text>
-              <Text style={styles.emptySub}>
-                {selectedPatientId !== 'self' && selectedPatientId !== selfMemberId
-                  ? 'No records linked to this family member yet.'
-                  : 'Upload a prescription or lab report to get started.'}
-              </Text>
-              <TouchableOpacity style={styles.emptyUploadBtn} onPress={() => setUploadModalVisible(true)} activeOpacity={0.85}>
-                <Ionicons name="cloud-upload" size={14} color="#FFF" />
-                <Text style={styles.emptyUploadBtnText}>{t('Upload Document')}</Text>
+          {/* RECORDS */}
+          <View style={[styles.recordsWrap, isTablet && styles.recordsWrapTablet]}>
+            <View style={styles.recordsHeader}>
+              <Text style={styles.recordsHeaderText}>{filteredRecords.length} {filteredRecords.length === 1 ? t('Record') : t('Records')}</Text>
+              <TouchableOpacity style={styles.syncBtn} onPress={handleSync} disabled={isSyncing} activeOpacity={0.8}>
+                {isSyncing ? <ActivityIndicator size="small" color="#0F766E" /> : <Ionicons name="sync" size={14} color="#0F766E" />}
+                <Text style={styles.syncBtnText}>{isSyncing ? t('Syncing...') : t('Sync')}</Text>
               </TouchableOpacity>
             </View>
-          ) : isTablet ? (
-            <View style={styles.tabletGrid}>{filteredRecords.map(renderCard)}</View>
-          ) : (
-            filteredRecords.map(renderCard)
-          )}
+
+            {filteredRecords.length === 0 ? (
+              <View style={styles.emptyCard}>
+                <View style={styles.emptyIconCircle}><Ionicons name="folder-open-outline" size={40} color="#0D9488" /></View>
+                <Text style={styles.emptyTitle}>
+                  {searchQuery
+                    ? `No records matching "${searchQuery}"`
+                    : selectedCategory !== 'all'
+                    ? `No ${t(CATEGORY_TABS.find((t) => t.id === selectedCategory)?.label || '')} found`
+                    : t('No health records found')}
+                </Text>
+                <Text style={styles.emptySub}>
+                  {selectedPatientId !== 'self' && selectedPatientId !== selfMemberId
+                    ? 'No records linked to this family member yet.'
+                    : 'Upload a prescription or lab report to get started.'}
+                </Text>
+                <TouchableOpacity style={styles.emptyUploadBtn} onPress={() => setUploadModalVisible(true)} activeOpacity={0.85}>
+                  <Ionicons name="cloud-upload" size={14} color="#FFF" />
+                  <Text style={styles.emptyUploadBtnText}>{t('Upload Document')}</Text>
+                </TouchableOpacity>
+              </View>
+            ) : isTablet ? (
+              <View style={styles.tabletGrid}>{filteredRecords.map(renderCard)}</View>
+            ) : (
+              filteredRecords.map(renderCard)
+            )}
+          </View>
+
+          <View style={{ height: 40 }} />
         </View>
 
-        <View style={{ height: 40 }} />
+        {Platform.OS === 'web' && <WebFooter navigation={navigation} />}
       </ScrollView>
 
       {/* ── RECORD DETAIL MODAL ── */}
@@ -684,7 +694,7 @@ const HealthRecordsScreen = ({ navigation }) => {
 
 export default HealthRecordsScreen;
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: { flex: 1, backgroundColor: '#F8FAFC' },
   toast: {
     position: 'absolute', top: Platform.OS === 'android' ? 56 : 70, alignSelf: 'center',
@@ -694,12 +704,31 @@ const styles = StyleSheet.create({
   },
   toastText: { color: '#FFF', fontSize: 12.5, fontWeight: '700' },
   header: {
-    flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between',
-    paddingHorizontal: 16, paddingTop: Platform.OS === 'android' ? 12 : 8, paddingBottom: 12,
-    backgroundColor: '#FFF', borderBottomWidth: 1, borderBottomColor: '#F1F5F9',
+    backgroundColor: '#FFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    width: '100%',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingTop: Platform.OS === 'android' ? 12 : 8,
+    paddingBottom: 12,
+  },
+  webHeaderInner: {
+    maxWidth: 1080,
+    width: '100%',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+  headerLeftGroup: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    flex: 1,
   },
   backBtn: { width: 38, height: 38, borderRadius: 12, backgroundColor: '#F1F5F9', alignItems: 'center', justifyContent: 'center' },
-  headerCenter: { flex: 1, paddingHorizontal: 12 },
+  headerCenter: { flex: 1 },
   headerTitle: { fontSize: 18, fontWeight: '900', color: '#0F172A' },
   headerSubRow: { flexDirection: 'row', alignItems: 'center', gap: 5, marginTop: 2 },
   liveDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: '#10B981' },
@@ -710,7 +739,8 @@ const styles = StyleSheet.create({
     shadowColor: '#0F766E', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.2, shadowRadius: 4, elevation: 2,
   },
   uploadHeaderBtnText: { color: '#FFF', fontSize: 12, fontWeight: '800' },
-  scroll: { paddingBottom: 110 },
+  scroll: { paddingBottom: Platform.OS === 'web' ? 0 : 110 },
+  webInnerContainer: { maxWidth: 1080, width: '100%', alignSelf: 'center' },
   sectionRow: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 16, marginBottom: 10 },
   sectionLabelRow: { flexDirection: 'row', alignItems: 'center', gap: 6 },
   sectionLabel: { fontSize: 14, fontWeight: '800', color: '#0F172A' },
@@ -756,7 +786,7 @@ const styles = StyleSheet.create({
   syncBtnText: { fontSize: 11.5, fontWeight: '700', color: '#0F766E' },
   tabletGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: 14 },
   recordCard: { backgroundColor: '#FFF', borderRadius: 18, borderWidth: 1, borderColor: '#E2E8F0', padding: 14, marginBottom: 12, shadowColor: '#0F172A', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 2 },
-  recordCardTablet: { width: '48%' },
+  recordCardTablet: { width: Platform.OS === 'web' ? 'calc(50% - 7px)' : '48%' },
   cardTopRow: { flexDirection: 'row', alignItems: 'flex-start', gap: 10 },
   cardIconBox: { width: 42, height: 42, borderRadius: 12, alignItems: 'center', justifyContent: 'center' },
   cardTitleCol: { flex: 1 },

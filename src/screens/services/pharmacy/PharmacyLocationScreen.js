@@ -9,6 +9,7 @@ import {
   ActivityIndicator,
   Keyboard,
   Platform,
+  ScrollView,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { showAlert } from '../../../utils/alert';
@@ -25,6 +26,9 @@ import {
 
 import colors from '../../../theme/colors';
 import { useCart } from '../../../context/CartContext';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
+import WebFooter from '../../../components/web/WebFooter';
 
 const DEFAULT_LOCATION = {
   latitude: 12.2958,
@@ -32,6 +36,8 @@ const DEFAULT_LOCATION = {
 };
 
 const PharmacyLocationScreen = ({ navigation, route }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const mapRef = useRef(null);
   const { updateAddress, selectedAddress } = useCart();
 
@@ -212,137 +218,156 @@ const PharmacyLocationScreen = ({ navigation, route }) => {
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
       {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.secondary} />
-        </TouchableOpacity>
-
-        <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Select Location on Map</Text>
-          <Text style={styles.headerSubtitle}>Tap or drag pin to your exact delivery point</Text>
-        </View>
-
-        <TouchableOpacity
-          style={styles.gpsHeaderBtn}
-          onPress={getCurrentLocation}
-          disabled={loadingLocation}
-          activeOpacity={0.8}
-        >
-          {loadingLocation ? (
-            <ActivityIndicator size="small" color={colors.primary} />
-          ) : (
-            <Ionicons name="locate" size={22} color={colors.primary} />
-          )}
-        </TouchableOpacity>
-      </View>
-
-      {/* SEARCH BAR OVER MAP */}
-      <View style={styles.searchBarContainer}>
-        <Ionicons name="search" size={18} color={colors.primary} />
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search locality, street, or landmark..."
-          placeholderTextColor={colors.slate}
-          value={searchText}
-          onChangeText={setSearchText}
-          onSubmitEditing={searchLocation}
-          returnKeyType="search"
-        />
-        {searching ? (
-          <ActivityIndicator size="small" color={colors.primary} />
-        ) : (
-          <TouchableOpacity onPress={searchLocation} style={styles.searchGoBtn}>
-            <Text style={styles.searchGoText}>Search</Text>
-          </TouchableOpacity>
-        )}
-      </View>
-
-      {/* INTERACTIVE MAP */}
-      <View style={styles.mapContainer}>
-        <MapView
-          ref={mapRef}
-          style={styles.map}
-          initialRegion={{
-            latitude: location.latitude,
-            longitude: location.longitude,
-            latitudeDelta: 0.012,
-            longitudeDelta: 0.012,
-          }}
-          onPress={handleMapPress}
-          showsUserLocation
-          showsMyLocationButton={false}
-        >
-          <Marker
-            coordinate={location}
-            draggable
-            onDragEnd={handleMapPress}
-            title="Delivery Spot"
-            description={address}
+      <View style={[styles.header, Platform.OS === 'web' && { alignItems: 'center' }]}>
+        <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }, Platform.OS === 'web' && styles.webContainer]}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
           >
-            <View style={styles.customMarker}>
-              <View style={styles.markerCircle}>
-                <Ionicons name="location" size={24} color={colors.white} />
-              </View>
-              <View style={styles.markerArrow} />
-            </View>
-          </Marker>
-        </MapView>
+            <Ionicons name="arrow-back" size={22} color={isDarkMode ? theme.text : colors.secondary} />
+          </TouchableOpacity>
 
-        {/* GPS RE-CENTER FLOATING BUTTON */}
-        <TouchableOpacity
-          style={styles.myLocationFloatingBtn}
-          activeOpacity={0.85}
-          onPress={getCurrentLocation}
-        >
-          <Ionicons name="navigate" size={22} color={colors.primary} />
-        </TouchableOpacity>
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.headerTitle}>Select Location on Map</Text>
+            <Text style={styles.headerSubtitle}>Tap or drag pin to your exact delivery point</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.gpsHeaderBtn}
+            onPress={getCurrentLocation}
+            disabled={loadingLocation}
+            activeOpacity={0.8}
+          >
+            {loadingLocation ? (
+              <ActivityIndicator size="small" color={colors.primary} />
+            ) : (
+              <Ionicons name="locate" size={22} color={colors.primary} />
+            )}
+          </TouchableOpacity>
+        </View>
       </View>
 
-      {/* BOTTOM SELECTED ADDRESS CARD */}
-      <View style={styles.bottomCard}>
-        <View style={styles.addressTopRow}>
-          <View style={styles.locIconCircle}>
-            <Ionicons name="location" size={20} color={colors.primary} />
-          </View>
-          <View style={styles.addressDetailsWrap}>
-            <Text style={styles.addressHeading}>Deliver To This Address</Text>
-            {gettingAddress ? (
-              <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
-                <ActivityIndicator size="small" color={colors.primary} />
-                <Text style={styles.detectingText}>Fetching street details...</Text>
-              </View>
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={{ flexGrow: 1 }}
+        scrollEnabled={Platform.OS === 'web'}
+      >
+        <View style={Platform.OS === 'web' ? styles.webContainer : { flex: 1 }}>
+          {/* SEARCH BAR OVER MAP */}
+          <View style={styles.searchBarContainer}>
+            <Ionicons name="search" size={18} color={colors.primary} />
+            <TextInput
+              style={styles.searchInput}
+              placeholder="Search locality, street, or landmark..."
+              placeholderTextColor={colors.slate}
+              value={searchText}
+              onChangeText={setSearchText}
+              onSubmitEditing={searchLocation}
+              returnKeyType="search"
+            />
+            {searching ? (
+              <ActivityIndicator size="small" color={colors.primary} />
             ) : (
-              <Text style={styles.addressText} numberOfLines={2}>
-                {address}
-              </Text>
+              <TouchableOpacity onPress={searchLocation} style={styles.searchGoBtn}>
+                <Text style={styles.searchGoText}>Search</Text>
+              </TouchableOpacity>
             )}
-            <Text style={styles.addressCityPincode}>
-              {city} - {pincode}, {stateName}
-            </Text>
+          </View>
+
+          {/* INTERACTIVE MAP */}
+          <View style={styles.mapContainer}>
+            <MapView
+              ref={mapRef}
+              style={styles.map}
+              initialRegion={{
+                latitude: location.latitude,
+                longitude: location.longitude,
+                latitudeDelta: 0.012,
+                longitudeDelta: 0.012,
+              }}
+              onPress={handleMapPress}
+              showsUserLocation
+              showsMyLocationButton={false}
+            >
+              <Marker
+                coordinate={location}
+                draggable
+                onDragEnd={handleMapPress}
+                title="Delivery Spot"
+                description={address}
+              >
+                <View style={styles.customMarker}>
+                  <View style={styles.markerCircle}>
+                    <Ionicons name="location" size={24} color={colors.white} />
+                  </View>
+                  <View style={styles.markerArrow} />
+                </View>
+              </Marker>
+            </MapView>
+
+            {/* GPS RE-CENTER FLOATING BUTTON */}
+            <TouchableOpacity
+              style={styles.myLocationFloatingBtn}
+              activeOpacity={0.85}
+              onPress={getCurrentLocation}
+            >
+              <Ionicons name="navigate" size={22} color={colors.primary} />
+            </TouchableOpacity>
+          </View>
+
+          {/* BOTTOM SELECTED ADDRESS CARD */}
+          <View style={styles.bottomCard}>
+            <View style={styles.addressTopRow}>
+              <View style={styles.locIconCircle}>
+                <Ionicons name="location" size={20} color={colors.primary} />
+              </View>
+              <View style={styles.addressDetailsWrap}>
+                <Text style={styles.addressHeading}>Deliver To This Address</Text>
+                {gettingAddress ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginTop: 4 }}>
+                    <ActivityIndicator size="small" color={colors.primary} />
+                    <Text style={styles.detectingText}>Fetching street details...</Text>
+                  </View>
+                ) : (
+                  <Text style={styles.addressText} numberOfLines={2}>
+                    {address}
+                  </Text>
+                )}
+                <Text style={styles.addressCityPincode}>
+                  {city} - {pincode}, {stateName}
+                </Text>
+              </View>
+            </View>
+
+            <TouchableOpacity
+              style={styles.confirmBtn}
+              activeOpacity={0.85}
+              onPress={confirmLocation}
+            >
+              <Ionicons name="checkmark-circle" size={18} color={colors.white} />
+              <Text style={styles.confirmBtnText}>Confirm Location & Set Address</Text>
+            </TouchableOpacity>
           </View>
         </View>
 
-        <TouchableOpacity
-          style={styles.confirmBtn}
-          activeOpacity={0.85}
-          onPress={confirmLocation}
-        >
-          <Ionicons name="checkmark-circle" size={18} color={colors.white} />
-          <Text style={styles.confirmBtnText}>Confirm Location & Set Address</Text>
-        </TouchableOpacity>
-      </View>
+        {Platform.OS === 'web' && <WebFooter navigation={navigation} />}
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F4F8FA',
+  },
+  webContainer: {
+    maxWidth: 960,
+    width: '100%',
+    alignSelf: 'center',
+    flex: 1,
+    paddingBottom: 20,
   },
   header: {
     minHeight: 60,
@@ -423,6 +448,9 @@ const styles = StyleSheet.create({
   },
   mapContainer: {
     flex: 1,
+    minHeight: Platform.OS === 'web' ? 420 : undefined,
+    borderRadius: Platform.OS === 'web' ? 16 : 0,
+    overflow: 'hidden',
     position: 'relative',
   },
   map: {

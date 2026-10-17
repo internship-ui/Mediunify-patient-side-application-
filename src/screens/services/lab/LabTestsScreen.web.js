@@ -9,6 +9,7 @@ import {
   Modal,
   Platform,
   useWindowDimensions,
+  Image,
 } from 'react-native';
 import { SafeAreaView, useSafeAreaInsets } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
@@ -41,8 +42,9 @@ import {
   NOVUS_PACKAGE_CATEGORIES,
 } from '../../../data/novusPackagesData';
 import { useCart } from '../../../context/CartContext';
+import { isPackageItem } from '../../../utils/labPackageMatcher.js';
 import { useAuthGuard } from '../../../context/AuthGuardContext';
-import LabTestsScreenMobile from './LabTestsScreenMobile';
+import LabTestsScreenMobile from './LabTestsScreen.js';
 import { isDesktopLayout, isDesktopSiteRequested } from '../../../utils/responsiveLayoutHelper';
 
 const WEB_LAB_CATEGORIES = [
@@ -56,6 +58,119 @@ const WEB_LAB_CATEGORIES = [
   { id: 'women', name: "Women's Health", icon: 'woman-outline' },
   { id: 'routine', name: 'Routine Tests', icon: 'flask-outline' },
   { id: 'thyroid', name: 'Thyroid', icon: 'fitness-outline' },
+];
+
+export const LAB_HEALTH_CONDITIONS = [
+  {
+    id: 'diabetes-care',
+    titlePrimary: 'DIABETES',
+    titleSecondary: 'CARE',
+    badge: 'SUGAR & HbA1c',
+    tagline: 'Fasting, PP & HbA1c',
+    bg: '#00BB95',
+    accentColor: '#00BB95',
+    image: 'https://images.unsplash.com/photo-1615485290382-441e4d049cb5?w=600&auto=format&fit=crop&q=80',
+    categoryId: 'diabetes',
+  },
+  {
+    id: 'cardiac-care',
+    titlePrimary: 'CARDIAC',
+    titleSecondary: 'HEALTH',
+    badge: 'LIPID PROFILE',
+    tagline: 'Cholesterol & ECG',
+    bg: '#1E3A8A',
+    accentColor: '#1E3A8A',
+    image: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&auto=format&fit=crop&q=80',
+    categoryId: 'heart',
+  },
+  {
+    id: 'thyroid-care',
+    titlePrimary: 'THYROID',
+    titleSecondary: 'CARE',
+    badge: 'HORMONES',
+    tagline: 'T3, T4 & TSH Vital',
+    bg: '#7BC96F',
+    accentColor: '#7BC96F',
+    image: 'https://images.unsplash.com/photo-1579684385127-1ef15d508118?w=600&auto=format&fit=crop&q=80',
+    categoryId: 'thyroid',
+  },
+  {
+    id: 'full-body-care',
+    titlePrimary: 'FULL BODY',
+    titleSecondary: 'CHECKUP',
+    badge: '60+ TESTS',
+    tagline: 'Complete Wellness',
+    bg: '#00C2CB',
+    accentColor: '#00C2CB',
+    image: 'https://images.unsplash.com/photo-1584515979956-d9f6e5d09982?w=600&auto=format&fit=crop&q=80',
+    categoryId: 'full-body',
+  },
+  {
+    id: 'fever-care',
+    titlePrimary: 'FEVER &',
+    titleSecondary: 'INFECTION',
+    badge: 'FAST RESULT',
+    tagline: 'CBC, Dengue & Viral',
+    bg: '#FF7F50',
+    accentColor: '#FF7F50',
+    image: 'https://images.unsplash.com/photo-1584308666744-24d5c474f2ae?w=600&auto=format&fit=crop&q=80',
+    categoryId: 'fever',
+  },
+  {
+    id: 'women-wellness',
+    titlePrimary: "WOMEN'S",
+    titleSecondary: 'WELLNESS',
+    badge: 'CARE PANEL',
+    tagline: 'PCOD, Iron & Calcium',
+    bg: '#D946EF',
+    accentColor: '#D946EF',
+    image: 'https://images.unsplash.com/photo-1522771739844-6a9f6d5f14af?w=600&auto=format&fit=crop&q=80',
+    categoryId: 'women',
+  },
+  {
+    id: 'liver-care',
+    titlePrimary: 'LIVER',
+    titleSecondary: 'FUNCTION',
+    badge: 'LFT PROFILE',
+    tagline: 'Bilirubin, SGOT & SGPT',
+    bg: '#00BB95',
+    accentColor: '#00BB95',
+    image: 'https://images.unsplash.com/photo-1559757175-5700dde675bc?w=600&auto=format&fit=crop&q=80',
+    categoryId: 'routine',
+  },
+  {
+    id: 'kidney-care',
+    titlePrimary: 'KIDNEY',
+    titleSecondary: 'CARE',
+    badge: 'KFT / RFT',
+    tagline: 'Creatinine & Urea',
+    bg: '#3B82F6',
+    accentColor: '#3B82F6',
+    image: 'https://images.unsplash.com/photo-1576091160550-2173dba999ef?w=600&auto=format&fit=crop&q=80',
+    categoryId: 'routine',
+  },
+  {
+    id: 'vitamins-bones',
+    titlePrimary: 'VITAMINS &',
+    titleSecondary: 'BONES',
+    badge: 'DEFICIENCY',
+    tagline: 'Vitamin D, B12 & Iron',
+    bg: '#F59E0B',
+    accentColor: '#F59E0B',
+    image: 'https://images.unsplash.com/photo-1579722821273-0f6c7d44362f?w=600&auto=format&fit=crop&q=80',
+    categoryId: 'popular',
+  },
+  {
+    id: 'executive-health',
+    titlePrimary: 'EXECUTIVE',
+    titleSecondary: 'HEALTH',
+    badge: 'MASTER CHECK',
+    tagline: 'Comprehensive Panel',
+    bg: '#6366F1',
+    accentColor: '#6366F1',
+    image: 'https://images.unsplash.com/photo-1512069772995-ec65ed45afd6?w=600&auto=format&fit=crop&q=80',
+    categoryId: 'executive',
+  },
 ];
 
 const POPULAR_TESTS_MAP = {
@@ -83,11 +198,16 @@ const getShortFastingLabel = (item) => {
 
 const getShortTATLabel = (tat) => {
   if (!tat) return 'Reports in 24 hrs';
-  if (tat.includes('6–8') || tat.includes('6-8')) return 'Reports in 6–8 hrs';
-  if (tat.includes('12-24') || tat.includes('12–24')) return 'Reports in 24 hrs';
-  if (tat.includes('Same day') || tat.includes('Same Day')) return 'Same day reports';
-  if (tat.length > 20) return tat.split('(')[0].trim();
-  return tat;
+  const clean = tat.trim();
+  if (clean.toLowerCase().startsWith('report')) return clean;
+
+  if (clean.includes('6–8') || clean.includes('6-8')) return 'Reports in 6–8 hrs';
+  if (clean.includes('4–6') || clean.includes('4-6')) return 'Reports in 4–6 hrs';
+  if (clean.includes('12-24') || clean.includes('12–24')) return 'Reports in 24 hrs';
+  if (clean.toLowerCase().includes('same day')) return 'Reports in same day';
+
+  const formattedHours = clean.replace(/Hours?/i, 'hrs').replace(/\s*h\b/i, ' hrs');
+  return `Reports in ${formattedHours}`;
 };
 
 const getShortCategoryLabel = (item) => {
@@ -130,7 +250,14 @@ const LabTestsScreenWeb = (props) => {
   };
 
   // Cart integration
-  const { labCart = [], addToCart, removeFromCart, labCartCount = 0, labFinalTotal = 0 } = useCart();
+  const {
+    labCart = [],
+    addToCart,
+    removeFromCart,
+    labCartCount = 0,
+    labFinalTotal = 0,
+    checkTestInCartPackages,
+  } = useCart();
 
   const isTestInCart = (id) => labCart?.some((item) => item.id === id);
 
@@ -141,6 +268,15 @@ const LabTestsScreenWeb = (props) => {
     } else {
       if (!isTestAvailableInCity(test.id, currentCity) || availableCentres.length === 0) {
         showAlert('Service Unavailable', `${test.name} is not available in ${currentCity}.`);
+        return;
+      }
+      // Check if this test is already included in any cart package!
+      const packageCheck = checkTestInCartPackages ? checkTestInCartPackages(test) : { included: false };
+      if (packageCheck.included) {
+        showAlert(
+          'Test Already Included in Package',
+          `"${test.name}" is already included in "${packageCheck.packageName}" in your cart.\n\nYou do not need to book or pay for this test separately.`
+        );
         return;
       }
       const cartItem = {
@@ -156,7 +292,8 @@ const LabTestsScreenWeb = (props) => {
         homeSample: Boolean(test.homeCollection),
         fastingRequired: test.fastingRequired,
       };
-      addToCart(cartItem, 1, 'lab');
+      const res = addToCart(cartItem, 1, 'lab');
+      if (res && res.success === false) return;
       showAlert('Added to Cart', `${test.name} has been added to your cart.`);
     }
   };
@@ -172,6 +309,7 @@ const LabTestsScreenWeb = (props) => {
         return;
       }
       const cartItem = {
+        ...pkg,
         id: pkgId,
         name: pkg.name,
         category: 'Lab Test',
@@ -179,10 +317,16 @@ const LabTestsScreenWeb = (props) => {
         price: pkg.price,
         mrp: pkg.mrp || Math.round(pkg.price * 1.3),
         centerName: availableCentres[0]?.name || 'MediUnify Certified Diagnostic Center',
-        reportTime: 'Within 24-48 Hours',
-        sampleType: `${pkg.includedCount || pkg.testsCount || 'Multiple'} Tests Included`,
+        reportTime: pkg.tatSummary || 'Within 24-48 Hours',
+        sampleType: pkg.sampleSummary || `${pkg.includedCount || pkg.testsCount || 'Multiple'} Tests Included`,
         homeSample: true,
         isPackage: true,
+        tests: pkg.tests || [],
+        testsList: pkg.tests || [],
+        parametersList: pkg.parametersList || (pkg.tests ? pkg.tests.map(t => `${t.name} (${t.parameters})`) : []),
+        preparationSummary: pkg.preparationSummary,
+        sampleSummary: pkg.sampleSummary,
+        clinicalNote: pkg.clinicalNote,
       };
       addToCart(cartItem, 1, 'lab');
       showAlert('Added to Cart', `${pkg.name} has been added to your cart.`);
@@ -221,7 +365,19 @@ const LabTestsScreenWeb = (props) => {
   const [selectedPackage, setSelectedPackage] = useState(null);
 
   // Selected City & Location Filtering (Synchronized with Home Screen Location as Single Source of Truth)
-  const [currentCity, setCurrentCity] = useState('Mysuru');
+  const [currentCity, setCurrentCity] = useState(() => {
+    try {
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const direct =
+          window.localStorage.getItem('@mediunify_selected_city') ||
+          window.localStorage.getItem('@unnathi_user_location');
+        if (direct) {
+          return normalizeLabCity(direct);
+        }
+      }
+    } catch (e) { }
+    return 'Mysuru';
+  });
 
   const syncLocation = useCallback(async () => {
     try {
@@ -234,7 +390,72 @@ const LabTestsScreenWeb = (props) => {
           setCurrentCity((prev) => (prev !== norm ? norm : prev));
         }
       }
-    } catch (e) {}
+    } catch (e) { }
+  }, []);
+
+  // Inject Premium Hover CSS for Lab Test Cards, Buttons, and Chips
+  useEffect(() => {
+    if (Platform.OS === 'web' && typeof document !== 'undefined') {
+      const styleId = 'lab-premium-page-styles';
+      let styleEl = document.getElementById(styleId);
+      if (!styleEl) {
+        styleEl = document.createElement('style');
+        styleEl.id = styleId;
+        document.head.appendChild(styleEl);
+      }
+      styleEl.innerHTML = `
+        .lab-premium-card {
+          transition: transform 0.24s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.24s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.2s ease !important;
+        }
+        .lab-premium-card:hover {
+          transform: translateY(-5px) !important;
+          box-shadow: 0 20px 36px -10px rgba(0, 187, 149, 0.14), 0 6px 18px rgba(15, 23, 42, 0.05) !important;
+          border-color: #00BB95 !important;
+        }
+        .lab-action-btn {
+          transition: transform 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease !important;
+        }
+        .lab-action-btn:hover {
+          transform: translateY(-1.5px) !important;
+          filter: brightness(1.04) !important;
+        }
+        .lab-cta-btn {
+          transition: transform 0.2s ease, opacity 0.2s ease !important;
+          cursor: pointer !important;
+        }
+        .lab-cta-btn:hover {
+          transform: translateX(3px) !important;
+        }
+        .lab-category-chip-btn {
+          transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
+          flex-shrink: 0 !important;
+          white-space: nowrap !important;
+        }
+        .lab-category-chip-btn:hover {
+          transform: translateY(-1.5px) !important;
+          border-color: #00BB95 !important;
+        }
+        .lab-category-nav-btn {
+          transition: transform 0.2s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.16s ease !important;
+          cursor: pointer !important;
+          background: transparent !important;
+          border: none !important;
+          box-shadow: none !important;
+        }
+        .lab-category-nav-btn:hover {
+          transform: translateY(-50%) scale(1.22) !important;
+          opacity: 0.82 !important;
+        }
+        .lab-quick-search-tag {
+          transition: all 0.16s ease !important;
+        }
+        .lab-quick-search-tag:hover {
+          background-color: #ECFDF5 !important;
+          border-color: #00BB95 !important;
+          color: #00BB95 !important;
+        }
+      `;
+    }
   }, []);
 
   useEffect(() => {
@@ -278,16 +499,26 @@ const LabTestsScreenWeb = (props) => {
     return `${currentCity}, Karnataka`;
   }, [currentCity]);
 
-  // Revalidate cart items when selected city changes
+  const prevCityRef = useRef(currentCity);
+
+  // Revalidate cart items ONLY when selected city actually changes to a different city
   useEffect(() => {
-    if (!currentCity || !labCart || labCart.length === 0) return;
+    if (!currentCity) return;
+    if (prevCityRef.current === currentCity) {
+      return;
+    }
+    prevCityRef.current = currentCity;
+
+    if (!labCart || labCart.length === 0) return;
+
     const invalidItems = labCart.filter((item) => {
-      const isPkg = Boolean(item.isPackage || item.testsCount);
+      const isPkg = isPackageItem(item);
       const isAvail = isPkg
         ? isPackageAvailableInCity(item.id, currentCity)
         : isTestAvailableInCity(item.id, currentCity);
       return !isAvail;
     });
+
     if (invalidItems.length > 0) {
       invalidItems.forEach((inv) => removeFromCart(inv.id, 'lab'));
       showAlert(
@@ -295,7 +526,7 @@ const LabTestsScreenWeb = (props) => {
         `${invalidItems.map((i) => i.name).join(', ')} removed because it is unavailable in ${currentCity}.`
       );
     }
-  }, [currentCity, labCart]);
+  }, [currentCity]);
 
   // Booking Flow State
   const [bookingFlowStep, setBookingFlowStep] = useState(1);
@@ -379,7 +610,7 @@ const LabTestsScreenWeb = (props) => {
           if (p?.email && p.email.trim()) userEmail = p.email.trim();
           if (p?.age) userAge = p.age.toString().replace(/[^0-9]/g, '') || '28';
           if (p?.gender) userGender = p.gender;
-        } catch (e) {}
+        } catch (e) { }
       }
       if (!userName && storedUser) {
         try {
@@ -389,7 +620,7 @@ const LabTestsScreenWeb = (props) => {
           if (u?.email && u.email.trim()) userEmail = u.email.trim();
           if (u?.age) userAge = u.age.toString().replace(/[^0-9]/g, '') || '28';
           if (u?.gender) userGender = u.gender;
-        } catch (e) {}
+        } catch (e) { }
       }
       if (!userName && storedName && storedName.trim()) {
         userName = storedName.replace(/\s*\(Self\)$/i, '').trim();
@@ -417,7 +648,7 @@ const LabTestsScreenWeb = (props) => {
           if (Array.isArray(parsed) && parsed.length > 0) {
             familyList = parsed;
           }
-        } catch (e) {}
+        } catch (e) { }
       }
 
       // Fallback: check session family members only if it belongs to this user
@@ -432,22 +663,22 @@ const LabTestsScreenWeb = (props) => {
                 familyList = parsedG;
               }
             }
-          } catch (e) {}
+          } catch (e) { }
         }
       }
 
       // Filter out self/primary, ONLY take family members explicitly added by user
       const otherProfiles = (Array.isArray(familyList) && familyList.length > 0)
         ? familyList
-            .filter(m => m && m.id !== 'self' && m.relation !== 'Self' && !m.isPrimary)
-            .map((m, idx) => ({
-              id: m.id || `p-${idx + 2}`,
-              name: (m.name || m.displayName || 'Family Member').replace(/\s*\(.*?\)$/, '').trim(),
-              relation: m.relation || 'Family',
-              age: parseInt(m.age, 10) || 30,
-              gender: m.gender || 'Not specified',
-              phone: m.phone || userPhone || '',
-            }))
+          .filter(m => m && m.id !== 'self' && m.relation !== 'Self' && !m.isPrimary)
+          .map((m, idx) => ({
+            id: m.id || `p-${idx + 2}`,
+            name: (m.name || m.displayName || 'Family Member').replace(/\s*\(.*?\)$/, '').trim(),
+            relation: m.relation || 'Family',
+            age: parseInt(m.age, 10) || 30,
+            gender: m.gender || 'Not specified',
+            phone: m.phone || userPhone || '',
+          }))
         : [];
 
       const combined = [selfProfile, ...otherProfiles];
@@ -480,7 +711,7 @@ const LabTestsScreenWeb = (props) => {
             setBookingsList(Array.from(map.values()));
           }
         }
-      } catch (e) {}
+      } catch (e) { }
     };
     loadStoredLabBookings();
   }, []);
@@ -493,6 +724,46 @@ const LabTestsScreenWeb = (props) => {
 
   // Scroll ref
   const mainScrollRef = useRef(null);
+  const conditionScrollRef = useRef(null);
+  const [conditionScrollX, setConditionScrollX] = useState(0);
+
+  const handleScrollCondition = (direction) => {
+    const delta = direction === 'next' ? 320 : -320;
+    const target = Math.max(0, conditionScrollX + delta);
+    setConditionScrollX(target);
+    conditionScrollRef.current?.scrollTo({ x: target, animated: true });
+  };
+
+  // Category horizontal slider refs and state
+  const categoryScrollRef = useRef(null);
+  const [categoryScrollX, setCategoryScrollX] = useState(0);
+  const [canCategoryScrollLeft, setCanCategoryScrollLeft] = useState(false);
+  const [canCategoryScrollRight, setCanCategoryScrollRight] = useState(true);
+  const [categoryContainerWidth, setCategoryContainerWidth] = useState(0);
+  const [categoryContentWidth, setCategoryContentWidth] = useState(0);
+
+  const handleCategoryScroll = (e) => {
+    const { contentOffset, layoutMeasurement, contentSize } = e.nativeEvent;
+    const offsetX = contentOffset?.x || 0;
+    setCategoryScrollX(offsetX);
+    setCanCategoryScrollLeft(offsetX > 10);
+    const layoutW = layoutMeasurement?.width || categoryContainerWidth;
+    const contentW = contentSize?.width || categoryContentWidth;
+    if (layoutW && contentW) {
+      setCanCategoryScrollRight(offsetX + layoutW < contentW - 12);
+    }
+  };
+
+  const handleScrollCategory = (direction) => {
+    const delta = direction === 'next' ? 280 : -280;
+    const target = Math.max(0, categoryScrollX + delta);
+    setCategoryScrollX(target);
+    if (categoryScrollRef.current) {
+      if (typeof categoryScrollRef.current.scrollTo === 'function') {
+        categoryScrollRef.current.scrollTo({ x: target, animated: true });
+      }
+    }
+  };
 
   // Active category object
   const activeCategoryItem = useMemo(() => {
@@ -817,7 +1088,7 @@ const LabTestsScreenWeb = (props) => {
         age: 28,
         gender: 'Male',
         status: 'Slot Confirmed',
-        badgeColor: '#00B894',
+        badgeColor: '#00BB95',
         price: total,
         paymentStatus: 'Paid Online via UPI',
         instructions: 'Fasting of 10-12 hours required prior to sample collection. Water is permitted.',
@@ -878,13 +1149,13 @@ const LabTestsScreenWeb = (props) => {
 
         <View style={styles.webAvailBox}>
           <View style={styles.webAvailItem}>
-            <Ionicons name={test.homeCollection ? 'checkmark-circle' : 'close-circle'} size={14} color={test.homeCollection ? '#00B894' : '#94A3B8'} />
+            <Ionicons name={test.homeCollection ? 'checkmark-circle' : 'close-circle'} size={14} color={test.homeCollection ? '#00BB95' : '#94A3B8'} />
             <Text style={[styles.webAvailText, !test.homeCollection && styles.webAvailTextDisabled]}>
               {test.homeCollection ? 'Home Collection' : 'No Home Collection'}
             </Text>
           </View>
           <View style={styles.webAvailItem}>
-            <Ionicons name={test.centreCollection ? 'checkmark-circle' : 'close-circle'} size={14} color={test.centreCollection ? '#00B894' : '#94A3B8'} />
+            <Ionicons name={test.centreCollection ? 'checkmark-circle' : 'close-circle'} size={14} color={test.centreCollection ? '#00BB95' : '#94A3B8'} />
             <Text style={[styles.webAvailText, !test.centreCollection && styles.webAvailTextDisabled]}>
               {test.centreCollection ? 'Lab Visit' : 'No Lab Visit'}
             </Text>
@@ -901,30 +1172,64 @@ const LabTestsScreenWeb = (props) => {
           </View>
 
           <View style={{ flexDirection: 'row', gap: 6, alignItems: 'center' }}>
-            <TouchableOpacity
-              style={[styles.webAddToCartBtn, isTestInCart(test.id) && styles.webAddToCartBtnActive]}
-              onPress={() => handleToggleCartTest(test)}
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name={isTestInCart(test.id) ? 'checkmark-circle' : 'cart-outline'}
-                size={13}
-                color={isTestInCart(test.id) ? '#FFFFFF' : '#00B894'}
-              />
-              <Text
-                style={[
-                  styles.webAddToCartBtnText,
-                  isTestInCart(test.id) && styles.webAddToCartBtnTextActive,
-                ]}
-              >
-                {isTestInCart(test.id) ? 'In Cart' : 'Add'}
-              </Text>
-            </TouchableOpacity>
+            {(() => {
+              const inCart = isTestInCart(test.id);
+              const inPkg = !inCart && checkTestInCartPackages ? checkTestInCartPackages(test) : { included: false };
+              if (inPkg.included) {
+                return (
+                  <TouchableOpacity
+                    style={[styles.webAddToCartBtn, { backgroundColor: '#F0FDF4', borderColor: '#86EFAC' }]}
+                    onPress={() =>
+                      showAlert(
+                        'Covered in Cart Package',
+                        `"${test.name}" is already included in "${inPkg.packageName}" in your cart.\n\nYou do not need to book or pay for this test separately.`
+                      )
+                    }
+                    activeOpacity={0.8}
+                  >
+                    <Ionicons name="shield-checkmark" size={13} color="#00BB95" />
+                    <Text style={[styles.webAddToCartBtnText, { color: '#00BB95', fontWeight: '700' }]}>
+                      In Package
+                    </Text>
+                  </TouchableOpacity>
+                );
+              }
+              return (
+                <TouchableOpacity
+                  style={[styles.webAddToCartBtn, inCart && styles.webAddToCartBtnActive]}
+                  onPress={() => handleToggleCartTest(test)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name={inCart ? 'checkmark-circle' : 'cart-outline'}
+                    size={13}
+                    color={inCart ? '#FFFFFF' : '#00BB95'}
+                  />
+                  <Text
+                    style={[
+                      styles.webAddToCartBtnText,
+                      inCart && styles.webAddToCartBtnTextActive,
+                    ]}
+                  >
+                    {inCart ? 'In Cart' : 'Add'}
+                  </Text>
+                </TouchableOpacity>
+              );
+            })()}
             <TouchableOpacity style={styles.webDetailsBtn} onPress={() => setSelectedTest(test)}>
               <Text style={styles.webDetailsBtnText}>Details</Text>
             </TouchableOpacity>
-            <TouchableOpacity style={styles.webBookBtn} onPress={() => startBooking(test)}>
-              <Text style={styles.webBookBtnText}>Book</Text>
+            <TouchableOpacity
+              style={styles.labOrganicCtaBtn}
+              // @ts-ignore
+              className="lab-cta-btn"
+              onPress={() => startBooking(test)}
+              activeOpacity={0.8}
+            >
+              <View style={styles.labOrganicArrowCircle}>
+                <Ionicons name="arrow-forward" size={11} color="#00BB95" />
+              </View>
+              <Text style={styles.labOrganicCtaText}>Book Now</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -941,38 +1246,51 @@ const LabTestsScreenWeb = (props) => {
 
     return (
       <View style={styles.webMainContentWrapper}>
-        {/* 1. PAGE TITLE, BACK ARROW & CITY LOCATION BADGE */}
-        <View style={styles.webHeaderSection}>
-          <View style={styles.webHeaderTopRow}>
-            <View style={styles.webHeaderTitleLeft}>
+        {/* 1. COLORFUL HERO HEADER BANNER (REDUCED TEXT, NO QUICK SEARCH) */}
+        <View style={styles.webHeroBanner}>
+          <View style={styles.heroTopRow}>
+            <View style={styles.heroTitleGroup}>
               <TouchableOpacity
-                style={styles.backButton}
+                style={styles.heroBackButton}
                 onPress={handleGoBack}
                 accessibilityRole="button"
                 accessibilityLabel="Go back"
-                activeOpacity={0.7}
+                activeOpacity={0.8}
               >
-                <Ionicons name="arrow-back-outline" size={22} color="#0F172A" />
+                <Ionicons name="arrow-back" size={20} color="#00BB95" />
               </TouchableOpacity>
-              <View>
-                <View style={styles.titleAndLocationRow}>
-                  <Text style={styles.webPageTitle}>Lab Tests</Text>
-                  <View style={styles.selectedCityBadge}>
-                    <Ionicons name="location-sharp" size={14} color="#007D69" style={{ marginRight: 4 }} />
-                    <Text style={styles.selectedCityBadgeText}>{displayCityLocation}</Text>
+              <View style={{ flex: 1 }}>
+                <View style={styles.heroBadgeRow}>
+                  <View style={styles.heroVerifiedBadge}>
+                    <Ionicons name="shield-checkmark" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
+                    <Text style={styles.heroVerifiedBadgeText}>VERIFIED LAB NETWORK</Text>
                   </View>
                 </View>
-                <Text style={styles.webPageSubtitle}>Find and book lab tests.</Text>
+                <Text style={styles.heroMainTitle}>Diagnostic Lab Tests</Text>
+                <Text style={styles.heroSubtitle}>
+                  Doorstep sample collection with certified 24-hr digital reports.
+                </Text>
+              </View>
+            </View>
+
+            {/* City Location Indicator Card */}
+            <View style={styles.heroCityCard}>
+              <View style={styles.heroCityStatusDot} />
+              <Ionicons name="location-sharp" size={16} color="#00BB95" style={{ marginRight: 6 }} />
+              <View>
+                <Text style={styles.heroCityLabel}>City</Text>
+                <Text style={styles.heroCityValue}>{displayCityLocation}</Text>
               </View>
             </View>
           </View>
 
-          {/* 2. PROMINENT SEARCH BAR */}
+
+          {/* Floating Search Bar (Quick Search Removed) */}
           <View style={styles.webSearchBarWrap}>
-            <Ionicons name="search-outline" size={20} color="#007D69" style={{ marginLeft: 4, marginRight: 10 }} />
+            <Ionicons name="search" size={20} color="#00BB95" style={{ marginLeft: 4, marginRight: 12 }} />
             <TextInput
               style={styles.webSearchInput}
-              placeholder="Search tests or packages"
+              placeholder="Search tests (e.g. CBC, HbA1c, Thyroid, Lipid Profile) or packages..."
               placeholderTextColor="#94A3B8"
               value={searchQuery}
               onChangeText={(text) => {
@@ -989,134 +1307,232 @@ const LabTestsScreenWeb = (props) => {
                 }}
                 hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
                 accessibilityLabel="Clear Search"
+                style={{ padding: 4 }}
               >
-                <Ionicons name="close-circle" size={18} color="#94A3B8" />
+                <Ionicons name="close-circle" size={20} color="#94A3B8" />
               </TouchableOpacity>
             )}
           </View>
         </View>
 
-        {/* 3. COMPACT CATEGORY SELECTOR (WRAPS ON DESKTOP SO ALL ARE FULLY ACCESSIBLE) */}
+        {/* 2. CATEGORIES SELECTOR */}
         <View style={styles.webCategoriesSection}>
           <View style={styles.categoriesHeaderRow}>
             <Text style={styles.categoriesSectionTitle}>Categories</Text>
             {hasActiveFilter && (
               <TouchableOpacity
-                style={styles.resetFilterChip}
                 onPress={resetAllFilters}
-                accessibilityRole="button"
-                accessibilityLabel="Reset Filter"
+                style={styles.activeFilterChip}
+                activeOpacity={0.8}
               >
-                <Ionicons name="close-circle-outline" size={14} color="#059669" style={{ marginRight: 4 }} />
-                <Text style={styles.resetFilterChipText}>Reset Filter</Text>
+                <Ionicons name="close-circle" size={14} color="#FF7F50" style={{ marginRight: 4 }} />
+                <Text style={styles.activeFilterChipText}>Reset Filter</Text>
               </TouchableOpacity>
             )}
           </View>
 
-          <View style={styles.webCategoriesWrapContainer}>
-            {WEB_LAB_CATEGORIES.map((cat) => {
-              const isSel = selectedCategory === cat.id;
-              return (
-                <TouchableOpacity
-                  key={cat.id}
-                  style={[styles.webCategoryChip, isSel && styles.webCategoryChipActive]}
-                  onPress={() => {
-                    setSelectedCategory(isSel && cat.id !== 'all' ? 'all' : cat.id);
-                    setCurrentPage(1);
-                  }}
-                  activeOpacity={0.8}
-                >
-                  <Ionicons
-                    name={cat.icon}
-                    size={15}
-                    color={isSel ? '#FFFFFF' : '#007D69'}
-                    style={{ marginRight: 7 }}
-                  />
-                  <Text
-                    style={[styles.webCategoryChipText, isSel && styles.webCategoryChipTextActive]}
+          <View style={styles.categoriesScrollWrapper}>
+            {canCategoryScrollLeft && (
+              <TouchableOpacity
+                // @ts-ignore
+                className="lab-category-nav-btn"
+                style={[styles.categoryNavBtn, styles.categoryPrevBtn]}
+                onPress={() => handleScrollCategory('prev')}
+                activeOpacity={0.7}
+                hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+                accessibilityLabel="Scroll categories left"
+              >
+                <Ionicons name="chevron-back" size={30} color="#00BB95" />
+              </TouchableOpacity>
+            )}
+
+            <ScrollView
+              ref={categoryScrollRef}
+              horizontal
+              showsHorizontalScrollIndicator={false}
+              contentContainerStyle={styles.categoriesScrollContent}
+              onScroll={handleCategoryScroll}
+              scrollEventThrottle={16}
+              onContentSizeChange={(w) => {
+                setCategoryContentWidth(w);
+                if (categoryContainerWidth > 0) {
+                  setCanCategoryScrollRight(categoryScrollX + categoryContainerWidth < w - 12);
+                }
+              }}
+              onLayout={(e) => {
+                const w = e.nativeEvent.layout.width;
+                setCategoryContainerWidth(w);
+                if (categoryContentWidth > 0) {
+                  setCanCategoryScrollRight(categoryScrollX + w < categoryContentWidth - 12);
+                }
+              }}
+            >
+              {WEB_LAB_CATEGORIES.map((cat) => {
+                const isSel = selectedCategory === cat.id;
+                return (
+                  <TouchableOpacity
+                    key={cat.id}
+                    // @ts-ignore
+                    className="lab-category-chip-btn"
+                    style={[styles.webCategoryChip, isSel && styles.webCategoryChipActive]}
+                    onPress={() => {
+                      setSelectedCategory(isSel && cat.id !== 'all' ? 'all' : cat.id);
+                      setCurrentPage(1);
+                    }}
+                    activeOpacity={0.8}
                   >
-                    {cat.name}
-                  </Text>
-                </TouchableOpacity>
-              );
-            })}
+                    <Ionicons
+                      name={cat.icon}
+                      size={15}
+                      color={isSel ? '#FFFFFF' : '#00BB95'}
+                      style={{ marginRight: 7 }}
+                    />
+                    <Text
+                      style={[styles.webCategoryChipText, isSel && styles.webCategoryChipTextActive]}
+                      numberOfLines={1}
+                    >
+                      {cat.name}
+                    </Text>
+                  </TouchableOpacity>
+                );
+              })}
+            </ScrollView>
+
+            {canCategoryScrollRight && (
+              <TouchableOpacity
+                // @ts-ignore
+                className="lab-category-nav-btn"
+                style={[styles.categoryNavBtn, styles.categoryNextBtn]}
+                onPress={() => handleScrollCategory('next')}
+                activeOpacity={0.7}
+                hitSlop={{ top: 14, bottom: 14, left: 14, right: 14 }}
+                accessibilityLabel="Scroll categories right"
+              >
+                <Ionicons name="chevron-forward" size={30} color="#00BB95" />
+              </TouchableOpacity>
+            )}
           </View>
         </View>
 
-        {/* 4. TEST COUNT BAR */}
+        {/* 3. TEST COUNT & CITY BANNER */}
         <View style={styles.webResultsBar}>
-          <Text style={styles.webResultsCountText}>
-            {unifiedLabItems.length} {unifiedLabItems.length === 1 ? 'test' : 'tests'} available
-            {selectedCategory !== 'all' ? ` in ${activeCategoryItem?.name || selectedCategory}` : ''}
-            {` in ${currentCity}`}
-          </Text>
+          <View style={styles.resultsBarLeft}>
+            <Ionicons name="checkmark-done-circle" size={18} color="#00BB95" style={{ marginRight: 6 }} />
+            <Text style={styles.webResultsCountText}>
+              Showing <Text style={{ fontWeight: '800', color: '#0F172A' }}>{unifiedLabItems.length}</Text> certified {unifiedLabItems.length === 1 ? 'test' : 'tests'}
+              {selectedCategory !== 'all' ? ` in ${activeCategoryItem?.name || selectedCategory}` : ''}
+              {` in `}<Text style={{ fontWeight: '700', color: '#00BB95' }}>{currentCity}</Text>
+            </Text>
+          </View>
+          <View style={styles.resultsBarRight}>
+            <Ionicons name="home-outline" size={14} color="#00BB95" style={{ marginRight: 4 }} />
+            <Text style={styles.resultsBarRightText}>Home Sample Collection in 60 Mins</Text>
+          </View>
         </View>
 
-        {/* 5. CLEAN GRID OF TEST CARDS */}
+        {/* 4. PREMIUM GRID OF TEST CARDS */}
         {unifiedLabItems.length > 0 ? (
           <>
             <View style={styles.webCardsGrid}>
               {paginatedLabItems.map((item) => {
                 const inCart = isTestInCart(item.id);
                 const isPkg = item.isPackage;
+                const inPkg = !inCart && !isPkg && checkTestInCartPackages ? checkTestInCartPackages(item) : { included: false };
+
+                // Color badge tokens per category
+                const catLower = (item.displayCategory || '').toLowerCase();
+                let catBg = '#F0FDF4';
+                let catBorder = '#DCFCE7';
+                let catColor = '#00BB95';
+                if (catLower.includes('routine')) {
+                  catBg = '#EFF6FF'; catBorder = '#DBEAFE'; catColor = '#1D4ED8';
+                } else if (catLower.includes('diabetes')) {
+                  catBg = '#FFFBEB'; catBorder = '#FDE68A'; catColor = '#B45309';
+                } else if (catLower.includes('heart')) {
+                  catBg = '#FEF2F2'; catBorder = '#FEE2E2'; catColor = '#DC2626';
+                } else if (catLower.includes('women')) {
+                  catBg = '#FDF2F8'; catBorder = '#FCE7F3'; catColor = '#BE185D';
+                }
+
+                const isFastingRequired = (item.fastingSummary || '').toLowerCase().includes('fasting required');
+
                 return (
-                  <View key={item.id} style={styles.webCardItem}>
-                    {/* Header: Short Category & TAT */}
+                  <View
+                    key={item.id}
+                    style={styles.webCardItem}
+                    // @ts-ignore
+                    className="lab-premium-card"
+                  >
+                    {/* Top Row: Category Pill & TAT Badge */}
                     <View style={styles.cardHeaderBadgesRow}>
-                      <View style={styles.categoryPillWrap}>
-                        <Text style={styles.cardCategoryText} numberOfLines={1}>
+                      <View style={[styles.categoryPillWrap, { backgroundColor: catBg, borderColor: catBorder }]}>
+                        <Text style={[styles.cardCategoryText, { color: catColor }]} numberOfLines={1}>
                           {item.displayCategory || (isPkg ? 'Health Checkup' : 'Diagnostic Test')}
                         </Text>
                       </View>
                       <View style={styles.tatBadge}>
-                        <Ionicons name="time-outline" size={12} color="#047857" style={{ marginRight: 4 }} />
+                        <Ionicons name="flash" size={12} color="#00BB95" style={{ marginRight: 4 }} />
                         <Text style={styles.tatBadgeText} numberOfLines={1}>
                           {item.tatSummary}
                         </Text>
                       </View>
                     </View>
 
-                    {/* Test / Package Name */}
+                    {/* Test / Package Name (Subtitles removed for clean, user-friendly look) */}
                     <TouchableOpacity
                       onPress={() => (isPkg ? setSelectedPackage(item) : setSelectedTest(item))}
                       activeOpacity={0.85}
+                      style={{ marginBottom: 12 }}
                     >
                       <Text style={styles.cardTitle} numberOfLines={2}>
                         {item.name}
                       </Text>
                     </TouchableOpacity>
 
-                    {/* Key Details: Tests Included / Sample & Fasting */}
+                    {/* Clinical Details: Sample & Fasting */}
                     <View style={styles.cardKeyDetailsRow}>
                       <View style={styles.keyDetailItem}>
                         <Ionicons
-                          name={isPkg ? 'cube-outline' : 'flask-outline'}
+                          name={isPkg ? 'cube-outline' : 'water-outline'}
                           size={13}
-                          color="#64748B"
+                          color="#00BB95"
                           style={{ marginRight: 5 }}
                         />
                         <Text style={styles.keyDetailText} numberOfLines={1}>
                           {item.sampleLabel}
                         </Text>
                       </View>
-                      <View style={styles.keyDetailItem}>
+                      <View
+                        style={[
+                          styles.keyDetailItem,
+                          isFastingRequired ? styles.fastingRequiredBadge : styles.fastingNotRequiredBadge,
+                        ]}
+                      >
                         <Ionicons
-                          name="restaurant-outline"
+                          name={isFastingRequired ? 'timer-outline' : 'restaurant-outline'}
                           size={13}
-                          color="#64748B"
+                          color={isFastingRequired ? '#B45309' : '#15803D'}
                           style={{ marginRight: 5 }}
                         />
-                        <Text style={styles.keyDetailText} numberOfLines={1}>
+                        <Text
+                          style={[
+                            styles.keyDetailText,
+                            { color: isFastingRequired ? '#B45309' : '#15803D', fontWeight: '700' },
+                          ]}
+                          numberOfLines={1}
+                        >
                           {item.fastingSummary}
                         </Text>
                       </View>
                     </View>
 
-                    {/* Footer: Price Row + Action Buttons Row */}
+                    {/* Footer: Price Row + Action Buttons */}
                     <View style={styles.cardFooterWrap}>
                       <View style={styles.cardPriceRow}>
-                        <Text style={styles.cardPrice}>₹{item.price}</Text>
-                        {item.mrp && <Text style={styles.cardMrp}>₹{item.mrp}</Text>}
+                        <View style={{ flexDirection: 'row', alignItems: 'baseline', gap: 6 }}>
+                          <Text style={styles.cardPrice}>₹{item.price}</Text>
+                          {item.mrp && <Text style={styles.cardMrp}>₹{item.mrp}</Text>}
+                        </View>
                         {item.discount && (
                           <View style={styles.discountBadge}>
                             <Text style={styles.discountBadgeText}>{item.discount}</Text>
@@ -1125,40 +1541,75 @@ const LabTestsScreenWeb = (props) => {
                       </View>
 
                       <View style={styles.cardActionBtnsRow}>
-                        <TouchableOpacity
-                          style={styles.detailsBtn}
-                          onPress={() => (isPkg ? setSelectedPackage(item) : setSelectedTest(item))}
-                          activeOpacity={0.8}
-                          accessibilityRole="button"
-                          accessibilityLabel="Details"
-                        >
-                          <Text style={styles.detailsBtnText}>Details</Text>
-                        </TouchableOpacity>
+                        <View style={styles.cardLeftActions}>
+                          {/* 1. Details Button */}
+                          <TouchableOpacity
+                            style={styles.detailsBtn}
+                            // @ts-ignore
+                            className="lab-action-btn"
+                            onPress={() => (isPkg ? setSelectedPackage(item) : setSelectedTest(item))}
+                            activeOpacity={0.8}
+                            accessibilityRole="button"
+                            accessibilityLabel="Details"
+                          >
+                            <Ionicons name="information-circle-outline" size={14} color="#475569" style={{ marginRight: 4 }} />
+                            <Text style={styles.detailsBtnText}>Details</Text>
+                          </TouchableOpacity>
 
-                        <TouchableOpacity
-                          style={[styles.cartIconBtn, inCart && styles.cartIconBtnActive]}
-                          onPress={() => (isPkg ? handleToggleCartPackage(item) : handleToggleCartTest(item))}
-                          activeOpacity={0.8}
-                          hitSlop={{ top: 6, bottom: 6, left: 6, right: 6 }}
-                          accessibilityRole="button"
-                          accessibilityLabel="Add to Cart"
-                        >
-                          <Ionicons
-                            name={inCart ? 'checkmark-circle' : 'cart-outline'}
-                            size={16}
-                            color={inCart ? '#FFFFFF' : '#007D69'}
-                          />
-                        </TouchableOpacity>
+                          {/* 2. Cart / In Package Button */}
+                          {inPkg.included ? (
+                            <TouchableOpacity
+                              style={styles.inPackageBtn}
+                              // @ts-ignore
+                              className="lab-action-btn"
+                              onPress={() =>
+                                showAlert(
+                                  'Covered in Cart Package',
+                                  `"${item.name}" is already included in "${inPkg.packageName}" in your cart.\n\nYou do not need to book or pay for this test separately.`
+                                )
+                              }
+                              activeOpacity={0.8}
+                            >
+                              <Ionicons name="shield-checkmark" size={14} color="#00BB95" style={{ marginRight: 4 }} />
+                              <Text style={styles.inPackageBtnText}>In Package</Text>
+                            </TouchableOpacity>
+                          ) : (
+                            <TouchableOpacity
+                              style={[styles.cartIconBtn, inCart && styles.cartIconBtnActive]}
+                              // @ts-ignore
+                              className="lab-action-btn"
+                              onPress={() => (isPkg ? handleToggleCartPackage(item) : handleToggleCartTest(item))}
+                              activeOpacity={0.8}
+                              accessibilityRole="button"
+                              accessibilityLabel={inCart ? "In Cart" : "Add to Cart"}
+                            >
+                              <Ionicons
+                                name={inCart ? 'checkmark-circle' : 'cart-outline'}
+                                size={15}
+                                color={inCart ? '#FFFFFF' : '#00BB95'}
+                                style={{ marginRight: 4 }}
+                              />
+                              <Text style={[styles.cartIconBtnText, inCart && styles.cartIconBtnTextActive]}>
+                                {inCart ? 'In Cart' : '+ Add'}
+                              </Text>
+                            </TouchableOpacity>
+                          )}
+                        </View>
 
+                        {/* 3. Primary Book Now CTA (User circular arrow design) */}
                         <TouchableOpacity
-                          style={styles.bookPrimaryBtn}
+                          style={styles.labOrganicCtaBtn}
+                          // @ts-ignore
+                          className="lab-cta-btn"
                           onPress={() => startBooking(item)}
-                          activeOpacity={0.85}
+                          activeOpacity={0.8}
                           accessibilityRole="button"
                           accessibilityLabel="Book Test"
                         >
-                          <Ionicons name="calendar-outline" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
-                          <Text style={styles.bookPrimaryBtnText}>Book Test</Text>
+                          <View style={styles.labOrganicArrowCircle}>
+                            <Ionicons name="arrow-forward" size={11} color="#00BB95" />
+                          </View>
+                          <Text style={styles.labOrganicCtaText}>Book Now</Text>
                         </TouchableOpacity>
                       </View>
                     </View>
@@ -1169,7 +1620,7 @@ const LabTestsScreenWeb = (props) => {
 
             {/* Pagination Controls */}
             {totalPages > 1 && (
-              <View style={{ marginTop: 24, marginBottom: 8 }}>
+              <View style={{ marginTop: 28, marginBottom: 8 }}>
                 <Pagination
                   currentPage={safeCurrentPage}
                   totalPages={totalPages}
@@ -1322,7 +1773,7 @@ const LabTestsScreenWeb = (props) => {
               <View style={styles.reportCardTop}>
                 <Text style={styles.reportCardId}>{rep.id}</Text>
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                  <Ionicons name="checkmark-circle" size={13} color="#00B894" />
+                  <Ionicons name="checkmark-circle" size={13} color="#00BB95" />
                   <Text style={styles.reportReadyPillText}>Verified & Released</Text>
                 </View>
               </View>
@@ -1332,7 +1783,7 @@ const LabTestsScreenWeb = (props) => {
               <Text style={styles.reportMetaLabel}>Reported: {rep.reportDate}</Text>
               <View style={{ flexDirection: 'row', gap: 10, marginTop: 12 }}>
                 <TouchableOpacity style={styles.reportDownloadBtn} onPress={() => setShowDownloadToast(true)}>
-                  <Ionicons name="download" size={14} color="#00B894" />
+                  <Ionicons name="download" size={14} color="#00BB95" />
                   <Text style={styles.reportDownloadBtnText}>Download</Text>
                 </TouchableOpacity>
                 <TouchableOpacity style={styles.reportViewFullBtn} onPress={() => setSelectedReport(rep)}>
@@ -1457,7 +1908,7 @@ const LabTestsScreenWeb = (props) => {
                     <Ionicons
                       name={isTestInCart(selectedTest.id) ? 'checkmark-circle' : 'cart-outline'}
                       size={15}
-                      color={isTestInCart(selectedTest.id) ? '#FFFFFF' : '#00B894'}
+                      color={isTestInCart(selectedTest.id) ? '#FFFFFF' : '#00BB95'}
                     />
                     <Text
                       style={[
@@ -1491,7 +1942,7 @@ const LabTestsScreenWeb = (props) => {
               <View style={styles.modalHeaderRow}>
                 <View style={{ flex: 1 }}>
                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-                    <View style={{ backgroundColor: '#00B894', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
+                    <View style={{ backgroundColor: '#00BB95', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 6 }}>
                       <Text style={{ fontSize: 11, fontWeight: '700', color: '#FFFFFF' }}>{selectedPackage.code}</Text>
                     </View>
                     <Text style={{ fontSize: 11.5, fontWeight: '600', color: '#64748B' }}>{selectedPackage.category}</Text>
@@ -1522,8 +1973,8 @@ const LabTestsScreenWeb = (props) => {
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 16 }}>
                   <View style={{ flex: 1, minWidth: 140, backgroundColor: '#F0FDF4', borderRadius: 8, padding: 10, borderWidth: 1, borderColor: '#DCFCE7' }}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
-                      <Ionicons name="time-outline" size={13} color="#059669" />
-                      <Text style={{ fontSize: 11, color: '#059669', fontWeight: '700' }}>Turnaround Time (TAT)</Text>
+                      <Ionicons name="time-outline" size={13} color="#00BB95" />
+                      <Text style={{ fontSize: 11, color: '#00BB95', fontWeight: '700' }}>Turnaround Time (TAT)</Text>
                     </View>
                     <Text style={{ fontSize: 12, color: '#0F172A', fontWeight: '600', marginTop: 2 }}>{selectedPackage.tatSummary || '6–8 Hours'}</Text>
                   </View>
@@ -1559,7 +2010,7 @@ const LabTestsScreenWeb = (props) => {
                       style={{
                         backgroundColor: isExpanded ? '#F8FAFC' : '#FFFFFF',
                         borderWidth: 1,
-                        borderColor: isExpanded ? '#00B894' : '#E2E8F0',
+                        borderColor: isExpanded ? '#00BB95' : '#E2E8F0',
                         borderRadius: 10,
                         marginBottom: 8,
                         overflow: 'hidden',
@@ -1575,7 +2026,7 @@ const LabTestsScreenWeb = (props) => {
                         onPress={() => setExpandedTestIndex(isExpanded ? null : idx)}
                       >
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flex: 1 }}>
-                          <Ionicons name="checkmark-circle" size={18} color="#00B894" />
+                          <Ionicons name="checkmark-circle" size={18} color="#00BB95" />
                           <View style={{ flex: 1 }}>
                             <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>{testItem.name}</Text>
                             <Text style={{ fontSize: 11, color: '#64748B', marginTop: 1 }} numberOfLines={isExpanded ? undefined : 1}>
@@ -1637,7 +2088,7 @@ const LabTestsScreenWeb = (props) => {
                   <Text style={styles.modalPriceText}>₹{selectedPackage.price}</Text>
                   <Text style={styles.modalMrpText}>₹{selectedPackage.mrp || Math.round(selectedPackage.price * 1.5)}</Text>
                   {Boolean(selectedPackage.discount) && (
-                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#00B894' }}>{selectedPackage.discount}</Text>
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#00BB95' }}>{selectedPackage.discount}</Text>
                   )}
                 </View>
                 <View style={{ flexDirection: 'row', gap: 10, alignItems: 'center' }}>
@@ -1653,7 +2104,7 @@ const LabTestsScreenWeb = (props) => {
                     <Ionicons
                       name={isTestInCart(selectedPackage.id) ? 'checkmark-circle' : 'cart-outline'}
                       size={15}
-                      color={isTestInCart(selectedPackage.id) ? '#FFFFFF' : '#00B894'}
+                      color={isTestInCart(selectedPackage.id) ? '#FFFFFF' : '#00BB95'}
                     />
                     <Text
                       style={[
@@ -1735,8 +2186,8 @@ const LabTestsScreenWeb = (props) => {
                           cursor: 'pointer',
                         }}
                       >
-                        <Ionicons name="person-add-outline" size={13} color="#00B894" />
-                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#00B894', marginLeft: 4 }}>+ Add Family Member</Text>
+                        <Ionicons name="person-add-outline" size={13} color="#00BB95" />
+                        <Text style={{ fontSize: 12, fontWeight: '700', color: '#00BB95', marginLeft: 4 }}>+ Add Family Member</Text>
                       </TouchableOpacity>
                     </View>
                     <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 8, marginBottom: 14 }}>
@@ -1774,7 +2225,7 @@ const LabTestsScreenWeb = (props) => {
                         <View style={[styles.methodRadio, isHome && styles.methodRadioActive]}>{isHome && <View style={styles.methodRadioInner} />}</View>
                         <View style={{ flex: 1, marginLeft: 10 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Ionicons name="home-outline" size={16} color="#00B894" />
+                            <Ionicons name="home-outline" size={16} color="#00BB95" />
                             <Text style={styles.methodSelectTitle}>Home Sample Collection</Text>
                           </View>
                           <Text style={styles.methodSelectSub}>Trained phlebotomist visits your address.</Text>
@@ -1787,24 +2238,24 @@ const LabTestsScreenWeb = (props) => {
                         <View style={[styles.methodRadio, !isHome && styles.methodRadioActive]}>{!isHome && <View style={styles.methodRadioInner} />}</View>
                         <View style={{ flex: 1, marginLeft: 10 }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                            <Ionicons name="business-outline" size={16} color="#00B894" />
+                            <Ionicons name="business-outline" size={16} color="#00BB95" />
                             <Text style={styles.methodSelectTitle}>Diagnostic Centre Visit</Text>
                           </View>
                           <Text style={styles.methodSelectSub}>Walk into any verified lab partner in Mysuru.</Text>
-                          <Text style={[styles.methodFeeTag, { color: '#00B894' }]}>Collection Fee: FREE</Text>
+                          <Text style={[styles.methodFeeTag, { color: '#00BB95' }]}>Collection Fee: FREE</Text>
                         </View>
                       </TouchableOpacity>
                     )}
                   </ScrollView>
                 )}
 
-                  {/* STEP 2 */}
+                {/* STEP 2 */}
                 {bookingFlowStep === 2 && (
                   <ScrollView showsVerticalScrollIndicator={false} style={{ maxHeight: 380 }}>
                     {isHome ? (
                       <View style={styles.stepBlock}>
                         <View style={styles.manualAddressHeader}>
-                          <Ionicons name="home" size={18} color="#00B894" />
+                          <Ionicons name="home" size={18} color="#00BB95" />
                           <Text style={styles.stepBlockTitle}>Sample Collection Address</Text>
                         </View>
                         <Text style={styles.manualAddressSubtitle}>Enter the address where the phlebotomist should visit</Text>
@@ -1879,7 +2330,7 @@ const LabTestsScreenWeb = (props) => {
                                 style={{ flex: 1, flexDirection: 'row', alignItems: 'flex-start' }}
                                 onPress={() => setSelectedCentreId(centre.id)}
                               >
-                                <Ionicons name="business-outline" size={20} color={isSel ? '#00B894' : '#64748B'} style={{ marginTop: 2 }} />
+                                <Ionicons name="business-outline" size={20} color={isSel ? '#00BB95' : '#64748B'} style={{ marginTop: 2 }} />
                                 <View style={{ flex: 1, marginLeft: 10, marginRight: 8 }}>
                                   <Text style={styles.centreSelectName}>{centre.name}</Text>
                                   <Text style={styles.centreSelectAddress}>{centre.address}</Text>
@@ -1889,10 +2340,10 @@ const LabTestsScreenWeb = (props) => {
                                       <Text style={styles.centreMetaText}>{centre.rating} • {centre.distanceKm} km away</Text>
                                     </View>
                                     <Text style={styles.centreMetaText}>•</Text>
-                                    <Text style={[styles.centreMetaText, { color: '#059669', fontWeight: '600' }]}>{centre.timings}</Text>
+                                    <Text style={[styles.centreMetaText, { color: '#00BB95', fontWeight: '600' }]}>{centre.timings}</Text>
                                   </View>
                                 </View>
-                                {isSel && <Ionicons name="checkmark-circle" size={18} color="#00B894" />}
+                                {isSel && <Ionicons name="checkmark-circle" size={18} color="#00BB95" />}
                               </TouchableOpacity>
 
                               <View style={styles.centreCardActionsRow}>
@@ -1901,7 +2352,7 @@ const LabTestsScreenWeb = (props) => {
                                   onPress={(e) => handleOpenDirections(centre, e)}
                                   activeOpacity={0.8}
                                 >
-                                  <Ionicons name="navigate-outline" size={13} color="#059669" style={{ marginRight: 4 }} />
+                                  <Ionicons name="navigate-outline" size={13} color="#00BB95" style={{ marginRight: 4 }} />
                                   <Text style={styles.modalGetDirectionsBtnText}>Get Directions</Text>
                                 </TouchableOpacity>
                               </View>
@@ -1969,7 +2420,7 @@ const LabTestsScreenWeb = (props) => {
                       {Boolean(test.code) && (
                         <View style={styles.summaryRow}>
                           <Text style={styles.summaryLabel}>Package Code:</Text>
-                          <Text style={[styles.summaryVal, { fontWeight: '700', color: '#00B894' }]}>{test.code}</Text>
+                          <Text style={[styles.summaryVal, { fontWeight: '700', color: '#00BB95' }]}>{test.code}</Text>
                         </View>
                       )}
                       <View style={styles.summaryRow}>
@@ -1989,7 +2440,7 @@ const LabTestsScreenWeb = (props) => {
                       <View style={styles.summaryRow}>
                         <Text style={styles.summaryLabel}>Method:</Text>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                          <Ionicons name={isHome ? 'home-outline' : 'business-outline'} size={14} color="#00B894" />
+                          <Ionicons name={isHome ? 'home-outline' : 'business-outline'} size={14} color="#00BB95" />
                           <Text style={styles.summaryVal}>{isHome ? 'Home' : 'Diagnostic Centre'}</Text>
                         </View>
                       </View>
@@ -2012,8 +2463,8 @@ const LabTestsScreenWeb = (props) => {
                               style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}
                               onPress={() => handleOpenDirections(selectedCentre)}
                             >
-                              <Ionicons name="navigate-outline" size={12} color="#00B894" />
-                              <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#00B894' }}>Get Directions</Text>
+                              <Ionicons name="navigate-outline" size={12} color="#00BB95" />
+                              <Text style={{ fontSize: 11.5, fontWeight: '700', color: '#00BB95' }}>Get Directions</Text>
                             </TouchableOpacity>
                           </View>
                         </View>
@@ -2045,9 +2496,9 @@ const LabTestsScreenWeb = (props) => {
                       const isSel = paymentMethod === m.id;
                       return (
                         <TouchableOpacity key={m.id} style={[styles.paymentMethodCard, isSel && styles.paymentMethodCardActive]} onPress={() => setPaymentMethod(m.id)}>
-                          <Ionicons name={m.icon} size={20} color={isSel ? '#00B894' : '#64748B'} />
+                          <Ionicons name={m.icon} size={20} color={isSel ? '#00BB95' : '#64748B'} />
                           <Text style={[styles.paymentMethodLabel, isSel && styles.paymentMethodLabelActive]}>{m.label}</Text>
-                          {isSel && <Ionicons name="checkmark-circle" size={18} color="#00B894" />}
+                          {isSel && <Ionicons name="checkmark-circle" size={18} color="#00BB95" />}
                         </TouchableOpacity>
                       );
                     })}
@@ -2057,7 +2508,7 @@ const LabTestsScreenWeb = (props) => {
                 {/* STEP 5: CONFIRMED */}
                 {bookingFlowStep === 5 && confirmedBookingData && (
                   <View style={styles.confirmedBox}>
-                    <Ionicons name="checkmark-circle" size={60} color="#00B894" />
+                    <Ionicons name="checkmark-circle" size={60} color="#00BB95" />
                     <Text style={styles.confirmedTitle}>Booking Confirmed!</Text>
                     <Text style={styles.confirmedBookingId}>Booking ID: {confirmedBookingData.id}</Text>
                     <Text style={styles.confirmedDesc}>
@@ -2067,12 +2518,12 @@ const LabTestsScreenWeb = (props) => {
                     {confirmedBookingData.collectionMethod === 'CENTRE' && selectedCentre && (
                       <View style={{ backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, marginVertical: 12, borderWidth: 1, borderColor: '#E2E8F0', width: '100%', alignItems: 'center' }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, marginBottom: 4 }}>
-                          <Ionicons name="business" size={16} color="#00B894" />
+                          <Ionicons name="business" size={16} color="#00BB95" />
                           <Text style={{ fontSize: 13.5, fontWeight: '800', color: '#0F172A' }}>{selectedCentre.name}</Text>
                         </View>
                         <Text style={{ fontSize: 11.5, color: '#64748B', textAlign: 'center', marginBottom: 8 }}>{selectedCentre.address}</Text>
                         <TouchableOpacity
-                          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#00B894', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 }}
+                          style={{ flexDirection: 'row', alignItems: 'center', gap: 6, backgroundColor: '#00BB95', paddingVertical: 8, paddingHorizontal: 16, borderRadius: 8 }}
                           onPress={() => handleOpenDirections(selectedCentre)}
                           activeOpacity={0.85}
                         >
@@ -2161,13 +2612,13 @@ const LabTestsScreenWeb = (props) => {
                     <View style={{ backgroundColor: '#F8FAFC', borderRadius: 10, padding: 12, marginVertical: 10, borderWidth: 1, borderColor: '#E2E8F0', flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 10 }}>
                       <View style={{ flex: 1 }}>
                         <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5, marginBottom: 2 }}>
-                          <Ionicons name="business" size={15} color="#00B894" />
+                          <Ionicons name="business" size={15} color="#00BB95" />
                           <Text style={{ fontSize: 13, fontWeight: '700', color: '#0F172A' }}>{b.diagnosticCentre.name}</Text>
                         </View>
                         <Text style={{ fontSize: 11.5, color: '#64748B' }}>{b.diagnosticCentre.location || b.diagnosticCentre.address}</Text>
                       </View>
                       <TouchableOpacity
-                        style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#00B894', paddingVertical: 7, paddingHorizontal: 12, borderRadius: 8 }}
+                        style={{ flexDirection: 'row', alignItems: 'center', gap: 5, backgroundColor: '#00BB95', paddingVertical: 7, paddingHorizontal: 12, borderRadius: 8 }}
                         onPress={() => {
                           const c = DIAGNOSTIC_CENTRES.find(dc => dc.name === b.diagnosticCentre?.name) || b.diagnosticCentre;
                           handleOpenDirections(c);
@@ -2233,8 +2684,8 @@ const LabTestsScreenWeb = (props) => {
                     <View style={styles.reportPatientRow}>
                       <Text style={styles.repPatientLabel}>Status:</Text>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
-                        <Ionicons name="checkmark-circle" size={13} color="#00B894" />
-                        <Text style={[styles.repPatientVal, { color: '#00B894', fontWeight: '700' }]}>Verified & Released</Text>
+                        <Ionicons name="checkmark-circle" size={13} color="#00BB95" />
+                        <Text style={[styles.repPatientVal, { color: '#00BB95', fontWeight: '700' }]}>Verified & Released</Text>
                       </View>
                     </View>
                   </View>
@@ -2267,7 +2718,7 @@ const LabTestsScreenWeb = (props) => {
                 </ScrollView>
                 <View style={styles.reportModalFooter}>
                   <TouchableOpacity style={styles.reportDownloadModalBtn} onPress={() => { setShowDownloadToast(true); setTimeout(() => setShowDownloadToast(false), 3000); }}>
-                    <Ionicons name="download" size={16} color="#00B894" />
+                    <Ionicons name="download" size={16} color="#00BB95" />
                     <Text style={styles.reportDownloadModalBtnText}>Download PDF</Text>
                   </TouchableOpacity>
                   <TouchableOpacity style={styles.reportMyHealthBtn} onPress={() => { setSelectedReport(null); navigation?.navigate?.('HealthRecords'); }}>
@@ -2362,7 +2813,7 @@ const styles = StyleSheet.create({
     position: 'absolute',
     top: -3,
     right: -3,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     borderRadius: 9,
     minWidth: 18,
     height: 18,
@@ -2383,17 +2834,17 @@ const styles = StyleSheet.create({
     paddingVertical: 5,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
     backgroundColor: '#F0FDF4',
   },
   webAddToCartBtnActive: {
-    backgroundColor: '#00B894',
-    borderColor: '#00B894',
+    backgroundColor: '#00BB95',
+    borderColor: '#00BB95',
   },
   webAddToCartBtnText: {
     fontSize: 11.5,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
   },
   webAddToCartBtnTextActive: {
     color: '#FFFFFF',
@@ -2431,7 +2882,7 @@ const styles = StyleSheet.create({
     width: 36,
     height: 36,
     borderRadius: 18,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     justifyContent: 'center',
     alignItems: 'center',
     flexShrink: 0,
@@ -2451,7 +2902,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     paddingHorizontal: 14,
     paddingVertical: 9,
     borderRadius: 8,
@@ -2464,7 +2915,7 @@ const styles = StyleSheet.create({
   },
   safeContainer: {
     flex: 1,
-    backgroundColor: '#FAFCFD',
+    backgroundColor: '#F1F8F6',
   },
   webHeaderBar: {
     backgroundColor: '#FFFFFF',
@@ -2519,7 +2970,7 @@ const styles = StyleSheet.create({
   webTabBtnActive: {
     backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
   },
   webTabBtnText: {
     fontSize: 13,
@@ -2527,11 +2978,12 @@ const styles = StyleSheet.create({
     color: '#64748B',
   },
   webTabBtnTextActive: {
-    color: '#00B894',
+    color: '#00BB95',
     fontWeight: '700',
   },
   scrollContainer: {
     flex: 1,
+    backgroundColor: '#F1F8F6',
   },
   webMainContentWrapper: {
     maxWidth: 1200,
@@ -2541,7 +2993,419 @@ const styles = StyleSheet.create({
     paddingTop: 24,
     paddingBottom: 80,
   },
-  // Clean Web Header Section
+  // Rich Colorful Hero Banner Section
+  webHeroBanner: {
+    backgroundColor: '#00BB95',
+    ...(Platform.OS === 'web'
+      ? {
+        background: 'linear-gradient(135deg, #00A885 0%, #00BB95 50%, #15D4AA 100%)',
+      }
+      : {}),
+    borderRadius: 20,
+    padding: 24,
+    marginBottom: 24,
+    shadowColor: '#00BB95',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.18,
+    shadowRadius: 20,
+    elevation: 4,
+  },
+  heroTopRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginBottom: 16,
+  },
+  heroTitleGroup: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: 14,
+    flex: 1,
+    minWidth: 280,
+  },
+  heroBackButton: {
+    width: 42,
+    height: 42,
+    borderRadius: 21,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.6)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.12,
+    shadowRadius: 4,
+    elevation: 2,
+  },
+  heroBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 6,
+  },
+  heroVerifiedBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.35)',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  heroVerifiedBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+  },
+  heroMainTitle: {
+    fontSize: 26,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: -0.5,
+    marginBottom: 4,
+  },
+  heroSubtitle: {
+    fontSize: 13.5,
+    color: 'rgba(255, 255, 255, 0.92)',
+    lineHeight: 19,
+    maxWidth: 620,
+  },
+  heroCityCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 14,
+    paddingVertical: 9,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#D1FAE5',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 6,
+    elevation: 2,
+  },
+  heroCityStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#00BB95',
+    marginRight: 8,
+  },
+  heroCityLabel: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#64748B',
+    textTransform: 'uppercase',
+    letterSpacing: 0.3,
+  },
+  heroCityValue: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#00BB95',
+  },
+  heroPerksRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    backgroundColor: 'rgba(255, 255, 255, 0.14)',
+    borderRadius: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 16,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.25)',
+    marginBottom: 18,
+    gap: 12,
+  },
+  heroPerkItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  heroPerkText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  heroPerkDivider: {
+    width: 1,
+    height: 16,
+    backgroundColor: 'rgba(255, 255, 255, 0.25)',
+  },
+  webSearchBarWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 14,
+    paddingHorizontal: 16,
+    height: 52,
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.5)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.12,
+    shadowRadius: 14,
+    elevation: 3,
+  },
+  webSearchInput: {
+    flex: 1,
+    fontSize: 14.5,
+    color: '#0F172A',
+    padding: 0,
+    margin: 0,
+  },
+  // 10 Sliding Health Condition Cards
+  conditionsSectionWrap: {
+    marginBottom: 20,
+  },
+  conditionsSectionHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 14,
+  },
+  conditionsSectionTitle: {
+    fontSize: 16,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  conditionsCountBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 8,
+    paddingVertical: 2,
+    borderRadius: 10,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  conditionsCountBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#00BB95',
+  },
+  activeFilterChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFF2ED',
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
+    borderRadius: 14,
+    borderWidth: 1,
+    borderColor: '#FFD8CC',
+  },
+  activeFilterChipText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#FF7F50',
+  },
+  browseCardsRow: {
+    position: 'relative',
+    width: '100%',
+  },
+  browseCardsScroll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+    paddingRight: 40,
+    paddingVertical: 4,
+  },
+  browseBannerCard: {
+    width: 290,
+    height: 140,
+    borderRadius: 16,
+    overflow: 'hidden',
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingLeft: 18,
+    paddingRight: 4,
+    position: 'relative',
+    borderWidth: 1.5,
+    borderColor: 'rgba(255, 255, 255, 0.45)',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+    elevation: 4,
+    cursor: 'pointer',
+  },
+  browseBannerCardActive: {
+    borderWidth: 3,
+    borderColor: '#0F172A',
+    shadowOpacity: 0.25,
+    transform: [{ scale: 1.02 }],
+  },
+  cardBackdropGlow: {
+    position: 'absolute',
+    left: -20,
+    top: -20,
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: 'rgba(255, 255, 255, 0.18)',
+  },
+  bannerMicroPill: {
+    position: 'absolute',
+    top: 10,
+    left: 18,
+    backgroundColor: 'rgba(255, 255, 255, 0.3)',
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    zIndex: 4,
+  },
+  bannerMicroPillText: {
+    fontSize: 9,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.6,
+  },
+  bannerTextCol: {
+    zIndex: 3,
+    justifyContent: 'center',
+    maxWidth: '56%',
+    paddingTop: 18,
+  },
+  bannerTitlePrimary: {
+    fontSize: 19,
+    fontWeight: '900',
+    color: '#FFFFFF',
+    letterSpacing: 0.5,
+    lineHeight: 22,
+  },
+  bannerTitleSecondary: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: 'rgba(255, 255, 255, 0.95)',
+    letterSpacing: 1.2,
+    marginTop: 2,
+  },
+  bannerTagline: {
+    fontSize: 10.5,
+    color: 'rgba(255, 255, 255, 0.92)',
+    marginTop: 4,
+    fontWeight: '600',
+  },
+  bannerExploreChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: 'rgba(255, 255, 255, 0.26)',
+    alignSelf: 'flex-start',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+    marginTop: 8,
+  },
+  bannerExploreChipActive: {
+    backgroundColor: '#0F172A',
+  },
+  bannerExploreText: {
+    fontSize: 10,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
+  bannerImageContainer: {
+    position: 'absolute',
+    right: 10,
+    top: 0,
+    bottom: 0,
+    justifyContent: 'center',
+    alignItems: 'center',
+    zIndex: 2,
+  },
+  imageBackdropDisc: {
+    width: 98,
+    height: 98,
+    borderRadius: 49,
+    backgroundColor: '#FFFFFF',
+    overflow: 'hidden',
+    borderWidth: 3,
+    borderColor: 'rgba(255, 255, 255, 0.8)',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.16,
+    shadowRadius: 8,
+    elevation: 5,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  bannerCutoutImage: {
+    width: '100%',
+    height: '100%',
+    borderRadius: 49,
+  },
+  carouselPrevBtn: {
+    position: 'absolute',
+    left: -14,
+    top: '50%',
+    transform: [{ translateY: -19 }],
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+    cursor: 'pointer',
+  },
+  carouselNextBtn: {
+    position: 'absolute',
+    right: -14,
+    top: '50%',
+    transform: [{ translateY: -19 }],
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 10,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.15,
+    shadowRadius: 6,
+    elevation: 4,
+    cursor: 'pointer',
+  },
+  quickSearchTagsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    flexWrap: 'wrap',
+    gap: 6,
+    paddingTop: 2,
+  },
+  quickSearchLabel: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#64748B',
+    marginRight: 4,
+  },
+  quickSearchChip: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    paddingHorizontal: 10,
+    paddingVertical: 4.5,
+    borderRadius: 14,
+  },
+  quickSearchChipText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#475569',
+  },
   webHeaderSection: {
     marginBottom: 20,
   },
@@ -2593,7 +3457,7 @@ const styles = StyleSheet.create({
   selectedCityBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#007D69',
+    color: '#00BB95',
   },
   webHeaderTitleRow: {
     marginBottom: 16,
@@ -2608,29 +3472,6 @@ const styles = StyleSheet.create({
     fontSize: 13.5,
     color: '#64748B',
     lineHeight: 18,
-  },
-  webSearchBarWrap: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderRadius: 12,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
-    elevation: 2,
-    maxWidth: 680,
-  },
-  webSearchInput: {
-    flex: 1,
-    fontSize: 14,
-    color: '#0F172A',
-    padding: 0,
-    margin: 0,
   },
   // Popular Tests Section
   popularSectionWrap: {
@@ -2673,7 +3514,7 @@ const styles = StyleSheet.create({
   popularViewAllText: {
     fontSize: 12.5,
     fontWeight: '700',
-    color: '#007D69',
+    color: '#00BB95',
   },
   popularCardsScroll: {
     gap: 12,
@@ -2709,7 +3550,7 @@ const styles = StyleSheet.create({
   popCategoryText: {
     fontSize: 9.5,
     fontWeight: '700',
-    color: '#007D69',
+    color: '#00BB95',
     textTransform: 'uppercase',
   },
   popDiscountBadge: {
@@ -2771,16 +3612,16 @@ const styles = StyleSheet.create({
     height: 28,
     borderRadius: 6,
     borderWidth: 1,
-    borderColor: '#007D69',
+    borderColor: '#00BB95',
     backgroundColor: '#F0FDF9',
     justifyContent: 'center',
     alignItems: 'center',
   },
   popCartBtnActive: {
-    backgroundColor: '#007D69',
+    backgroundColor: '#00BB95',
   },
   popBookBtn: {
-    backgroundColor: '#007D69',
+    backgroundColor: '#00BB95',
     paddingHorizontal: 10,
     height: 28,
     borderRadius: 6,
@@ -2820,121 +3661,186 @@ const styles = StyleSheet.create({
   resetFilterChipText: {
     fontSize: 11.5,
     fontWeight: '700',
-    color: '#059669',
+    color: '#00BB95',
   },
-  webCategoriesScroll: {
-    gap: 8,
-    paddingBottom: 4,
+  categoriesScrollWrapper: {
+    position: 'relative',
+    width: '100%',
+    justifyContent: 'center',
   },
-  webCategoriesWrapContainer: {
+  categoriesScrollContent: {
     flexDirection: 'row',
-    flexWrap: 'wrap',
+    alignItems: 'center',
     gap: 8,
-    paddingVertical: 4,
+    paddingVertical: 5,
+    paddingHorizontal: 2,
+  },
+  categoryNavBtn: {
+    position: 'absolute',
+    top: '50%',
+    transform: [{ translateY: -17 }],
+    alignItems: 'center',
+    justifyContent: 'center',
+    zIndex: 25,
+    padding: 2,
+    backgroundColor: 'transparent',
+    cursor: 'pointer',
+  },
+  categoryPrevBtn: {
+    left: -36,
+  },
+  categoryNextBtn: {
+    right: -36,
   },
   webCategoryChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 14,
-    paddingVertical: 8,
-    borderRadius: 20,
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 24,
     backgroundColor: '#FFFFFF',
-    borderWidth: 1,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.03,
+    shadowRadius: 3,
+    flexShrink: 0,
+    cursor: 'pointer',
   },
   webCategoryChipActive: {
-    backgroundColor: '#007D69',
-    borderColor: '#007D69',
+    backgroundColor: '#00BB95',
+    borderColor: '#00BB95',
+    shadowColor: '#00BB95',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
   },
   webCategoryChipText: {
-    fontSize: 12.5,
+    fontSize: 13,
     fontWeight: '600',
-    color: '#475569',
+    color: '#334155',
   },
   webCategoryChipTextActive: {
     color: '#FFFFFF',
     fontWeight: '700',
   },
+  categoryCountBadge: {
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 7,
+    paddingVertical: 1.5,
+    borderRadius: 10,
+  },
+  categoryCountBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#00BB95',
+  },
   // Results count
   webResultsBar: {
-    marginBottom: 14,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 12,
+    marginBottom: 16,
+    paddingVertical: 4,
+  },
+  resultsBarLeft: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  resultsBarRight: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    paddingHorizontal: 12,
+    paddingVertical: 5,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+  },
+  resultsBarRightText: {
+    fontSize: 11.5,
+    fontWeight: '700',
+    color: '#00BB95',
   },
   webResultsCountText: {
-    fontSize: 12.5,
-    fontWeight: '700',
-    color: '#64748B',
+    fontSize: 13,
+    fontWeight: '600',
+    color: '#475569',
   },
   // Cards Grid
   webCardsGrid: {
     ...(Platform.OS === 'web'
       ? {
-          display: 'grid',
-          gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))',
-          gap: 16,
-        }
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fill, minmax(330px, 1fr))',
+        gap: 20,
+      }
       : {
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          gap: 16,
-        }),
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        gap: 20,
+      }),
   },
   webCardItem: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    padding: 16,
-    borderWidth: 1,
+    borderRadius: 18,
+    padding: 20,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 12,
     elevation: 2,
     justifyContent: 'space-between',
+    position: 'relative',
+    overflow: 'hidden',
   },
   cardHeaderBadgesRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    marginBottom: 10,
+    marginBottom: 12,
     gap: 8,
   },
   categoryPillWrap: {
-    backgroundColor: '#F8FAFC',
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 4,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#E2E8F0',
-    maxWidth: '60%',
+    maxWidth: '65%',
   },
   cardCategoryText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: '#007D69',
+    fontSize: 10.5,
+    fontWeight: '800',
+    letterSpacing: 0.4,
     textTransform: 'uppercase',
-    letterSpacing: 0.3,
   },
   tatBadge: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#ECFDF5',
-    paddingHorizontal: 7,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 8,
     borderWidth: 1,
-    borderColor: '#D1FAE5',
+    borderColor: '#A7F3D0',
   },
   tatBadgeText: {
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '700',
-    color: '#047857',
+    color: '#00BB95',
   },
   cardTitle: {
-    fontSize: 15.5,
+    fontSize: 16.5,
     fontWeight: '800',
     color: '#0F172A',
-    marginBottom: 10,
-    lineHeight: 21,
+    lineHeight: 22,
+    minHeight: 44,
   },
   cardKeyDetailsRow: {
     flexDirection: 'row',
@@ -2949,60 +3855,100 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 6,
+    paddingHorizontal: 9,
+    paddingVertical: 4.5,
+    borderRadius: 8,
   },
   keyDetailText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '600',
-    color: '#475569',
+    color: '#334155',
+  },
+  fastingRequiredBadge: {
+    backgroundColor: '#FFFBEB',
+    borderColor: '#FDE68A',
+  },
+  fastingNotRequiredBadge: {
+    backgroundColor: '#F0FDF4',
+    borderColor: '#DCFCE7',
   },
   cardFooterWrap: {
-    paddingTop: 12,
+    paddingTop: 14,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
     marginTop: 'auto',
-    gap: 10,
+    gap: 12,
   },
   cardPriceRow: {
     flexDirection: 'row',
-    alignItems: 'baseline',
-    gap: 6,
+    alignItems: 'center',
+    justifyContent: 'space-between',
   },
   cardPrice: {
-    fontSize: 17,
-    fontWeight: '800',
+    fontSize: 22,
+    fontWeight: '900',
     color: '#0F172A',
   },
   cardMrp: {
-    fontSize: 12,
+    fontSize: 13,
     color: '#94A3B8',
     textDecorationLine: 'line-through',
   },
   discountBadge: {
     backgroundColor: '#FFF2ED',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
     borderRadius: 6,
   },
   discountBadgeText: {
     color: '#FF7F50',
-    fontSize: 10.5,
+    fontSize: 11,
     fontWeight: '800',
   },
   cardActionBtnsRow: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     gap: 8,
   },
-  detailsBtn: {
-    paddingHorizontal: 12,
-    height: 36,
-    justifyContent: 'center',
+  cardLeftActions: {
+    flexDirection: 'row',
     alignItems: 'center',
+    gap: 8,
+  },
+  labOrganicCtaBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 7,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    borderRadius: 20,
+    marginLeft: 'auto',
+  },
+  labOrganicArrowCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.5,
+    borderColor: '#00BB95',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  labOrganicCtaText: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: '#00BB95',
+    letterSpacing: 0.1,
+  },
+  detailsBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 12,
+    height: 38,
     backgroundColor: '#F8FAFC',
-    borderRadius: 8,
+    borderRadius: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -3012,32 +3958,62 @@ const styles = StyleSheet.create({
     color: '#475569',
   },
   cartIconBtn: {
-    width: 36,
-    height: 36,
-    borderRadius: 8,
-    borderWidth: 1,
-    borderColor: '#007D69',
-    backgroundColor: '#F0FDF9',
-    justifyContent: 'center',
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    height: 38,
+    paddingHorizontal: 11,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#00BB95',
+    backgroundColor: '#F0FDF9',
   },
   cartIconBtnActive: {
-    backgroundColor: '#007D69',
-    borderColor: '#007D69',
+    backgroundColor: '#00BB95',
+    borderColor: '#00BB95',
+  },
+  cartIconBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#00BB95',
+  },
+  cartIconBtnTextActive: {
+    color: '#FFFFFF',
+  },
+  inPackageBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    height: 38,
+    paddingHorizontal: 10,
+    borderRadius: 10,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1.5,
+    borderColor: '#86EFAC',
+  },
+  inPackageBtnText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#00BB95',
   },
   bookPrimaryBtn: {
     flex: 1,
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007D69',
-    height: 36,
-    borderRadius: 8,
+    backgroundColor: '#00BB95',
+    height: 38,
+    borderRadius: 10,
     paddingHorizontal: 10,
+    shadowColor: '#00BB95',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.22,
+    shadowRadius: 6,
+    elevation: 2,
   },
   bookPrimaryBtnText: {
     fontSize: 12.5,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#FFFFFF',
   },
   webEmptyState: {
@@ -3065,7 +4041,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   resetFilterActionBtn: {
-    backgroundColor: '#007D69',
+    backgroundColor: '#00BB95',
     paddingHorizontal: 18,
     paddingVertical: 8,
     borderRadius: 8,
@@ -3176,7 +4152,7 @@ const styles = StyleSheet.create({
   webPriceText: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#00BB95',
   },
   webMrpText: {
     fontSize: 12,
@@ -3204,7 +4180,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 14,
     paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
   },
   webBookBtnText: {
     fontSize: 12,
@@ -3281,8 +4257,8 @@ const styles = StyleSheet.create({
     cursor: 'pointer',
   },
   webPageNumBtnActive: {
-    backgroundColor: '#00B894',
-    borderColor: '#00B894',
+    backgroundColor: '#00BB95',
+    borderColor: '#00BB95',
     boxShadow: '0 4px 10px rgba(0, 184, 148, 0.28)',
   },
   webPageNumText: {
@@ -3326,8 +4302,8 @@ const styles = StyleSheet.create({
     borderColor: '#CBD5E1',
   },
   tabFilterBtnActive: {
-    backgroundColor: '#00B894',
-    borderColor: '#00B894',
+    backgroundColor: '#00BB95',
+    borderColor: '#00BB95',
   },
   tabFilterText: {
     fontSize: 12,
@@ -3360,7 +4336,7 @@ const styles = StyleSheet.create({
   bookingIdText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#00BB95',
   },
   statusBadgeText: {
     fontSize: 11,
@@ -3385,11 +4361,11 @@ const styles = StyleSheet.create({
   bookingPriceVal: {
     fontSize: 15,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#00BB95',
     marginTop: 4,
   },
   modalPrimaryBtn: {
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     paddingVertical: 10,
     borderRadius: 8,
     alignItems: 'center',
@@ -3452,7 +4428,7 @@ const styles = StyleSheet.create({
   reportDownloadBtnText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
   },
   reportViewFullBtn: {
     flex: 1,
@@ -3460,7 +4436,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     paddingVertical: 8,
     borderRadius: 8,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
   },
   reportViewFullBtnText: {
     fontSize: 12,
@@ -3555,7 +4531,7 @@ const styles = StyleSheet.create({
   modalPriceText: {
     fontSize: 22,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#00BB95',
   },
   modalMrpText: {
     fontSize: 13,
@@ -3563,7 +4539,7 @@ const styles = StyleSheet.create({
     textDecorationLine: 'line-through',
   },
   modalPrimaryBtn: {
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     paddingHorizontal: 20,
     paddingVertical: 12,
     borderRadius: 12,
@@ -3685,7 +4661,7 @@ const styles = StyleSheet.create({
   includedItemDetailsLink: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
     marginLeft: 8,
   },
 
@@ -3718,7 +4694,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   methodSelectCardActive: {
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
     backgroundColor: '#F0FDF9',
   },
   methodRadio: {
@@ -3731,12 +4707,12 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     marginTop: 2,
   },
-  methodRadioActive: { borderColor: '#00B894' },
+  methodRadioActive: { borderColor: '#00BB95' },
   methodRadioInner: {
     width: 8,
     height: 8,
     borderRadius: 4,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
   },
   methodSelectTitle: {
     fontSize: 14,
@@ -3773,7 +4749,7 @@ const styles = StyleSheet.create({
   addAddressLink: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
   },
   addressCard: {
     flexDirection: 'row',
@@ -3786,7 +4762,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   addressCardActive: {
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
     backgroundColor: '#F0FDF9',
   },
   addressTagText: {
@@ -3810,7 +4786,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   centreSelectCardActive: {
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
     backgroundColor: '#F0FDF9',
   },
   centreSelectName: {
@@ -3830,7 +4806,7 @@ const styles = StyleSheet.create({
   },
   centreMetaText: {
     fontSize: 11,
-    color: '#00B894',
+    color: '#00BB95',
     fontWeight: '600',
   },
   datePillsRow: {
@@ -3848,8 +4824,8 @@ const styles = StyleSheet.create({
     minWidth: 60,
   },
   datePillActive: {
-    borderColor: '#00B894',
-    backgroundColor: '#00B894',
+    borderColor: '#00BB95',
+    backgroundColor: '#00BB95',
   },
   datePillDay: {
     fontSize: 10,
@@ -3880,7 +4856,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   slotCardActive: {
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
     backgroundColor: '#F0FDF9',
   },
   slotCardDisabled: {
@@ -3895,7 +4871,7 @@ const styles = StyleSheet.create({
     color: '#0F172A',
     marginBottom: 2,
   },
-  slotLabelActive: { color: '#00B894' },
+  slotLabelActive: { color: '#00BB95' },
   slotLabelDisabled: {
     color: '#94A3B8',
     textDecorationLine: 'line-through',
@@ -3956,7 +4932,7 @@ const styles = StyleSheet.create({
   summaryTotalVal: {
     fontSize: 18,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#00BB95',
   },
 
   // ─── PAYMENT ─────────────────────────────────────────────────────
@@ -3986,7 +4962,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#FFFFFF',
   },
   paymentMethodCardActive: {
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
     backgroundColor: '#F0FDF9',
   },
   paymentMethodLabel: {
@@ -3995,7 +4971,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#0F172A',
   },
-  paymentMethodLabelActive: { color: '#00B894' },
+  paymentMethodLabelActive: { color: '#00BB95' },
   stepBackBtn: {
     paddingHorizontal: 20,
     paddingVertical: 12,
@@ -4028,7 +5004,7 @@ const styles = StyleSheet.create({
   confirmedBookingId: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
     marginBottom: 10,
   },
   confirmedDesc: {
@@ -4039,7 +5015,7 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   viewBookingsConfirmedBtn: {
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     paddingHorizontal: 24,
     paddingVertical: 13,
     borderRadius: 12,
@@ -4076,7 +5052,7 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  timelineNodeDone: { backgroundColor: '#00B894' },
+  timelineNodeDone: { backgroundColor: '#00BB95' },
   timelineNodeCurr: { backgroundColor: '#1E3A8A' },
   timelineLine: {
     width: 2,
@@ -4085,7 +5061,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
     minHeight: 20,
   },
-  timelineLineDone: { backgroundColor: '#00B894' },
+  timelineLineDone: { backgroundColor: '#00BB95' },
   timelineTextCol: {
     flex: 1,
     marginLeft: 10,
@@ -4185,7 +5161,7 @@ const styles = StyleSheet.create({
   paramResultText: {
     fontSize: 13,
     fontWeight: '800',
-    color: '#00B894',
+    color: '#00BB95',
   },
   paramRefText: {
     fontSize: 11,
@@ -4225,13 +5201,13 @@ const styles = StyleSheet.create({
     paddingVertical: 11,
     borderRadius: 10,
     borderWidth: 1.5,
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
     backgroundColor: '#F0FDF9',
   },
   reportDownloadModalBtnText: {
     fontSize: 13,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
   },
   reportMyHealthBtn: {
     flex: 1,
@@ -4241,7 +5217,7 @@ const styles = StyleSheet.create({
     gap: 6,
     paddingVertical: 11,
     borderRadius: 10,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
   },
   reportMyHealthBtnText: {
     fontSize: 13,
@@ -4270,7 +5246,7 @@ const styles = StyleSheet.create({
     backgroundColor: '#F8FAFC',
   },
   tagToggleBtnActive: {
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
     backgroundColor: '#F0FDF9',
   },
   tagToggleText: {
@@ -4278,7 +5254,7 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     color: '#64748B',
   },
-  tagToggleTextActive: { color: '#00B894' },
+  tagToggleTextActive: { color: '#00BB95' },
   addressInput: {
     borderWidth: 1.5,
     borderColor: '#E2E8F0',
@@ -4313,7 +5289,7 @@ const styles = StyleSheet.create({
     flex: 1.5,
     paddingVertical: 12,
     borderRadius: 10,
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     alignItems: 'center',
   },
   saveAddressBtnText: {
@@ -4424,7 +5400,7 @@ const styles = StyleSheet.create({
   webLocationBadgeText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#059669',
+    color: '#00BB95',
   },
   webCentresGrid: {
     flexDirection: 'row',
@@ -4466,7 +5442,7 @@ const styles = StyleSheet.create({
   webCentreLocation: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#00B894',
+    color: '#00BB95',
   },
   webCentreAddressBox: {
     backgroundColor: '#FFFFFF',
@@ -4543,7 +5519,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#00B894',
+    backgroundColor: '#00BB95',
     paddingVertical: 9,
     paddingHorizontal: 14,
     borderRadius: 8,
@@ -4560,7 +5536,7 @@ const styles = StyleSheet.create({
     justifyContent: 'center',
     backgroundColor: '#FFFFFF',
     borderWidth: 1.5,
-    borderColor: '#00B894',
+    borderColor: '#00BB95',
     paddingVertical: 9,
     paddingHorizontal: 12,
     borderRadius: 8,
@@ -4568,7 +5544,7 @@ const styles = StyleSheet.create({
   webCentreBookBtnText: {
     fontSize: 12.5,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#00BB95',
   },
   centreCardActionsRow: {
     flexDirection: 'row',
@@ -4592,7 +5568,7 @@ const styles = StyleSheet.create({
   modalGetDirectionsBtnText: {
     fontSize: 11.5,
     fontWeight: '700',
-    color: '#059669',
+    color: '#00BB95',
   },
 });
 

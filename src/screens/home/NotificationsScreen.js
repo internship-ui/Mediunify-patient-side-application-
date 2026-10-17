@@ -10,6 +10,9 @@ import {
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import WebFooter from '../../components/web/WebFooter';
+import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 
 const NOTIFICATIONS_DATA = [
   {
@@ -82,6 +85,8 @@ const NOTIFICATIONS_DATA = [
 const TABS = ['All', 'Unread', 'Bookings', 'Pharmacy', 'Lab Reports', 'Wallet'];
 
 const NotificationsScreen = ({ navigation }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const [activeTab, setActiveTab] = useState('All');
   const [notifications, setNotifications] = useState(NOTIFICATIONS_DATA);
 
@@ -141,9 +146,9 @@ const NotificationsScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
-      <View style={styles.contentWrap}>
-        {/* Header */}
-        <View style={styles.header}>
+      {/* Header */}
+      <View style={styles.header}>
+        <View style={styles.headerInner}>
           <View style={styles.headerTitleRow}>
             <TouchableOpacity
               style={styles.backBtn}
@@ -151,7 +156,7 @@ const NotificationsScreen = ({ navigation }) => {
               activeOpacity={0.7}
               accessibilityLabel="Back"
             >
-              <Ionicons name="arrow-back" size={20} color="#0F172A" />
+              <Ionicons name="arrow-back" size={20} color={isDarkMode ? theme.text : "#0F172A"} />
             </TouchableOpacity>
 
             <View style={styles.titleWithBadge}>
@@ -175,7 +180,14 @@ const NotificationsScreen = ({ navigation }) => {
             </TouchableOpacity>
           )}
         </View>
+      </View>
 
+      <ScrollView
+        showsVerticalScrollIndicator={false}
+        style={{ flex: 1, width: '100%' }}
+        contentContainerStyle={styles.scrollContent}
+      >
+        <View style={styles.contentWrap}>
         {/* Filter Tabs */}
         <View style={styles.tabsRow}>
           <ScrollView
@@ -202,11 +214,7 @@ const NotificationsScreen = ({ navigation }) => {
         </View>
 
         {/* Notifications List */}
-        <ScrollView
-          style={styles.scrollList}
-          contentContainerStyle={styles.scrollContent}
-          showsVerticalScrollIndicator={false}
-        >
+        <View style={styles.scrollList}>
           {filteredNotifications.length === 0 ? (
             <View style={styles.emptyState}>
               <View style={styles.emptyIconCircle}>
@@ -264,37 +272,51 @@ const NotificationsScreen = ({ navigation }) => {
               </TouchableOpacity>
             ))
           )}
-        </ScrollView>
-      </View>
+        </View>
+        </View>
+
+        {Platform.OS === 'web' && <WebFooter navigation={navigation} />}
+      </ScrollView>
     </SafeAreaView>
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
-  },
-  contentWrap: {
-    flex: 1,
     width: '100%',
-    maxWidth: 800,
-    alignSelf: 'center',
   },
-
-  // Header
   header: {
+    backgroundColor: '#FFFFFF',
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+    width: '100%',
+  },
+  headerInner: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     paddingHorizontal: 16,
     paddingTop: 14,
     paddingBottom: 12,
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#F1F5F9',
+    maxWidth: 800,
+    width: '100%',
+    alignSelf: 'center',
     flexWrap: 'wrap',
     gap: 8,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    width: '100%',
+    paddingBottom: Platform.OS === 'web' ? 0 : 40,
+  },
+  contentWrap: {
+    flex: 1,
+    width: '100%',
+    maxWidth: 800,
+    alignSelf: 'center',
+    paddingBottom: 40,
   },
   headerTitleRow: {
     flexDirection: 'row',
@@ -383,11 +405,7 @@ const styles = StyleSheet.create({
 
   // List
   scrollList: {
-    flex: 1,
-  },
-  scrollContent: {
     padding: 14,
-    paddingBottom: 110,
     gap: 10,
   },
 

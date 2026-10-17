@@ -20,6 +20,8 @@ import { showAlert } from '../../../utils/alert';
 import WebFooter from '../../../components/web/WebFooter';
 import WebBackButton from '../../../components/web/WebBackButton';
 import OptimizedImage from '../../../components/common/OptimizedImage';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 
 // Helper: Format category names to short, concise tags
 const getShortCategory = (category) => {
@@ -64,7 +66,29 @@ const formatDiscountText = (discount, mrp, price) => {
   return 'FLAT 20% OFF';
 };
 
+// Helper: Extract concise product highlight tags
+const getProductHighlights = (prod) => {
+  if (!prod) return [];
+  const text = `${prod.name || ''} ${prod.description || ''} ${prod.uses || ''} ${prod.activeIngredients || ''}`.toLowerCase();
+  const tags = [];
+  if (text.includes('rash')) tags.push('Rash-Free');
+  if (text.includes('breathable') || text.includes('air')) tags.push('Breathable Fabric');
+  if (text.includes('wetness')) tags.push('Wetness Indicator');
+  if (text.includes('cotton')) tags.push('Cotton Soft');
+  if (text.includes('12-hour') || text.includes('12 hour') || text.includes('protection')) tags.push('12-Hr Dryness');
+  if (text.includes('aloe')) tags.push('Aloe Infused');
+  if (text.includes('fever') || text.includes('pain')) tags.push('Fast Relief');
+  if (text.includes('immunity') || text.includes('vitamin')) tags.push('Immunity Boost');
+  if (text.includes('liver') || text.includes('detox')) tags.push('Liver Detox');
+  if (text.includes('paracetamol')) tags.push('Antipyretic');
+  if (text.includes('zinc')) tags.push('Zinc Fortified');
+  if (tags.length === 0) tags.push('Quality Assured', 'Tested Safe');
+  return tags.slice(0, 4);
+};
+
 const ProductDetailsScreen = ({ navigation, route }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const isDesktopWeb = Platform.OS === 'web' && isDesktopLayout(width);
 
@@ -82,6 +106,7 @@ const ProductDetailsScreen = ({ navigation, route }) => {
 
   const currentStore = passedStore || selectedPharmacyStore;
   const [quantity, setQuantity] = useState(1);
+  const [infoTab, setInfoTab] = useState('all');
 
   // Find product from dataset if not passed directly
   const product = useMemo(() => {
@@ -94,12 +119,13 @@ const ProductDetailsScreen = ({ navigation, route }) => {
     );
   }, [passedProduct, productId]);
 
-  // Related products from same category
+  // Related products from same category or fallback to top products
   const relatedProducts = useMemo(() => {
     const list = Array.isArray(EXTENDED_PRODUCTS) && EXTENDED_PRODUCTS.length > 0 ? EXTENDED_PRODUCTS : (pharmacyProducts || []);
-    return list
-      .filter((p) => p.category === product?.category && String(p.id) !== String(product?.id))
-      .slice(0, 4);
+    const filtered = list.filter((p) => p.category === product?.category && String(p.id) !== String(product?.id));
+    if (filtered.length >= 4) return filtered.slice(0, 4);
+    const others = list.filter((p) => String(p.id) !== String(product?.id) && !filtered.some((f) => String(f.id) === String(p.id)));
+    return [...filtered, ...others].slice(0, 4);
   }, [product]);
 
   const { requireLogin } = useAuthGuard();
@@ -181,7 +207,7 @@ const ProductDetailsScreen = ({ navigation, route }) => {
             onPress={() => navigation.goBack()}
             activeOpacity={0.8}
           >
-            <Ionicons name="arrow-back" size={20} color="#1E3A8A" />
+            <Ionicons name="arrow-back" size={20} color={isDarkMode ? theme.text : "#1E3A8A"} />
           </TouchableOpacity>
           <Text style={styles.mobileHeaderTitle} numberOfLines={1}>
             Product Details
@@ -221,18 +247,15 @@ const ProductDetailsScreen = ({ navigation, route }) => {
               {/* Left Column: Image Showcase & Trust Strip */}
               <View style={styles.desktopImageCol}>
                 <View style={styles.desktopImageCard}>
-                  {/* Top Multi-Color Gradient Accent Bar */}
-                  <View style={styles.cardGradientBarMulticolor} />
-
                   {discountStr ? (
-                    <View style={styles.discountBadge}>
-                      <Text style={styles.discountBadgeText}>{discountStr}</Text>
+                    <View style={styles.pharmacyBadge}>
+                      <Text style={styles.pharmacyBadgeText}>{discountStr}</Text>
                     </View>
                   ) : null}
 
                   {Boolean(product.requiresPrescription) ? (
-                    <View style={styles.rxBadge}>
-                      <Text style={styles.rxBadgeText}>Rx</Text>
+                    <View style={styles.pharmacyRxBadge}>
+                      <Text style={styles.pharmacyRxBadgeText}>Rx</Text>
                     </View>
                   ) : null}
 
@@ -242,7 +265,7 @@ const ProductDetailsScreen = ({ navigation, route }) => {
                   </View>
 
                   <OptimizedImage
-                    source={{ uri: prodImg }}
+                    source={typeof prodImg === 'number' ? prodImg : (prodImg?.uri ? prodImg : { uri: prodImg })}
                     style={styles.desktopProductImage}
                     containerStyle={{ backgroundColor: 'transparent' }}
                     placeholderColor="transparent"
@@ -300,7 +323,7 @@ const ProductDetailsScreen = ({ navigation, route }) => {
                     <Text style={styles.ratingPillText}>{product.rating || '4.8'}</Text>
                   </View>
                   <Text style={styles.ratingCountDesktop}>
-                    {formatReviewCount(product.reviewsCount)} verified patient ratings
+                    {formatReviewCount(product.reviewsCount)} ratings
                   </Text>
                 </View>
 
@@ -325,7 +348,7 @@ const ProductDetailsScreen = ({ navigation, route }) => {
                         <Text style={styles.pricingRightBadgeText}>60-Min Express</Text>
                       </View>
                     </View>
-                    <Text style={styles.taxInclusiveText}>Inclusive of all applicable taxes</Text>
+                    <Text style={styles.taxInclusiveText}>Inclusive of all taxes</Text>
                   </View>
                 </View>
 
@@ -401,10 +424,10 @@ const ProductDetailsScreen = ({ navigation, route }) => {
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text style={styles.storeFulfilmentTitle}>
-                        Fulfilled & Dispensed by {currentStore.name}
+                        Fulfilled by {currentStore.name ? currentStore.name.replace(/\s*-\s*.*$/, '') : 'Apollo Pharmacy'}
                       </Text>
                       <Text style={styles.storeFulfilmentSub}>
-                        {currentStore.locality} • Delivery in {currentStore.deliveryTime || '15-25 mins'} • Verified Partner
+                        {currentStore.locality ? `${currentStore.locality} • ` : ''}Delivery in {currentStore.deliveryTime || '15-25 mins'} • Verified Partner
                       </Text>
                     </View>
                   </View>
@@ -412,66 +435,165 @@ const ProductDetailsScreen = ({ navigation, route }) => {
               </View>
             </View>
 
-            {/* Product Information & Care Specifications */}
+            {/* Product Information & Care Specifications (Clean, User-Friendly Layout) */}
             <View style={styles.specsSection}>
-              <Text style={styles.sectionHeadingLarge}>Product Information & Care</Text>
+              <View style={styles.specsSectionHeaderRow}>
+                <View>
+                  <Text style={styles.sectionHeadingLarge}>Product Information</Text>
+                  <Text style={styles.sectionHeadingSub}>Verified details, usage guide, and composition</Text>
+                </View>
+
+                {/* Filter Tabs */}
+                <View style={styles.infoTabsRow}>
+                  <TouchableOpacity
+                    style={[styles.infoTabPill, infoTab === 'all' && styles.infoTabPillActive]}
+                    onPress={() => setInfoTab('all')}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.infoTabPillText, infoTab === 'all' && styles.infoTabPillTextActive]}>
+                      All Details
+                    </Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.infoTabPill, infoTab === 'overview' && styles.infoTabPillActive]}
+                    onPress={() => setInfoTab('overview')}
+                    activeOpacity={0.8}
+                  >
+                    <Text style={[styles.infoTabPillText, infoTab === 'overview' && styles.infoTabPillTextActive]}>
+                      Overview
+                    </Text>
+                  </TouchableOpacity>
+
+                  {product.uses ? (
+                    <TouchableOpacity
+                      style={[styles.infoTabPill, infoTab === 'uses' && styles.infoTabPillActive]}
+                      onPress={() => setInfoTab('uses')}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.infoTabPillText, infoTab === 'uses' && styles.infoTabPillTextActive]}>
+                        Key Benefits
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+
+                  {product.activeIngredients ? (
+                    <TouchableOpacity
+                      style={[styles.infoTabPill, infoTab === 'ingredients' && styles.infoTabPillActive]}
+                      onPress={() => setInfoTab('ingredients')}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.infoTabPillText, infoTab === 'ingredients' && styles.infoTabPillTextActive]}>
+                        Ingredients
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+
+                  {product.dosage ? (
+                    <TouchableOpacity
+                      style={[styles.infoTabPill, infoTab === 'dosage' && styles.infoTabPillActive]}
+                      onPress={() => setInfoTab('dosage')}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.infoTabPillText, infoTab === 'dosage' && styles.infoTabPillTextActive]}>
+                        How to Use
+                      </Text>
+                    </TouchableOpacity>
+                  ) : null}
+                </View>
+              </View>
+
+              {/* Specs Grid: 2-column clean layout with max-width and clean cards */}
               <View style={styles.specsGrid}>
-                <View style={[styles.specCard, styles.specCardOverview]}>
-                  <View style={styles.cardGradientBarTeal} />
-                  <View style={styles.specCardInnerPad}>
+                {(infoTab === 'all' || infoTab === 'overview') && (
+                  <View style={[styles.specCardUnified, infoTab === 'overview' && styles.specCardUnifiedFull]}>
                     <View style={styles.specCardHeader}>
-                      <View style={[styles.specIconCircle, { backgroundColor: '#ECFDF5', borderColor: '#A7F3D0' }]}>
-                        <Ionicons name="document-text-outline" size={16} color="#00B894" />
+                      <View style={[styles.specIconCircle, { backgroundColor: '#E6F7F5' }]}>
+                        <Ionicons name="document-text" size={16} color="#007D69" />
                       </View>
-                      <Text style={styles.specCardTitle}>Product Overview</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.specCardTitle}>Overview</Text>
+                        <Text style={styles.specCardSub}>Product Summary</Text>
+                      </View>
                     </View>
                     <Text style={styles.specCardBody}>
                       {product.description || 'Quality-assured healthcare formulation directly supplied by certified pharmaceutical partners.'}
                     </Text>
-                  </View>
-                </View>
-
-                {product.activeIngredients ? (
-                  <View style={[styles.specCard, styles.specCardIngredients]}>
-                    <View style={styles.cardGradientBarCyan} />
-                    <View style={styles.specCardInnerPad}>
-                      <View style={styles.specCardHeader}>
-                        <View style={[styles.specIconCircle, { backgroundColor: '#F0F9FF', borderColor: '#BAE6FD' }]}>
-                          <Ionicons name="flask-outline" size={16} color="#00C2CB" />
+                    {/* Quick Highlight Pills */}
+                    <View style={styles.highlightPillsRow}>
+                      {getProductHighlights(product).map((tag, i) => (
+                        <View key={i} style={styles.highlightPill}>
+                          <Ionicons name="checkmark-circle" size={12} color="#007D69" />
+                          <Text style={styles.highlightPillText}>{tag}</Text>
                         </View>
-                        <Text style={styles.specCardTitle}>Active Ingredients & Composition</Text>
+                      ))}
+                    </View>
+                  </View>
+                )}
+
+                {(infoTab === 'all' || infoTab === 'uses') && product.uses ? (
+                  <View style={[styles.specCardUnified, infoTab === 'uses' && styles.specCardUnifiedFull]}>
+                    <View style={styles.specCardHeader}>
+                      <View style={[styles.specIconCircle, { backgroundColor: '#ECFDF5' }]}>
+                        <Ionicons name="shield-checkmark" size={16} color="#00B894" />
                       </View>
-                      <Text style={styles.specCardBody}>{product.activeIngredients}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.specCardTitle}>Key Benefits</Text>
+                        <Text style={styles.specCardSub}>Uses & Efficacy</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.specCardBody}>{product.uses}</Text>
+                    <View style={styles.highlightPillsRow}>
+                      <View style={styles.highlightPillEmerald}>
+                        <Ionicons name="sparkles" size={12} color="#00B894" />
+                        <Text style={styles.highlightPillTextEmerald}>Gentle on Sensitive Skin</Text>
+                      </View>
+                      <View style={styles.highlightPillEmerald}>
+                        <Ionicons name="time" size={12} color="#00B894" />
+                        <Text style={styles.highlightPillTextEmerald}>Long-Lasting Comfort</Text>
+                      </View>
                     </View>
                   </View>
                 ) : null}
 
-                {product.uses ? (
-                  <View style={[styles.specCard, styles.specCardUses]}>
-                    <View style={styles.cardGradientBarPurple} />
-                    <View style={styles.specCardInnerPad}>
-                      <View style={styles.specCardHeader}>
-                        <View style={[styles.specIconCircle, { backgroundColor: '#FAF5FF', borderColor: '#E9D5FF' }]}>
-                          <Ionicons name="bandage-outline" size={16} color="#7C3AED" />
-                        </View>
-                        <Text style={styles.specCardTitle}>Key Therapeutic Uses</Text>
+                {(infoTab === 'all' || infoTab === 'ingredients') && product.activeIngredients ? (
+                  <View style={[styles.specCardUnified, infoTab === 'ingredients' && styles.specCardUnifiedFull]}>
+                    <View style={styles.specCardHeader}>
+                      <View style={[styles.specIconCircle, { backgroundColor: '#F0F9FF' }]}>
+                        <Ionicons name="flask" size={16} color="#0284C7" />
                       </View>
-                      <Text style={styles.specCardBody}>{product.uses}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.specCardTitle}>Ingredients</Text>
+                        <Text style={styles.specCardSub}>Formulation & Composition</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.specCardBody}>{product.activeIngredients}</Text>
+                    <View style={styles.highlightPillsRow}>
+                      <View style={styles.highlightPillCyan}>
+                        <Ionicons name="leaf-outline" size={12} color="#0284C7" />
+                        <Text style={styles.highlightPillTextCyan}>Dermatologically Tested</Text>
+                      </View>
                     </View>
                   </View>
                 ) : null}
 
-                {product.dosage ? (
-                  <View style={[styles.specCard, styles.specCardDosage]}>
-                    <View style={styles.cardGradientBarCoral} />
-                    <View style={styles.specCardInnerPad}>
-                      <View style={styles.specCardHeader}>
-                        <View style={[styles.specIconCircle, { backgroundColor: '#FFF7ED', borderColor: '#FED7AA' }]}>
-                          <Ionicons name="time-outline" size={16} color="#FF7F50" />
-                        </View>
-                        <Text style={styles.specCardTitle}>Dosage & Administration</Text>
+                {(infoTab === 'all' || infoTab === 'dosage') && product.dosage ? (
+                  <View style={[styles.specCardUnified, infoTab === 'dosage' && styles.specCardUnifiedFull]}>
+                    <View style={styles.specCardHeader}>
+                      <View style={[styles.specIconCircle, { backgroundColor: '#FFF7ED' }]}>
+                        <Ionicons name="help-buoy-outline" size={16} color="#EA580C" />
                       </View>
-                      <Text style={styles.specCardBody}>{product.dosage}</Text>
+                      <View style={{ flex: 1 }}>
+                        <Text style={styles.specCardTitle}>How to Use</Text>
+                        <Text style={styles.specCardSub}>Directions & Guide</Text>
+                      </View>
+                    </View>
+                    <Text style={styles.specCardBody}>{product.dosage}</Text>
+                    <View style={styles.highlightPillsRow}>
+                      <View style={styles.highlightPillAmber}>
+                        <Ionicons name="checkmark-done" size={12} color="#EA580C" />
+                        <Text style={styles.highlightPillTextAmber}>Easy to Wear & Discard</Text>
+                      </View>
                     </View>
                   </View>
                 ) : null}
@@ -481,28 +603,41 @@ const ProductDetailsScreen = ({ navigation, route }) => {
             {/* Similar Healthcare Items (Matching Pharmacy Cards Standard) */}
             {relatedProducts.length > 0 ? (
               <View style={styles.relatedSectionDesktop}>
-                <Text style={styles.sectionHeadingLarge}>Similar Healthcare Products</Text>
+                <View style={styles.relatedHeaderRow}>
+                  <Text style={styles.sectionHeadingLarge}>Similar Healthcare Products</Text>
+                  <TouchableOpacity
+                    onPress={() => navigation.navigate('Pharmacy')}
+                    style={styles.seeAllBtn}
+                    activeOpacity={0.75}
+                  >
+                    <Text style={styles.seeAllText}>View All Products</Text>
+                    <Ionicons name="arrow-forward" size={14} color="#007D69" />
+                  </TouchableOpacity>
+                </View>
+
                 <View style={styles.relatedGridDesktop}>
                   {relatedProducts.map((item) => {
                     const itemImg = getProductImage(item);
                     const itemDiscount = formatDiscountText(item.discount, item.mrp || item.oldPrice, item.price);
                     const cartItem = (pharmacyCart || []).find((ci) => ci.id === item.id);
                     const itemQty = cartItem?.quantity || 0;
+                    const reviewsStr = formatReviewCount(item.reviewsCount);
+                    const shortCat = getShortCategory(item.category);
 
                     return (
-                      <View key={item.id} style={styles.relatedCard}>
-                        {/* Top Gradient Bar */}
-                        <View style={styles.cardGradientBarMulticolor} />
-
-                        <View style={styles.relatedBadge}>
-                          <Text style={styles.relatedBadgeText}>{itemDiscount}</Text>
+                      <View key={item.id} style={styles.pharmacyCardRelated}>
+                        {/* Discount Badge */}
+                        <View style={styles.pharmacyBadge}>
+                          <Text style={styles.pharmacyBadgeText}>{itemDiscount}</Text>
                         </View>
+
                         {Boolean(item.requiresPrescription) ? (
-                          <View style={styles.relatedRxBadge}>
-                            <Text style={styles.relatedRxBadgeText}>Rx</Text>
+                          <View style={styles.pharmacyRxBadge}>
+                            <Text style={styles.pharmacyRxBadgeText}>Rx</Text>
                           </View>
                         ) : null}
 
+                        {/* Image Wrap */}
                         <TouchableOpacity
                           onPress={() => {
                             if (navigation.push) {
@@ -511,74 +646,85 @@ const ProductDetailsScreen = ({ navigation, route }) => {
                               navigation.navigate('ProductDetails', { product: item, productId: item.id });
                             }
                           }}
-                          style={styles.relatedImgWrap}
-                          activeOpacity={0.88}
+                          style={styles.pharmacyCardImgWrap}
+                          activeOpacity={0.9}
                         >
                           <OptimizedImage
-                            source={{ uri: itemImg }}
-                            style={styles.relatedImg}
+                            source={typeof itemImg === 'number' ? itemImg : (itemImg?.uri ? itemImg : { uri: itemImg })}
+                            style={styles.pharmacyCardImg}
                             resizeMode="contain"
+                            placeholderColor="transparent"
                             fallbackIcon="medkit-outline"
-                            fallbackColor="#00B894"
+                            fallbackColor="#007D69"
                           />
                         </TouchableOpacity>
 
-                        <View style={styles.relatedBody}>
-                          <Text style={styles.relatedCat}>{getShortCategory(item.category)}</Text>
-                          <TouchableOpacity
-                            onPress={() => {
-                              if (navigation.push) {
-                                navigation.push('ProductDetails', { product: item, productId: item.id });
-                              } else {
-                                navigation.navigate('ProductDetails', { product: item, productId: item.id });
-                              }
-                            }}
-                            activeOpacity={0.8}
-                          >
-                            <Text style={styles.relatedTitle} numberOfLines={2}>
-                              {item.name}
-                            </Text>
-                          </TouchableOpacity>
-
-                          <View style={styles.relatedRatingRow}>
-                            <Ionicons name="star" size={11} color="#FF7F50" />
-                            <Text style={styles.relatedRatingText}>{item.rating || '4.8'}</Text>
-                            <Text style={styles.relatedReviewsText}>{formatReviewCount(item.reviewsCount)}</Text>
-                          </View>
-
-                          <View style={styles.relatedPriceRow}>
-                            <Text style={styles.relatedPrice}>₹{item.price}</Text>
-                            {Boolean(item.mrp || item.oldPrice) ? (
-                              <Text style={styles.relatedMrp}>MRP ₹{item.mrp || item.oldPrice}</Text>
-                            ) : null}
-                          </View>
-
-                          {itemQty > 0 ? (
-                            <View style={styles.relatedStepper}>
-                              <TouchableOpacity
-                                style={styles.relatedStepperBtn}
-                                onPress={() => decreaseQuantity(item.id, 'pharmacy')}
-                              >
-                                <Ionicons name="remove" size={13} color="#00B894" />
-                              </TouchableOpacity>
-                              <Text style={styles.relatedStepperQty}>{itemQty}</Text>
-                              <TouchableOpacity
-                                style={styles.relatedStepperBtn}
-                                onPress={() => increaseQuantity(item.id, 'pharmacy')}
-                              >
-                                <Ionicons name="add" size={13} color="#00B894" />
-                              </TouchableOpacity>
-                            </View>
-                          ) : (
+                        {/* Card Content Body */}
+                        <View style={styles.pharmacyCardBody}>
+                          <View style={styles.pharmacyCardContent}>
+                            <Text style={styles.pharmacyCat}>{shortCat}</Text>
                             <TouchableOpacity
-                              style={styles.relatedAddBtn}
-                              onPress={() => addToCart(item, 1, 'pharmacy', currentStore)}
-                              activeOpacity={0.85}
+                              onPress={() => {
+                                if (navigation.push) {
+                                  navigation.push('ProductDetails', { product: item, productId: item.id });
+                                } else {
+                                  navigation.navigate('ProductDetails', { product: item, productId: item.id });
+                                }
+                              }}
+                              activeOpacity={0.8}
                             >
-                              <Ionicons name="cart-outline" size={14} color="#FFFFFF" />
-                              <Text style={styles.relatedAddBtnText}>Add to Cart</Text>
+                              <Text style={styles.pharmacyName} numberOfLines={2} ellipsizeMode="tail">
+                                {item.name}
+                              </Text>
                             </TouchableOpacity>
-                          )}
+
+                            {/* Compact Rating: 4.8 (1.2k) */}
+                            <View style={styles.pharmacyRatingRow}>
+                              <Ionicons name="star" size={12} color="#FF9F43" />
+                              <Text style={styles.ratingNumberText}>{item.rating || 4.8}</Text>
+                              <Text style={styles.reviewsCountText}>{reviewsStr}</Text>
+                            </View>
+                          </View>
+
+                          {/* Footer: Price & Add to Cart Action */}
+                          <View style={styles.pharmacyCardFooter}>
+                            <View style={styles.pharmacyPriceRow}>
+                              <Text style={styles.pharmacyPrice}>₹{item.price}</Text>
+                              {Boolean(item.mrp || item.oldPrice) ? (
+                                <Text style={styles.pharmacyMrp}>MRP ₹{item.mrp || item.oldPrice}</Text>
+                              ) : null}
+                            </View>
+
+                            {/* Add to Cart or Stepper */}
+                            {itemQty > 0 ? (
+                              <View style={styles.quantityStepper}>
+                                <TouchableOpacity
+                                  style={styles.stepperBtn}
+                                  onPress={() => decreaseQuantity(item.id, 'pharmacy')}
+                                  activeOpacity={0.7}
+                                >
+                                  <Ionicons name="remove" size={14} color="#00B894" />
+                                </TouchableOpacity>
+                                <Text style={styles.stepperQuantity}>{itemQty}</Text>
+                                <TouchableOpacity
+                                  style={styles.stepperBtn}
+                                  onPress={() => increaseQuantity(item.id, 'pharmacy')}
+                                  activeOpacity={0.7}
+                                >
+                                  <Ionicons name="add" size={14} color="#00B894" />
+                                </TouchableOpacity>
+                              </View>
+                            ) : (
+                              <TouchableOpacity
+                                style={styles.addToCartButton}
+                                onPress={() => addToCart(item, 1, 'pharmacy', currentStore)}
+                                activeOpacity={0.88}
+                              >
+                                <Ionicons name="cart-outline" size={16} color="#FFFFFF" />
+                                <Text style={styles.addToCartButtonText}>Add to Cart</Text>
+                              </TouchableOpacity>
+                            )}
+                          </View>
                         </View>
                       </View>
                     );
@@ -669,26 +815,36 @@ const ProductDetailsScreen = ({ navigation, route }) => {
 
               {/* Specs Cards Mobile */}
               <View style={styles.mobileSpecsSection}>
-                <Text style={styles.sectionHeadingMobile}>Product Overview</Text>
+                <Text style={styles.sectionHeadingMobile}>Product Information</Text>
                 <Text style={styles.descTextMobile}>{product.description}</Text>
 
-                {product.activeIngredients ? (
-                  <View style={styles.specCardMobile}>
-                    <Text style={styles.specTitleMobile}>Active Ingredients</Text>
-                    <Text style={styles.specBodyMobile}>{product.activeIngredients}</Text>
-                  </View>
-                ) : null}
+                {/* Mobile Highlight Pills */}
+                <View style={[styles.highlightPillsRow, { marginBottom: 12 }]}>
+                  {getProductHighlights(product).map((tag, i) => (
+                    <View key={i} style={styles.highlightPill}>
+                      <Ionicons name="checkmark-circle" size={11} color="#007D69" />
+                      <Text style={styles.highlightPillText}>{tag}</Text>
+                    </View>
+                  ))}
+                </View>
 
                 {product.uses ? (
                   <View style={styles.specCardMobile}>
-                    <Text style={styles.specTitleMobile}>Key Uses</Text>
+                    <Text style={styles.specTitleMobile}>Key Benefits</Text>
                     <Text style={styles.specBodyMobile}>{product.uses}</Text>
+                  </View>
+                ) : null}
+
+                {product.activeIngredients ? (
+                  <View style={styles.specCardMobile}>
+                    <Text style={styles.specTitleMobile}>Ingredients</Text>
+                    <Text style={styles.specBodyMobile}>{product.activeIngredients}</Text>
                   </View>
                 ) : null}
 
                 {product.dosage ? (
                   <View style={styles.specCardMobile}>
-                    <Text style={styles.specTitleMobile}>Dosage</Text>
+                    <Text style={styles.specTitleMobile}>How to Use</Text>
                     <Text style={styles.specBodyMobile}>{product.dosage}</Text>
                   </View>
                 ) : null}
@@ -734,7 +890,7 @@ const ProductDetailsScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     width: '100%',
@@ -907,42 +1063,44 @@ const styles = StyleSheet.create({
   // 3. DESKTOP SHOWCASE LAYOUT
   desktopLayoutWrap: {
     width: '100%',
-    paddingHorizontal: 40,
+    maxWidth: 1320,
+    alignSelf: 'center',
+    paddingHorizontal: 24,
     paddingVertical: 24,
   },
   desktopShowcaseRow: {
     flexDirection: 'row',
-    gap: 40,
+    gap: 36,
     alignItems: 'flex-start',
     width: '100%',
   },
   desktopImageCol: {
-    width: 500,
-    maxWidth: 540,
+    width: 440,
+    maxWidth: 460,
   },
   desktopImageCard: {
     width: '100%',
-    height: 460,
+    height: 420,
     backgroundColor: '#FFFFFF',
-    backgroundImage: 'linear-gradient(160deg, #FFFFFF 0%, #F8FAFC 60%, #F0FDF9 100%)',
-    borderRadius: 16,
-    borderWidth: 1.5,
-    borderColor: '#D1FAE5',
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E8EFF5',
     padding: 24,
     alignItems: 'center',
     justifyContent: 'center',
     position: 'relative',
     overflow: 'hidden',
-    shadowColor: '#1E3A8A',
-    shadowOffset: { width: 0, height: 6 },
-    shadowOpacity: 0.08,
-    shadowRadius: 16,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
     elevation: 3,
-    boxShadow: '0 10px 30px -4px rgba(0, 184, 148, 0.09), 0 4px 12px rgba(30, 58, 138, 0.04)',
+    boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06)',
   },
   desktopProductImage: {
     width: '92%',
     height: '92%',
+    ...(Platform.OS === 'web' ? { mixBlendMode: 'multiply' } : {}),
   },
   discountBadge: {
     position: 'absolute',
@@ -1350,83 +1508,183 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
 
-  // SPECS & INFORMATION SECTION
+  // SPECS & INFORMATION SECTION (CLEAN USER-FRIENDLY DESIGN)
   specsSection: {
     marginTop: 36,
     width: '100%',
   },
+  specsSectionHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 16,
+    marginBottom: 20,
+    paddingBottom: 14,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F1F5F9',
+  },
   sectionHeadingLarge: {
-    fontSize: 19,
+    fontSize: 20,
     fontWeight: '800',
-    color: '#1E3A8A',
-    marginBottom: 16,
-    letterSpacing: -0.2,
+    color: '#0F172A',
+    letterSpacing: -0.3,
+  },
+  sectionHeadingSub: {
+    fontSize: 13,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  infoTabsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    flexWrap: 'wrap',
+  },
+  infoTabPill: {
+    paddingVertical: 7,
+    paddingHorizontal: 14,
+    borderRadius: 20,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    cursor: 'pointer',
+  },
+  infoTabPillActive: {
+    backgroundColor: '#007D69',
+    borderColor: '#007D69',
+  },
+  infoTabPillText: {
+    fontSize: 12.5,
+    fontWeight: '600',
+    color: '#475569',
+  },
+  infoTabPillTextActive: {
+    color: '#FFFFFF',
+    fontWeight: '700',
   },
   specsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: 20,
     width: '100%',
   },
-  specCard: {
-    flex: 1,
-    minWidth: 260,
+  specCardUnified: {
+    width: '48.8%',
+    minWidth: 320,
     backgroundColor: '#FFFFFF',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    position: 'relative',
-    overflow: 'hidden',
-    shadowColor: '#1E3A8A',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
-    boxShadow: '0 6px 20px -2px rgba(30, 58, 138, 0.07)',
-  },
-  specCardInnerPad: {
-    padding: 18,
-    paddingTop: 20,
-  },
-  specCardOverview: {
-    backgroundImage: 'linear-gradient(145deg, #FFFFFF 0%, #F0FDF4 65%, #ECFDF5 100%)',
-    borderColor: '#A7F3D0',
-  },
-  specCardIngredients: {
-    backgroundImage: 'linear-gradient(145deg, #FFFFFF 0%, #F0F9FF 65%, #E0F2FE 100%)',
-    borderColor: '#BAE6FD',
-  },
-  specCardUses: {
-    backgroundImage: 'linear-gradient(145deg, #FFFFFF 0%, #FAF5FF 65%, #F3E8FF 100%)',
-    borderColor: '#DDD6FE',
-  },
-  specCardDosage: {
-    backgroundImage: 'linear-gradient(145deg, #FFFFFF 0%, #FFF7ED 65%, #FFEDD5 100%)',
-    borderColor: '#FED7AA',
-  },
-  specIconCircle: {
-    width: 32,
-    height: 32,
     borderRadius: 16,
-    borderWidth: 1.5,
-    alignItems: 'center',
-    justifyContent: 'center',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    padding: 22,
+    justifyContent: 'space-between',
+    boxShadow: '0 2px 10px rgba(15, 23, 42, 0.04)',
+    elevation: 2,
+  },
+  specCardUnifiedFull: {
+    width: '100%',
+    minWidth: '100%',
   },
   specCardHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 10,
-    marginBottom: 10,
+    gap: 12,
+    marginBottom: 12,
+  },
+  specIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   specCardTitle: {
-    fontSize: 13,
+    fontSize: 15,
     fontWeight: '800',
-    color: '#1E3A8A',
+    color: '#0F172A',
+    letterSpacing: -0.2,
+  },
+  specCardSub: {
+    fontSize: 11.5,
+    color: '#94A3B8',
+    fontWeight: '500',
+    marginTop: 1,
   },
   specCardBody: {
-    fontSize: 12.5,
-    color: '#64748B',
-    lineHeight: 19,
+    fontSize: 13.5,
+    color: '#334155',
+    lineHeight: 22,
+    marginBottom: 14,
+  },
+  highlightPillsRow: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginTop: 4,
+  },
+  highlightPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#BBF7D0',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+  },
+  highlightPillText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#15803D',
+  },
+  highlightPillEmerald: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+  },
+  highlightPillTextEmerald: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#065F46',
+  },
+  highlightPillCyan: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#F0F9FF',
+    borderWidth: 1,
+    borderColor: '#BAE6FD',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+  },
+  highlightPillTextCyan: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#0369A1',
+  },
+  highlightPillAmber: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#FFF7ED',
+    borderWidth: 1,
+    borderColor: '#FED7AA',
+    paddingVertical: 4,
+    paddingHorizontal: 10,
+    borderRadius: 14,
+  },
+  highlightPillTextAmber: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#C2410C',
   },
 
   // RELATED PRODUCTS (DESKTOP)
@@ -1434,176 +1692,213 @@ const styles = StyleSheet.create({
     marginTop: 40,
     width: '100%',
   },
+  relatedHeaderRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 20,
+  },
+  seeAllBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    cursor: 'pointer',
+  },
+  seeAllText: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#007D69',
+  },
   relatedGridDesktop: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    gap: 16,
+    gap: 20,
     width: '100%',
   },
-  relatedCard: {
+  pharmacyCardRelated: {
     flex: 1,
-    minWidth: 230,
+    minWidth: 240,
+    maxWidth: 295,
     backgroundColor: '#FFFFFF',
-    backgroundImage: 'linear-gradient(180deg, #FFFFFF 0%, #FAFCFF 60%, #F0FDF9 100%)',
-    borderRadius: 14,
-    borderWidth: 1.5,
-    borderColor: '#E2E8F0',
-    padding: 14,
-    paddingTop: 18,
+    borderRadius: 18,
+    borderWidth: 1,
+    borderColor: '#E8EFF5',
+    padding: 13,
+    paddingTop: 12,
+    paddingBottom: 14,
     position: 'relative',
     overflow: 'hidden',
-    justifyContent: 'space-between',
-    minHeight: 310,
-    shadowColor: '#1E3A8A',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
     elevation: 3,
-    boxShadow: '0 8px 24px -3px rgba(30, 58, 138, 0.08), 0 2px 6px rgba(0, 184, 148, 0.04)',
+    boxShadow: '0 4px 20px -4px rgba(15, 23, 42, 0.06), 0 1px 3px rgba(15, 23, 42, 0.02)',
+    justifyContent: 'space-between',
+    minHeight: 330,
     cursor: 'pointer',
   },
-  relatedBadge: {
+  pharmacyBadge: {
     position: 'absolute',
     top: 8,
     left: 8,
-    backgroundColor: '#FFF5F0',
-    paddingHorizontal: 6,
+    backgroundColor: '#FFF4ED',
+    paddingHorizontal: 5.5,
     paddingVertical: 2,
-    borderRadius: 4,
+    borderRadius: 6,
+    borderWidth: 0.8,
+    borderColor: '#FED7AA',
     zIndex: 2,
   },
-  relatedBadgeText: {
-    fontSize: 9.5,
-    fontWeight: '800',
-    color: '#FF7F50',
+  pharmacyBadgeText: {
+    fontSize: 8.5,
+    fontWeight: '700',
+    color: '#EA580C',
+    letterSpacing: 0.2,
   },
-  relatedRxBadge: {
+  pharmacyRxBadge: {
     position: 'absolute',
-    top: 8,
-    right: 8,
-    backgroundColor: '#EFF6FF',
+    top: 9,
+    right: 9,
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 20,
     borderWidth: 1,
-    borderColor: '#BFDBFE',
-    paddingHorizontal: 6,
-    paddingVertical: 2,
-    borderRadius: 4,
+    borderColor: '#CBD5E1',
     zIndex: 2,
   },
-  relatedRxBadgeText: {
+  pharmacyRxBadgeText: {
     fontSize: 9.5,
     fontWeight: '800',
-    color: '#1E3A8A',
+    color: '#475569',
   },
-  relatedImgWrap: {
+  pharmacyCardImgWrap: {
     width: '100%',
     height: 140,
-    backgroundColor: '#F8FAFC',
-    backgroundImage: 'linear-gradient(135deg, #F8FAFC 0%, #F1F5F9 50%, #ECFDF5 100%)',
-    borderRadius: 10,
-    borderWidth: 1,
-    borderColor: '#EDF2F7',
+    backgroundColor: 'transparent',
+    borderRadius: 12,
     marginTop: 14,
     marginBottom: 8,
     alignItems: 'center',
     justifyContent: 'center',
     overflow: 'hidden',
   },
-  relatedImg: {
-    width: '85%',
-    height: '85%',
+  pharmacyCardImg: {
+    width: '94%',
+    height: '94%',
+    ...(Platform.OS === 'web' ? { mixBlendMode: 'multiply' } : {}),
   },
-  relatedBody: {
+  pharmacyCardBody: {
     flex: 1,
     justifyContent: 'space-between',
   },
-  relatedCat: {
+  pharmacyCardContent: {
+    flex: 1,
+  },
+  pharmacyCat: {
     fontSize: 10,
     fontWeight: '700',
-    color: '#00B894',
+    color: '#0D9488',
     textTransform: 'uppercase',
-    letterSpacing: 0.4,
-    marginBottom: 3,
+    letterSpacing: 0.6,
+    marginBottom: 4,
   },
-  relatedTitle: {
-    fontSize: 13,
+  pharmacyName: {
+    fontSize: 13.5,
     fontWeight: '700',
-    color: '#1E3A8A',
-    lineHeight: 18,
-    height: 36,
+    color: '#0F172A',
+    lineHeight: 19,
+    height: 38,
+    overflow: 'hidden',
+    letterSpacing: -0.1,
   },
-  relatedRatingRow: {
+  pharmacyRatingRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
-    marginTop: 5,
+    marginTop: 6,
   },
-  relatedRatingText: {
+  ratingNumberText: {
     fontSize: 11.5,
-    fontWeight: '700',
+    fontWeight: '800',
     color: '#334155',
   },
-  relatedReviewsText: {
+  reviewsCountText: {
     fontSize: 11,
     color: '#94A3B8',
   },
-  relatedPriceRow: {
+  pharmacyCardFooter: {
+    marginTop: 10,
+  },
+  pharmacyPriceRow: {
     flexDirection: 'row',
     alignItems: 'baseline',
-    gap: 6,
-    marginVertical: 8,
+    gap: 7,
+    marginBottom: 8,
   },
-  relatedPrice: {
-    fontSize: 16,
+  pharmacyPrice: {
+    fontSize: 18,
     fontWeight: '800',
-    color: '#1E3A8A',
+    color: '#0F172A',
+    letterSpacing: -0.3,
   },
-  relatedMrp: {
-    fontSize: 11.5,
+  pharmacyMrp: {
+    fontSize: 12,
     color: '#94A3B8',
     textDecorationLine: 'line-through',
   },
-  relatedAddBtn: {
+  addToCartButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 6,
+    gap: 7,
     backgroundColor: '#00B894',
-    backgroundImage: 'linear-gradient(135deg, #00B894 0%, #009B7B 100%)',
-    borderRadius: 8,
-    height: 36,
+    backgroundImage: 'linear-gradient(135deg, #00C29A 0%, #009E7E 100%)',
+    borderRadius: 10,
+    height: 38,
     cursor: 'pointer',
     shadowColor: '#00B894',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 8,
+    elevation: 3,
+    boxShadow: '0 4px 14px rgba(0, 184, 148, 0.28)',
   },
-  relatedAddBtnText: {
-    fontSize: 12.5,
+  addToCartButtonText: {
+    fontSize: 13,
     fontWeight: '700',
     color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
-  relatedStepper: {
+  quantityStepper: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
     borderWidth: 1.5,
     borderColor: '#00B894',
-    borderRadius: 8,
-    backgroundColor: '#ECFDF5',
-    height: 34,
-    paddingHorizontal: 8,
+    borderRadius: 10,
+    height: 38,
+    paddingHorizontal: 4,
   },
-  relatedStepperBtn: {
-    width: 26,
-    height: 26,
+  stepperBtn: {
+    width: 28,
+    height: 28,
     alignItems: 'center',
     justifyContent: 'center',
   },
-  relatedStepperQty: {
+  stepperQuantity: {
     fontSize: 13,
     fontWeight: '800',
     color: '#00B894',
+    minWidth: 20,
+    textAlign: 'center',
   },
 
   // 4. MOBILE SINGLE-COLUMN LAYOUT

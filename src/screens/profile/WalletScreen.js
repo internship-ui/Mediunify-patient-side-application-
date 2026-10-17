@@ -9,6 +9,7 @@ import {
   Modal,
   Alert,
   StatusBar,
+  Platform,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import { showAlert } from '../../utils/alert';
@@ -16,6 +17,9 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import colors from '../../theme/colors';
 import { saveTransaction } from '../../services/transactionService';
+import WebFooter from '../../components/web/WebFooter';
+import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 
 const INITIAL_TRANSACTIONS = [
   {
@@ -57,6 +61,8 @@ const INITIAL_TRANSACTIONS = [
 ];
 
 const WalletScreen = ({ navigation }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const [walletBalance, setWalletBalance] = useState(1250);
   const [carePoints, setCarePoints] = useState(500);
   const [transactions, setTransactions] = useState(INITIAL_TRANSACTIONS);
@@ -133,38 +139,41 @@ const WalletScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? theme.headerBg : "#FFFFFF"} />
 
       {/* HEADER */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backButton}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-back" size={22} color={colors.secondary} />
-        </TouchableOpacity>
+      <View style={[styles.header, Platform.OS === 'web' && { alignItems: 'center' }]}>
+        <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }, Platform.OS === 'web' && styles.webInnerContainer]}>
+          <TouchableOpacity
+            style={styles.backButton}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-back" size={22} color={isDarkMode ? theme.text : colors.secondary} />
+          </TouchableOpacity>
 
-        <View style={styles.headerCenter}>
-          <Text style={styles.headerTitle}>MediUnify Health Wallet</Text>
-          <Text style={styles.headerSubtitle}>
-            Cashback, Care Points & Instant Payments
-          </Text>
+          <View style={styles.headerCenter}>
+            <Text style={styles.headerTitle}>MediUnify Health Wallet</Text>
+            <Text style={styles.headerSubtitle}>
+              Cashback, Care Points & Instant Payments
+            </Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.referIconBtn}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('ReferEarn')}
+          >
+            <Ionicons name="gift-outline" size={20} color={colors.primary} />
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={styles.referIconBtn}
-          activeOpacity={0.8}
-          onPress={() => navigation.navigate('ReferEarn')}
-        >
-          <Ionicons name="gift-outline" size={20} color={colors.primary} />
-        </TouchableOpacity>
       </View>
 
       <ScrollView
         showsVerticalScrollIndicator={false}
         contentContainerStyle={styles.scrollContent}
       >
+        <View style={Platform.OS === 'web' ? styles.webInnerContainer : null}>
         {/* ==================================================
             MAIN WALLET BALANCE CARD
         ================================================== */}
@@ -273,6 +282,9 @@ const WalletScreen = ({ navigation }) => {
             );
           })}
         </View>
+        </View>
+
+        {Platform.OS === 'web' && <WebFooter navigation={navigation} />}
       </ScrollView>
 
       {/* ==================================================
@@ -353,7 +365,7 @@ const WalletScreen = ({ navigation }) => {
 // STYLES
 // ==================================================
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F8FAFC',
@@ -404,7 +416,14 @@ const styles = StyleSheet.create({
 
   scrollContent: {
     padding: 16,
-    paddingBottom: 70,
+    paddingBottom: Platform.OS === 'web' ? 0 : 70,
+    paddingHorizontal: Platform.OS === 'web' ? 0 : 16,
+  },
+  webInnerContainer: {
+    maxWidth: 800,
+    width: '100%',
+    alignSelf: 'center',
+    paddingHorizontal: Platform.OS === 'web' ? 16 : 0,
   },
 
   // MAIN WALLET CARD

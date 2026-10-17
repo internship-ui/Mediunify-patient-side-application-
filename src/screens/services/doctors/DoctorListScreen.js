@@ -37,6 +37,7 @@ import { isDesktopLayout } from '../../../utils/responsiveLayoutHelper';
 import Pagination from '../../../components/common/Pagination';
 import GuestLeadModal from '../../../components/common/GuestLeadModal';
 import { shouldShowGuestLeadPopup } from '../../../services/guestLeadService';
+import { useTheme } from '../../../context/ThemeContext';
 
 export const POPULAR_LOCALITIES = [
   { id: '1', name: 'Kuvempunagar', city: 'Mysore', full: 'Kuvempunagar, Mysore', latitude: 12.2858, longitude: 76.6341 },
@@ -77,54 +78,6 @@ export const TOP_QUICK_SPECIALTIES = [
   { id: 'Ophthalmology', label: 'Eye Care', icon: 'eye-outline' },
 ];
 
-// ATTRACTIVE LIGHT CARD PALETTE (Soft, Professional & Vibrant - Fully Coloured Cards)
-const DOCTOR_CARD_THEMES = [
-  {
-    // 1. Soft Emerald / Mint
-    bgColor: '#E6F8F2',
-    cardBg: 'linear-gradient(135deg, #ECFDF5 0%, #E2F8F0 50%, #D1F4E8 100%)',
-    borderColor: '#86EFAC',
-    accentColor: '#00B894',
-    feeColor: '#007D69',
-    badgeBorder: '#A7F3D0',
-    btnBg: 'linear-gradient(135deg, #00B894 0%, #009677 100%)',
-    shadowColor: 'rgba(0, 184, 148, 0.16)',
-  },
-  {
-    // 2. Soft Sky Ice Blue
-    bgColor: '#E0F2FE',
-    cardBg: 'linear-gradient(135deg, #EFF6FF 0%, #E0F2FE 50%, #BAE6FD 100%)',
-    borderColor: '#93C5FD',
-    accentColor: '#0284C7',
-    feeColor: '#0369A1',
-    badgeBorder: '#BAE6FD',
-    btnBg: 'linear-gradient(135deg, #0284C7 0%, #0369A1 100%)',
-    shadowColor: 'rgba(2, 132, 199, 0.16)',
-  },
-  {
-    // 3. Soft Lilac / Lavender
-    bgColor: '#F3E8FF',
-    cardBg: 'linear-gradient(135deg, #FAF5FF 0%, #F3E8FF 50%, #E9D5FF 100%)',
-    borderColor: '#C4B5FD',
-    accentColor: '#7C3AED',
-    feeColor: '#6D28D9',
-    badgeBorder: '#DDD6FE',
-    btnBg: 'linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)',
-    shadowColor: 'rgba(124, 58, 237, 0.16)',
-  },
-  {
-    // 4. Soft Sunset Coral / Peach
-    bgColor: '#FFEDD5',
-    cardBg: 'linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 50%, #FED7AA 100%)',
-    borderColor: '#FDBA74',
-    accentColor: '#EA580C',
-    feeColor: '#C2410C',
-    badgeBorder: '#FED7AA',
-    btnBg: 'linear-gradient(135deg, #FF7F50 0%, #EA580C 100%)',
-    shadowColor: 'rgba(255, 127, 80, 0.16)',
-  },
-];
-
 const DoctorAvatar = ({ image, name }) => {
   const [imageFailed, setImageFailed] = useState(false);
   const initials = name
@@ -148,10 +101,152 @@ const DoctorAvatar = ({ image, name }) => {
       ) : (
         <View style={styles.avatarFallback}>
           <Text style={styles.avatarFallbackText}>{initials}</Text>
-          <Ionicons name="medical" size={12} color="#0D9488" style={styles.avatarFallbackIcon} />
+          <Ionicons name="medical" size={13} color="#0D9488" style={styles.avatarFallbackIcon} />
         </View>
       )}
       <View style={styles.onlineStatusDot} />
+    </View>
+  );
+};
+
+const formatExperience = (exp, years) => {
+  if (exp) {
+    return exp.replace(/\s*Years\s*Experience/i, ' yrs exp').replace(/\s*Years/i, ' yrs').replace(/\s*Experience/i, ' exp');
+  }
+  return `${years || '10+'} yrs exp`;
+};
+
+const formatDistance = (dist) => {
+  if (!dist) return '1 km';
+  return dist.replace(/\s*away/i, '').trim();
+};
+
+const formatSlot = (slot) => {
+  if (!slot) return 'Today, 04:30 PM';
+  const match = slot.match(/Today,\s*in\s*\d+\s*mins\s*\(([^)]+)\)/i);
+  if (match) {
+    return `Today, ${match[1]}`;
+  }
+  return slot;
+};
+
+// STREAMLINED DOCTOR CARD COMPONENT
+const DoctorCardItem = ({
+  item,
+  index = 0,
+  isDesktopWeb,
+  onSelectDoctor,
+  onDirections,
+  onBook,
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <View
+      style={[
+        styles.card,
+        isDesktopWeb && styles.cardDesktop,
+        {
+          boxShadow: isHovered
+            ? '0 12px 28px -4px rgba(15, 23, 42, 0.08), 0 4px 10px rgba(15, 23, 42, 0.03)'
+            : '0 2px 12px -2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.02)',
+          transform: isHovered && Platform.OS === 'web' ? [{ translateY: -2 }] : [{ translateY: 0 }],
+        },
+      ]}
+      {...(Platform.OS === 'web'
+        ? {
+            onMouseEnter: () => setIsHovered(true),
+            onMouseLeave: () => setIsHovered(false),
+          }
+        : {})}
+    >
+      {/* 1. DOCTOR MAIN DETAILS */}
+      <TouchableOpacity
+        style={styles.doctorMainRow}
+        activeOpacity={0.88}
+        onPress={onSelectDoctor}
+      >
+        <DoctorAvatar image={item.image} name={item.name} />
+
+        <View style={styles.doctorInfoCol}>
+          {/* Doctor Name & Today Tag - Auto-adjusts cleanly */}
+          <View style={styles.nameBadgeRow}>
+            <View style={styles.nameVerifiedWrap}>
+              <Text 
+                style={styles.doctorName} 
+                numberOfLines={2}
+                adjustsFontSizeToFit
+                minimumFontScale={0.88}
+              >
+                {item.name}
+              </Text>
+              <Ionicons name="checkmark-circle" size={14} color="#00B894" style={styles.verifiedCheckIcon} />
+            </View>
+            {item.availableToday && (
+              <View style={styles.availableTag}>
+                <View style={styles.liveAvailablePulse} />
+                <Text style={styles.availableTagText}>Available Today</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Specialty & Experience - Automatically wraps gracefully on small screens */}
+          <Text style={styles.specialtyExpText} numberOfLines={2}>
+            {item.specialty} • {formatExperience(item.experience, item.experienceYears)}
+          </Text>
+
+          {/* Clinic & Distance - Automatically wraps */}
+          <View style={styles.clinicLocationWrap}>
+            <Ionicons name="business-outline" size={13} color="#0D9488" style={{ marginRight: 3, flexShrink: 0 }} />
+            <Text style={styles.clinicNameText} numberOfLines={2}>
+              {item.clinicName}
+            </Text>
+            <Text style={styles.distanceBadgeText}>• {formatDistance(item.distance)}</Text>
+          </View>
+
+          {/* Key Metrics: Rating & Next Slot - Consistent clean row */}
+          <View style={styles.metricsRow}>
+            <View style={styles.ratingChip}>
+              <Ionicons name="star" size={11} color="#F59E0B" />
+              <Text style={styles.ratingChipText}>{item.rating}</Text>
+              <Text style={styles.reviewsCountText}>({item.reviewCount})</Text>
+            </View>
+
+            <View style={styles.slotBadge}>
+              <Ionicons name="flash" size={10.5} color="#059669" />
+              <Text style={styles.slotBadgeText}>{formatSlot(item.nextSlot)}</Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      {/* 2. BOTTOM FOOTER: FEE & ACTIONS */}
+      <View style={[styles.cardFooterRow, isDesktopWeb && styles.cardFooterRowDesktop]}>
+        <View style={styles.feeSectionCol}>
+          <Text style={styles.feeAmount}>₹{item.fee}</Text>
+          <Text style={styles.feeSubtext}>Free Follow-up</Text>
+        </View>
+
+        <View style={styles.cardActionsWrap}>
+          <TouchableOpacity
+            style={styles.navigateButton}
+            activeOpacity={0.82}
+            onPress={onDirections}
+          >
+            <Ionicons name="navigate-outline" size={13} color="#1E3A8A" />
+            <Text style={styles.navigateButtonText}>Directions</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.bookAppointmentButton}
+            activeOpacity={0.88}
+            onPress={onBook}
+          >
+            <Text style={styles.bookAppointmentButtonText}>Book Visit</Text>
+            <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      </View>
     </View>
   );
 };
@@ -172,6 +267,8 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 };
 
 const DoctorListScreen = ({ navigation, route }) => {
+  const { isDarkMode, theme } = useTheme();
+  const isDark = isDarkMode;
   const { width } = useWindowDimensions();
   const isDesktopWeb = Platform.OS === 'web' && (isDesktopLayout(width) || width >= 600);
   const isWideScreen = isDesktopLayout(width);
@@ -511,98 +608,19 @@ const DoctorListScreen = ({ navigation, route }) => {
   };
 
   const renderDoctor = ({ item, index = 0 }) => {
-    const theme = DOCTOR_CARD_THEMES[index % DOCTOR_CARD_THEMES.length];
-
     return (
-      <View
-        style={[
-          styles.card,
-          isDesktopWeb && styles.cardDesktop,
-          {
-            backgroundColor: theme.bgColor,
-            backgroundImage: theme.cardBg,
-            borderColor: theme.borderColor,
-            boxShadow: `0 8px 24px -2px ${theme.shadowColor}, 0 2px 6px rgba(0, 0, 0, 0.04)`,
-          },
-        ]}
-      >
-        {/* Doctor Main Details */}
-        <TouchableOpacity
-          style={styles.doctorMainRow}
-          activeOpacity={0.88}
-          onPress={() =>
-            navigation.navigate('DoctorDetails', {
-              doctor: item,
-            })
-          }
-        >
-          <DoctorAvatar image={item.image} name={item.name} />
-
-          <View style={styles.doctorInfoCol}>
-            <View style={styles.nameBadgeRow}>
-              <Text style={styles.doctorName} numberOfLines={1}>{item.name}</Text>
-              <Ionicons name="checkmark-circle" size={15} color={theme.accentColor} />
-            </View>
-
-            <Text style={styles.specialtyText} numberOfLines={1}>
-              {item.specialty} • {item.experienceYears || '10+'} yrs exp
-            </Text>
-
-            <View style={[styles.clinicLocationWrap, { borderColor: theme.badgeBorder }]}>
-              <Ionicons name="business-outline" size={12} color={theme.accentColor} />
-              <Text style={styles.clinicNameText} numberOfLines={1}>
-                {item.clinicName}
-              </Text>
-              <Text style={styles.distanceBadgeText}>• {item.distance}</Text>
-            </View>
-
-            {/* Ratings & Slot Badges */}
-            <View style={styles.metricsRow}>
-              <View style={[styles.ratingChip, { borderColor: theme.badgeBorder }]}>
-                <Ionicons name="star" size={11} color="#FFA000" />
-                <Text style={styles.ratingChipText}>{item.rating}</Text>
-                <Text style={styles.reviewsCountText}>({item.reviewCount})</Text>
-              </View>
-
-              <View style={[styles.slotBadge, { borderColor: theme.badgeBorder }]}>
-                <Ionicons name="flash-outline" size={11} color={theme.accentColor} />
-                <Text style={[styles.slotBadgeText, { color: theme.accentColor }]}>{item.nextSlot}</Text>
-              </View>
-            </View>
-          </View>
-        </TouchableOpacity>
-
-        {/* BOTTOM FOOTER: FEE & SIDE-BY-SIDE ACTIONS */}
-        <View style={[styles.cardFooterRow, isDesktopWeb && styles.cardFooterRowDesktop]}>
-          <View style={[styles.feeWrap, { borderColor: theme.badgeBorder }]}>
-            <Text style={[styles.feeLabel, { color: theme.feeColor }]}>Fee</Text>
-            <Text style={[styles.feeAmount, { color: theme.feeColor }]}>₹{item.fee}</Text>
-          </View>
-
-          <View style={styles.cardActionsWrap}>
-            <TouchableOpacity
-              style={[styles.navigateButton, { borderColor: theme.badgeBorder }]}
-              activeOpacity={0.82}
-              onPress={() => handleOpenDirectionsModal(item)}
-            >
-              <Ionicons name="navigate-outline" size={13} color="#1E3A8A" />
-              <Text style={styles.navigateButtonText}>Directions</Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[
-                styles.bookAppointmentButton,
-                { backgroundImage: theme.btnBg, backgroundColor: theme.accentColor },
-              ]}
-              activeOpacity={0.88}
-              onPress={() => setSelectedDoctorForBooking(item)}
-            >
-              <Text style={styles.bookAppointmentButtonText}>Book Visit</Text>
-              <Ionicons name="arrow-forward" size={13} color="#FFFFFF" />
-            </TouchableOpacity>
-          </View>
-        </View>
-      </View>
+      <DoctorCardItem
+        item={item}
+        index={index}
+        isDesktopWeb={isDesktopWeb}
+        onSelectDoctor={() =>
+          navigation.navigate('DoctorDetails', {
+            doctor: item,
+          })
+        }
+        onDirections={() => handleOpenDirectionsModal(item)}
+        onBook={() => setSelectedDoctorForBooking(item)}
+      />
     );
   };
 
@@ -1054,8 +1072,8 @@ const DoctorListScreen = ({ navigation, route }) => {
   );
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeArea, isDark && { backgroundColor: theme.background }]}>
+      <StatusBar barStyle={isDark ? 'light-content' : 'dark-content'} backgroundColor={isDark ? theme.headerBg : '#FFFFFF'} />
 
       <ScrollView
         ref={scrollViewRef}
@@ -1066,46 +1084,31 @@ const DoctorListScreen = ({ navigation, route }) => {
             HEADER (MOBILE ONLY)
         ================================================== */}
         {!isDesktopWeb && (
-          <View style={styles.header}>
+          <View style={[styles.header, isDark && { backgroundColor: theme.headerBg, borderBottomColor: theme.border }]}>
             <TouchableOpacity
-              style={styles.backButton}
+              style={[styles.backButton, isDark && { backgroundColor: theme.card, borderColor: theme.border }]}
               onPress={() => navigation.goBack()}
               activeOpacity={0.8}
             >
-              <Ionicons name="arrow-back" size={20} color="#1E3A8A" />
+              <Ionicons name="arrow-back" size={20} color={isDark ? theme.text : '#1E3A8A'} />
             </TouchableOpacity>
 
             <View style={styles.headerCenter}>
-              <Text style={styles.headerTitle}>Doctors</Text>
+              <Text style={[styles.headerTitle, isDark && { color: theme.text }]}>Doctors</Text>
               <TouchableOpacity
-                style={styles.headerLocationBtn}
+                style={[styles.headerLocationBtn, isDark && { backgroundColor: theme.card }]}
                 onPress={() => setLocationModalVisible(true)}
                 activeOpacity={0.7}
               >
-                <Ionicons name="location-sharp" size={11} color="#0D9488" />
-                <Text style={styles.headerLocationText} numberOfLines={1}>
+                <Ionicons name="location-sharp" size={11} color="#00B894" />
+                <Text style={[styles.headerLocationText, isDark && { color: theme.textSecondary }]} numberOfLines={1}>
                   {loadingGps ? 'Detecting...' : userLocality.split(',')[0]}
                 </Text>
-                <Ionicons name="chevron-down" size={10} color="#0D9488" />
+                <Ionicons name="chevron-down" size={10} color="#00B894" />
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity
-              style={[styles.filterHeaderBtn, activeFiltersCount > 0 && styles.filterHeaderBtnActive]}
-              activeOpacity={0.8}
-              onPress={() => setFilterModalVisible(true)}
-            >
-              <Ionicons
-                name="options-outline"
-                size={18}
-                color={activeFiltersCount > 0 ? '#FFFFFF' : '#1E3A8A'}
-              />
-              {activeFiltersCount > 0 && (
-                <View style={styles.filterBadgeCount}>
-                  <Text style={styles.filterBadgeText}>{activeFiltersCount}</Text>
-                </View>
-              )}
-            </TouchableOpacity>
+            <View style={{ width: 40 }} />
           </View>
         )}
 
@@ -1193,17 +1196,10 @@ const DoctorListScreen = ({ navigation, route }) => {
         </View>
 
         {/* ==================================================
-            MAIN CONTENT AREA: DESKTOP 2-COLUMN (VISIBLE FILTER SIDEBAR + DOCTORS LIST)
+            MAIN CONTENT AREA: PREMIUM CENTERED DOCTORS LIST
         ================================================== */}
         <View style={[styles.mainLayoutWrap, isWideScreen && styles.mainLayoutWrapDesktop]}>
-          {/* Left Filter Sidebar - Visible on Desktop & Tablets! */}
-          {isWideScreen && (
-            <View style={styles.desktopSidebarCol}>
-              {renderDesktopSidebar()}
-            </View>
-          )}
-
-          {/* Right Content Column: Results count & Doctors Cards */}
+          {/* Centered Doctors Cards Column */}
           <View style={[styles.doctorsColWrap, isWideScreen && styles.doctorsColWrapDesktop]}>
             <View style={styles.resultsHeaderRow}>
               <View style={styles.resultsHeadingWrap}>
@@ -1213,12 +1209,43 @@ const DoctorListScreen = ({ navigation, route }) => {
                 </View>
               </View>
 
-              {/* Interactive Horizontal Sort Options */}
+              {/* UNIFIED SINGLE HORIZONTAL FILTER & SORT OPTIONS */}
               <ScrollView
                 horizontal
                 showsHorizontalScrollIndicator={false}
                 contentContainerStyle={styles.sortPillsScroll}
               >
+                {/* 1. Filter Trigger Pill */}
+                <TouchableOpacity
+                  style={[
+                    styles.sortPillBtn,
+                    activeFiltersCount > 0 && styles.sortPillBtnActive,
+                    { flexDirection: 'row', alignItems: 'center', gap: 5 },
+                  ]}
+                  onPress={() => setFilterModalVisible(true)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name="options-outline"
+                    size={13}
+                    color={activeFiltersCount > 0 ? '#FFFFFF' : '#0D9488'}
+                  />
+                  <Text
+                    style={[
+                      styles.sortPillText,
+                      activeFiltersCount > 0 && styles.sortPillTextActive,
+                    ]}
+                  >
+                    Filter
+                  </Text>
+                  {activeFiltersCount > 0 && (
+                    <View style={styles.filterTriggerCountBadge}>
+                      <Text style={styles.filterTriggerCountBadgeText}>{activeFiltersCount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                {/* 2. Sort Pills */}
                 {[
                   { id: 'nearest', label: 'Nearest' },
                   { id: 'rating', label: 'Top Rated' },
@@ -1239,6 +1266,31 @@ const DoctorListScreen = ({ navigation, route }) => {
                     </TouchableOpacity>
                   );
                 })}
+
+                {/* 3. Available Today Quick Toggle */}
+                <TouchableOpacity
+                  style={[
+                    styles.sortPillBtn,
+                    onlyAvailableToday && styles.sortPillBtnActiveGreen,
+                    { flexDirection: 'row', alignItems: 'center', gap: 4 },
+                  ]}
+                  onPress={() => setOnlyAvailableToday(!onlyAvailableToday)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name="flash"
+                    size={11.5}
+                    color={onlyAvailableToday ? '#FFFFFF' : '#10B981'}
+                  />
+                  <Text
+                    style={[
+                      styles.sortPillText,
+                      onlyAvailableToday && styles.sortPillTextActive,
+                    ]}
+                  >
+                    Available Today
+                  </Text>
+                </TouchableOpacity>
               </ScrollView>
             </View>
 
@@ -1337,14 +1389,17 @@ const DoctorListScreen = ({ navigation, route }) => {
               activeOpacity={1}
               onPress={() => {}}
             >
+              {/* TOP MULTICOLOR ACCENT BAR */}
+              <View style={styles.modalTopAccentBar} />
+
               {/* MODAL HEADER */}
               <View style={styles.modalHeaderRow}>
                 <View style={styles.locationModalIconBox}>
-                  <Ionicons name="location" size={20} color="#0D9488" />
+                  <Ionicons name="location-sharp" size={20} color="#00B894" />
                 </View>
-                <View style={{ flex: 1, marginLeft: 10 }}>
+                <View style={{ flex: 1, marginLeft: 12 }}>
                   <Text style={styles.modalHeaderTitle}>Select Location</Text>
-                  <Text style={styles.modalHeaderSub}>Find doctors near your area</Text>
+                  <Text style={styles.modalHeaderSub}>Find verified doctors and clinics near your area</Text>
                 </View>
                 <TouchableOpacity
                   style={styles.modalCloseBtn}
@@ -1352,6 +1407,7 @@ const DoctorListScreen = ({ navigation, route }) => {
                     Keyboard.dismiss();
                     setLocationModalVisible(false);
                   }}
+                  activeOpacity={0.8}
                 >
                   <Ionicons name="close" size={18} color="#64748B" />
                 </TouchableOpacity>
@@ -1359,7 +1415,7 @@ const DoctorListScreen = ({ navigation, route }) => {
 
               {/* SEARCH LOCALITY INPUT */}
               <View style={styles.localitySearchBox}>
-                <Ionicons name="search-outline" size={16} color="#94A3B8" />
+                <Ionicons name="search-outline" size={16} color="#00B894" />
                 <TextInput
                   style={styles.localitySearchInput}
                   placeholder="Search area, locality, or city..."
@@ -1374,52 +1430,48 @@ const DoctorListScreen = ({ navigation, route }) => {
                 )}
               </View>
 
-              {/* DUAL QUICK ACTIONS: CURRENT GPS & LIVE MAP */}
-              <View style={styles.quickLocActionsRow}>
-                <TouchableOpacity
-                  style={[styles.quickLocActionBtn, styles.quickLocActionBtnActive]}
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    Keyboard.dismiss();
-                    detectLocation();
-                  }}
-                  disabled={loadingGps}
-                >
+              {/* GPS AUTO-DETECT CURRENT LOCATION CARD (FULL-WIDTH LUXURY ROW) */}
+              <TouchableOpacity
+                style={styles.gpsLocationCard}
+                activeOpacity={0.82}
+                onPress={() => {
+                  Keyboard.dismiss();
+                  detectLocation();
+                }}
+                disabled={loadingGps}
+              >
+                <View style={styles.gpsIconCircle}>
                   {loadingGps ? (
-                    <ActivityIndicator size="small" color="#0D9488" />
+                    <ActivityIndicator size="small" color="#FFFFFF" />
                   ) : (
-                    <Ionicons name="navigate" size={15} color="#0D9488" />
+                    <Ionicons name="navigate" size={17} color="#FFFFFF" />
                   )}
-                  <Text style={styles.quickLocActionText}>
-                    {loadingGps ? 'Locating...' : 'Use Current GPS'}
-                  </Text>
-                </TouchableOpacity>
+                </View>
 
-                <TouchableOpacity
-                  style={styles.quickLocActionBtn}
-                  activeOpacity={0.8}
-                  onPress={() => {
-                    Keyboard.dismiss();
-                    setLocationModalVisible(false);
-                    navigation.navigate('PharmacyLocation', {
-                      onLocationSelected: (selectedLoc) => {
-                        const full = selectedLoc.addressLine || `${selectedLoc.city}`;
-                        setUserLocality(full);
-                        if (selectedLoc.latitude && selectedLoc.longitude) {
-                          setUserCoords({
-                            latitude: selectedLoc.latitude,
-                            longitude: selectedLoc.longitude,
-                          });
-                        }
-                        showToast(`Location set from Live Map: ${full}`);
-                      },
-                    });
-                  }}
-                >
-                  <Ionicons name="map-outline" size={15} color="#0D9488" />
-                  <Text style={styles.quickLocActionText}>Pick on Map</Text>
-                </TouchableOpacity>
-              </View>
+                <View style={styles.gpsTextCol}>
+                  <View style={styles.gpsTitleRow}>
+                    <Text style={styles.gpsCardTitle}>
+                      {loadingGps ? 'Detecting your location...' : 'Use Current Location'}
+                    </Text>
+                    <View style={styles.gpsLivePill}>
+                      <View style={styles.gpsLiveDot} />
+                      <Text style={styles.gpsLivePillText}>GPS</Text>
+                    </View>
+                  </View>
+                  <Text style={styles.gpsCardSub} numberOfLines={1}>
+                    {loadingGps
+                      ? 'Fetching your coordinates...'
+                      : 'Tap to auto-detect your current area in Mysore'}
+                  </Text>
+                </View>
+
+                <View style={styles.gpsActionPill}>
+                  <Text style={styles.gpsActionPillText}>
+                    {loadingGps ? 'Locating' : 'Detect'}
+                  </Text>
+                  <Ionicons name="chevron-forward" size={13} color="#00B894" />
+                </View>
+              </TouchableOpacity>
 
               <ScrollView
                 showsVerticalScrollIndicator={false}
@@ -1428,7 +1480,7 @@ const DoctorListScreen = ({ navigation, route }) => {
                 bounces={false}
               >
                 {/* POPULAR LOCALITIES LIST */}
-                <Text style={styles.popularLocTitle}>POPULAR AREAS</Text>
+                <Text style={styles.popularLocTitle}>POPULAR LOCALITIES IN MYSORE</Text>
                 <View style={styles.localitiesListContainer}>
                   {filteredLocalities.map((loc) => {
                     const isSelected = userLocality === loc.full;
@@ -1436,13 +1488,13 @@ const DoctorListScreen = ({ navigation, route }) => {
                       <TouchableOpacity
                         key={loc.id}
                         style={[styles.localityRow, isSelected && styles.localityRowActive]}
-                        activeOpacity={0.7}
+                        activeOpacity={0.75}
                         onPress={() => handleSelectLocality(loc)}
                       >
                         <Ionicons
                           name={isSelected ? 'location-sharp' : 'location-outline'}
                           size={16}
-                          color={isSelected ? '#00B894' : '#94A3B8'}
+                          color={isSelected ? '#00B894' : '#64748B'}
                           style={{ marginRight: 10 }}
                         />
                         <View style={{ flex: 1 }}>
@@ -1450,9 +1502,13 @@ const DoctorListScreen = ({ navigation, route }) => {
                             {loc.name}
                           </Text>
                         </View>
-                        <Text style={styles.localityCity}>{loc.city}</Text>
+                        <View style={[styles.localityCityPill, isSelected && styles.localityCityPillActive]}>
+                          <Text style={[styles.localityCity, isSelected && styles.localityCityActive]}>
+                            {loc.city}
+                          </Text>
+                        </View>
                         {isSelected && (
-                          <Ionicons name="checkmark-circle" size={16} color="#00B894" style={{ marginLeft: 6 }} />
+                          <Ionicons name="checkmark-circle" size={17} color="#00B894" style={{ marginLeft: 8 }} />
                         )}
                       </TouchableOpacity>
                     );
@@ -1461,7 +1517,7 @@ const DoctorListScreen = ({ navigation, route }) => {
 
                 {/* CUSTOM ADDRESS MANUAL ENTRY */}
                 <View style={styles.customLocBox}>
-                  <Text style={styles.customLocLabel}>Or enter custom area</Text>
+                  <Text style={styles.customLocLabel}>Or enter custom locality</Text>
                   <View style={styles.customLocInputRow}>
                     <TextInput
                       style={styles.customLocInput}
@@ -1477,8 +1533,9 @@ const DoctorListScreen = ({ navigation, route }) => {
                       ]}
                       disabled={!customLocalityInput.trim()}
                       onPress={handleSetCustomLocation}
+                      activeOpacity={0.85}
                     >
-                      <Text style={styles.customLocApplyText}>Set</Text>
+                      <Text style={styles.customLocApplyText}>Set Location</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -2254,25 +2311,24 @@ const styles = StyleSheet.create({
   searchConsoleContainerDesktop: {
     flexDirection: 'row',
     alignItems: 'center',
-    maxWidth: 1320,
+    maxWidth: 1040,
     width: '100%',
     alignSelf: 'center',
-    marginHorizontal: 24,
+    paddingHorizontal: 20,
     marginTop: 16,
-    marginBottom: 14,
-    gap: 16,
+    marginBottom: 12,
+    gap: 14,
   },
   standaloneLocationCard: {
-    backgroundColor: '#E6F8F3',
-    backgroundImage: 'linear-gradient(135deg, #ECFDF5 0%, #E0F7F0 100%)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#86EFAC',
-    shadowColor: '#00B894',
+    borderColor: '#E2E8F0',
+    shadowColor: '#1E3A8A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08,
+    shadowOpacity: 0.04,
     shadowRadius: 8,
-    boxShadow: '0 4px 14px rgba(0, 184, 148, 0.08)',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
     elevation: 2,
     flexDirection: 'row',
     alignItems: 'center',
@@ -2283,20 +2339,19 @@ const styles = StyleSheet.create({
     ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
   },
   standaloneLocationCardDesktop: {
-    width: 360,
+    width: 320,
     paddingVertical: 7,
   },
   standaloneSearchCard: {
-    backgroundColor: '#F0F9FF',
-    backgroundImage: 'linear-gradient(135deg, #F8FAFC 0%, #E0F2FE 100%)',
+    backgroundColor: '#FFFFFF',
     borderRadius: 12,
     borderWidth: 1.5,
-    borderColor: '#93C5FD',
+    borderColor: '#E2E8F0',
     shadowColor: '#1E3A8A',
     shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
+    shadowOpacity: 0.04,
     shadowRadius: 8,
-    boxShadow: '0 4px 14px rgba(2, 132, 199, 0.08)',
+    boxShadow: '0 2px 8px rgba(0, 0, 0, 0.04)',
     elevation: 2,
     flexDirection: 'row',
     alignItems: 'center',
@@ -2634,6 +2689,22 @@ const styles = StyleSheet.create({
     backgroundColor: '#00B894',
     borderColor: '#00B894',
   },
+  sortPillBtnActiveGreen: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
+  },
+  filterTriggerCountBadge: {
+    backgroundColor: '#00B894',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 8,
+    marginLeft: 2,
+  },
+  filterTriggerCountBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#FFFFFF',
+  },
   sortPillText: {
     fontSize: 11.5,
     fontWeight: '600',
@@ -2644,30 +2715,25 @@ const styles = StyleSheet.create({
     fontWeight: '800',
   },
 
-  // MAIN 2-COLUMN LAYOUT
+  // MAIN CENTERED LAYOUT
   mainLayoutWrap: {
     width: '100%',
     paddingHorizontal: 16,
   },
   mainLayoutWrapDesktop: {
-    flexDirection: 'row',
-    maxWidth: 1320,
+    maxWidth: 1040,
     width: '100%',
     alignSelf: 'center',
-    paddingHorizontal: 24,
-    gap: 24,
-    alignItems: 'flex-start',
-    marginTop: 8,
-  },
-  desktopSidebarCol: {
-    width: 310,
+    paddingHorizontal: 20,
+    marginTop: 6,
   },
   doctorsColWrap: {
     width: '100%',
   },
   doctorsColWrapDesktop: {
-    flex: 1,
-    minWidth: 0,
+    width: '100%',
+    maxWidth: 1040,
+    alignSelf: 'center',
   },
 
   // DESKTOP SIDEBAR CARD
@@ -3058,71 +3124,159 @@ const styles = StyleSheet.create({
     zIndex: 3,
   },
   card: {
-    borderRadius: 14,
-    padding: 14,
-    paddingTop: 14,
-    marginBottom: 12,
-    borderWidth: 1.5,
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 15,
+    paddingTop: 15,
+    marginBottom: 14,
+    borderWidth: 0,
+    borderColor: 'transparent',
     position: 'relative',
     overflow: 'hidden',
-    shadowColor: '#1E3A8A',
+    shadowColor: '#0F172A',
     shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.06,
-    shadowRadius: 12,
-    elevation: 3,
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
+    elevation: 2,
+    ...(Platform.OS === 'web'
+      ? {
+          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        }
+      : {}),
   },
   cardDesktop: {
-    padding: 16,
-    paddingTop: 16,
-    marginBottom: 14,
+    padding: 22,
+    paddingTop: 20,
+    marginBottom: 18,
+  },
+  cardHeaderStrip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+    gap: 8,
+  },
+  primeHeaderBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  primeGoldBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3.5,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  primeGoldBadgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#92400E',
+    letterSpacing: 0.6,
+  },
+  verifiedClinicBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3.5,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  verifiedClinicBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#065F46',
+  },
+  liveAvailableBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 0,
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 999,
+  },
+  liveAvailablePulse: {
+    width: 6,
+    height: 6,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+  },
+  liveAvailableText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  nextSlotQuickPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 0,
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 999,
+  },
+  nextSlotQuickText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: '#64748B',
   },
 
   // DOCTOR MAIN & AVATAR
   doctorMainRow: {
     flexDirection: 'row',
     alignItems: 'flex-start',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
-    backgroundColor: '#E2E8F0',
+    width: 62,
+    height: 62,
+    borderRadius: 13,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 0,
   },
   avatarWrapper: {
     position: 'relative',
     marginRight: 12,
   },
   avatarFallback: {
-    width: 60,
-    height: 60,
-    borderRadius: 12,
+    width: 62,
+    height: 62,
+    borderRadius: 13,
     backgroundColor: '#CCFBF1',
     justifyContent: 'center',
     alignItems: 'center',
-    borderWidth: 1.5,
-    borderColor: '#99F6E4',
+    borderWidth: 0,
     position: 'relative',
   },
   avatarFallbackText: {
-    fontSize: 18,
+    fontSize: 19,
     fontWeight: '900',
     color: '#0D9488',
     letterSpacing: 0.5,
   },
   avatarFallbackIcon: {
     position: 'absolute',
-    bottom: 3,
-    right: 3,
+    bottom: 4,
+    right: 4,
   },
   onlineStatusDot: {
     position: 'absolute',
-    bottom: 2,
-    right: 2,
-    width: 10,
-    height: 10,
-    borderRadius: 5,
+    bottom: -1,
+    right: -1,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
     backgroundColor: '#10B981',
-    borderWidth: 1.5,
+    borderWidth: 2,
     borderColor: '#FFFFFF',
   },
   doctorInfoCol: {
@@ -3131,91 +3285,147 @@ const styles = StyleSheet.create({
   },
   nameBadgeRow: {
     flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  nameVerifiedWrap: {
+    flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    flex: 1,
+    minWidth: 0,
+    flexWrap: 'wrap',
+    gap: 3.5,
+  },
+  verifiedCheckIcon: {
+    flexShrink: 0,
+    marginLeft: 1,
   },
   doctorName: {
-    fontSize: 15,
+    fontSize: 16,
     fontWeight: '800',
     color: '#0F172A',
+    letterSpacing: -0.2,
   },
-  specialtyText: {
+  availableTag: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F0FDF4',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 999,
+    flexShrink: 0,
+    marginTop: 1,
+  },
+  availableTagText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  specialtyExpText: {
     fontSize: 12,
     fontWeight: '600',
-    color: '#334155',
-    marginTop: 1,
+    color: '#475569',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  specialtyTagPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    borderWidth: 0,
+    backgroundColor: '#F1F5F9',
+  },
+  specialtyTagText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  experienceText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#64748B',
   },
   clinicLocationWrap: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 5,
+    marginTop: 3.5,
     gap: 4,
-    backgroundColor: '#FFFFFF',
-    paddingHorizontal: 8,
-    paddingVertical: 3.5,
-    borderRadius: 7,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
-    boxShadow: '0 2px 5px rgba(0, 0, 0, 0.04)',
-    alignSelf: 'flex-start',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
   },
   clinicNameText: {
     fontSize: 11.5,
     fontWeight: '600',
     color: '#0D9488',
-    maxWidth: '70%',
+    flexShrink: 1,
+    lineHeight: 15,
   },
   distanceBadgeText: {
-    fontSize: 11,
+    fontSize: 11.5,
     fontWeight: '600',
     color: '#64748B',
+    flexShrink: 0,
   },
 
   // METRICS & BADGES
   metricsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginTop: 8,
-    gap: 8,
+    marginTop: 6.5,
+    gap: 6,
     flexWrap: 'wrap',
   },
   ratingChip: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#FEF3C7',
-    paddingHorizontal: 8,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 0,
+    paddingHorizontal: 7.5,
     paddingVertical: 3,
-    borderRadius: 7,
-    gap: 4,
-    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
+    borderRadius: 6,
+    gap: 3,
   },
   ratingChipText: {
     fontSize: 11,
     fontWeight: '800',
-    color: '#B45309',
+    color: '#92400E',
   },
   reviewsCountText: {
     fontSize: 9.5,
-    color: '#92400E',
+    fontWeight: '600',
+    color: '#B45309',
   },
   slotBadge: {
     flexDirection: 'row',
     alignItems: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#CCFBF1',
-    paddingHorizontal: 8,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 0,
+    paddingHorizontal: 7.5,
     paddingVertical: 3,
-    borderRadius: 7,
-    gap: 4,
-    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
+    borderRadius: 6,
+    gap: 3,
   },
   slotBadgeText: {
     fontSize: 10.5,
     fontWeight: '700',
-    color: '#0D9488',
+    color: '#065F46',
+  },
+  primePerkBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 6,
+    gap: 3.5,
+  },
+  primePerkText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#1D4ED8',
   },
 
   // CARD FOOTER & ACTIONS
@@ -3223,14 +3433,40 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 12,
-    marginTop: 12,
+    paddingTop: 11,
+    marginTop: 11,
     borderTopWidth: 1,
-    borderTopColor: 'rgba(15, 23, 42, 0.06)',
+    borderTopColor: '#F1F5F9',
   },
   cardFooterRowDesktop: {
     paddingTop: 14,
     marginTop: 14,
+  },
+  feeSectionCol: {
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+  },
+  feeLabel: {
+    fontSize: 9.5,
+    color: '#64748B',
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  feeAmountRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 5,
+  },
+  feeAmount: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+  feeSubtext: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#059669',
   },
   feeWrap: {
     flexDirection: 'row',
@@ -3242,15 +3478,8 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     borderWidth: 1.5,
     borderColor: '#CCFBF1',
-    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
   },
-  feeLabel: {
-    fontSize: 10,
-    color: '#0D9488',
-    fontWeight: '700',
-    textTransform: 'uppercase',
-  },
-  feeAmount: {
+  feeAmountOld: {
     fontSize: 16,
     fontWeight: '900',
     color: '#0D9488',
@@ -3264,36 +3493,46 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#FFFFFF',
-    borderWidth: 1.5,
-    borderColor: '#BFDBFE',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 0,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
     borderRadius: 8,
     gap: 4,
-    boxShadow: '0 2px 6px rgba(0, 0, 0, 0.04)',
+    ...(Platform.OS === 'web'
+      ? {
+          cursor: 'pointer',
+          transition: 'all 0.15s ease',
+        }
+      : {}),
   },
   navigateButtonText: {
     fontSize: 12,
     fontWeight: '700',
-    color: '#1E3A8A',
+    color: '#334155',
   },
   bookAppointmentButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: '#00B894',
-    backgroundImage: 'linear-gradient(135deg, #00B894 0%, #009677 100%)',
-    paddingHorizontal: 14,
-    paddingVertical: 7,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
     borderRadius: 8,
-    gap: 4,
-    boxShadow: '0 4px 12px rgba(0, 184, 148, 0.28)',
+    gap: 5,
+    ...(Platform.OS === 'web'
+      ? {
+          cursor: 'pointer',
+          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          boxShadow: '0 4px 12px rgba(0, 184, 148, 0.25)',
+        }
+      : {}),
   },
   bookAppointmentButtonText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '800',
     color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
 
   // EMPTY
@@ -3331,8 +3570,15 @@ const styles = StyleSheet.create({
   // MODAL OVERLAY
   modalOverlay: {
     flex: 1,
-    backgroundColor: 'rgba(0,0,0,0.5)',
+    backgroundColor: 'rgba(15, 23, 42, 0.65)',
     justifyContent: 'flex-end',
+    ...(Platform.OS === 'web'
+      ? {
+          justifyContent: 'center',
+          alignItems: 'center',
+          padding: 20,
+        }
+      : {}),
   },
 
   // LOCATION MODAL
@@ -3341,91 +3587,189 @@ const styles = StyleSheet.create({
     borderTopLeftRadius: 24,
     borderTopRightRadius: 24,
     padding: 20,
-    paddingBottom: 30,
+    paddingBottom: 26,
+    width: '100%',
+    position: 'relative',
+    overflow: 'hidden',
+    ...(Platform.OS === 'web'
+      ? {
+          maxWidth: 620,
+          borderRadius: 20,
+          borderWidth: 1.5,
+          borderColor: '#E2E8F0',
+          boxShadow: '0 25px 60px -12px rgba(15, 23, 42, 0.3), 0 10px 20px -5px rgba(0, 0, 0, 0.08)',
+          padding: 24,
+          paddingTop: 24,
+        }
+      : {}),
+  },
+  modalTopAccentBar: {
+    position: 'absolute',
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 3.5,
+    backgroundImage: 'linear-gradient(90deg, #00B894 0%, #00C2CB 50%, #1E3A8A 100%)',
+    zIndex: 2,
   },
   locationModalIconBox: {
-    width: 40,
-    height: 40,
+    width: 42,
+    height: 42,
     borderRadius: 12,
-    backgroundColor: colors.lightTeal,
-    justifyContent: 'center',
-    alignItems: 'center',
-  },
-  // LOCATION MODAL QUICK ACTIONS & LIST
-  quickLocActionsRow: {
-    flexDirection: 'row',
-    gap: 8,
-    marginBottom: 12,
-  },
-  quickLocActionBtn: {
-    flex: 1,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#F0FDFA',
+    backgroundColor: '#ECFDF5',
     borderWidth: 1,
-    borderColor: '#CCFBF1',
-    borderRadius: 10,
-    paddingVertical: 9,
-    paddingHorizontal: 10,
-    gap: 6,
+    borderColor: '#A7F3D0',
+    justifyContent: 'center',
+    alignItems: 'center',
   },
-  quickLocActionBtnActive: {
-    backgroundColor: '#CCFBF1',
-    borderColor: '#99F6E4',
+  modalCloseBtn: {
+    width: 34,
+    height: 34,
+    borderRadius: 17,
+    backgroundColor: '#F1F5F9',
+    justifyContent: 'center',
+    alignItems: 'center',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.15s ease' } : {}),
   },
-  quickLocActionText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#0D9488',
-  },
-
   localitySearchBox: {
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#F8FAFC',
-    borderRadius: 10,
-    paddingHorizontal: 10,
-    height: 38,
-    borderWidth: 1,
+    borderRadius: 12,
+    paddingHorizontal: 12,
+    height: 44,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
-    marginBottom: 10,
+    marginTop: 14,
+    marginBottom: 12,
   },
   localitySearchInput: {
     flex: 1,
-    marginLeft: 6,
-    fontSize: 12.5,
-    color: colors.text,
+    marginLeft: 8,
+    fontSize: 13,
+    color: '#0F172A',
+    fontWeight: '500',
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
+  },
+
+  // QUICK ACTIONS
+  // GPS LOCATION CARD
+  gpsLocationCard: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF9',
+    borderWidth: 1.5,
+    borderColor: '#A7F3D0',
+    borderRadius: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
+    marginBottom: 16,
+    gap: 12,
+    ...(Platform.OS === 'web'
+      ? {
+          cursor: 'pointer',
+          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        }
+      : {}),
+  },
+  gpsIconCircle: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#00B894',
+    backgroundImage: 'linear-gradient(135deg, #00B894 0%, #009677 100%)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    boxShadow: '0 2px 8px rgba(0, 184, 148, 0.3)',
+  },
+  gpsTextCol: {
+    flex: 1,
+    minWidth: 0,
+  },
+  gpsTitleRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  gpsCardTitle: {
+    fontSize: 13.5,
+    fontWeight: '800',
+    color: '#0F172A',
+  },
+  gpsLivePill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#DCFCE7',
+    paddingHorizontal: 6,
+    paddingVertical: 1.5,
+    borderRadius: 6,
+  },
+  gpsLiveDot: {
+    width: 5,
+    height: 5,
+    borderRadius: 2.5,
+    backgroundColor: '#16A34A',
+  },
+  gpsLivePillText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#15803D',
+    letterSpacing: 0.3,
+  },
+  gpsCardSub: {
+    fontSize: 11.5,
+    color: '#0D9488',
+    fontWeight: '600',
+    marginTop: 2,
+  },
+  gpsActionPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 10,
+    paddingVertical: 5,
+    borderRadius: 8,
+    gap: 3,
+  },
+  gpsActionPillText: {
+    fontSize: 11.5,
+    fontWeight: '800',
+    color: '#00B894',
   },
 
   popularLocTitle: {
     fontSize: 11,
     fontWeight: '800',
     color: '#64748B',
-    letterSpacing: 0.4,
-    marginBottom: 6,
+    letterSpacing: 0.6,
+    marginBottom: 8,
     textTransform: 'uppercase',
   },
   localitiesListContainer: {
-    gap: 2,
+    gap: 4,
   },
   localityRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingVertical: 9,
-    paddingHorizontal: 10,
-    borderRadius: 8,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 10,
     backgroundColor: '#FFFFFF',
     borderWidth: 1,
-    borderColor: '#F1F5F9',
-    marginBottom: 3,
+    borderColor: '#E2E8F0',
+    marginBottom: 4,
+    ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.15s ease' } : {}),
   },
   localityRowActive: {
-    backgroundColor: '#F0FDFA',
+    backgroundColor: '#F0FDF9',
     borderColor: '#00B894',
+    borderWidth: 1.5,
   },
   localityName: {
-    fontSize: 13,
+    fontSize: 13.5,
     fontWeight: '700',
     color: '#1E293B',
   },
@@ -3433,23 +3777,38 @@ const styles = StyleSheet.create({
     color: '#00B894',
     fontWeight: '800',
   },
+  localityCityPill: {
+    backgroundColor: '#F1F5F9',
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+  },
+  localityCityPillActive: {
+    backgroundColor: '#CCFBF1',
+  },
   localityCity: {
     fontSize: 11,
-    color: '#94A3B8',
-    fontWeight: '500',
+    color: '#64748B',
+    fontWeight: '600',
+  },
+  localityCityActive: {
+    color: '#0D9488',
+    fontWeight: '700',
   },
 
   customLocBox: {
-    marginTop: 10,
-    paddingTop: 10,
+    marginTop: 14,
+    paddingTop: 14,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
   customLocLabel: {
     fontSize: 11,
-    fontWeight: '700',
-    color: colors.textSecondary,
-    marginBottom: 6,
+    fontWeight: '800',
+    color: '#64748B',
+    letterSpacing: 0.5,
+    marginBottom: 8,
+    textTransform: 'uppercase',
   },
   customLocInputRow: {
     flexDirection: 'row',
@@ -3459,22 +3818,25 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#F8FAFC',
     borderRadius: 10,
-    paddingHorizontal: 12,
+    paddingHorizontal: 14,
     height: 42,
-    fontSize: 12,
-    borderWidth: 1,
+    fontSize: 12.5,
+    borderWidth: 1.5,
     borderColor: '#E2E8F0',
+    color: '#0F172A',
+    ...(Platform.OS === 'web' ? { outlineStyle: 'none' } : {}),
   },
   customLocApplyBtn: {
-    backgroundColor: colors.secondary,
+    backgroundColor: '#1E3A8A',
     borderRadius: 10,
     paddingHorizontal: 18,
     justifyContent: 'center',
     alignItems: 'center',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
   },
   customLocApplyText: {
     color: '#FFFFFF',
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '800',
   },
 

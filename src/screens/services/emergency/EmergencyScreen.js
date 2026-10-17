@@ -13,8 +13,12 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import WebFooter from '../../../components/web/WebFooter';
 import { isDesktopLayout } from '../../../utils/responsiveLayoutHelper';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 
 const EmergencyScreen = ({ navigation }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const isDesktopWeb = Platform.OS === 'web' && isDesktopLayout(width);
 
@@ -28,7 +32,7 @@ const EmergencyScreen = ({ navigation }) => {
       {!isDesktopWeb && (
         <View style={styles.header}>
           <TouchableOpacity onPress={() => navigation.goBack()} activeOpacity={0.8}>
-            <Ionicons name="arrow-back" size={24} color="#1E293B" />
+            <Ionicons name="arrow-back" size={24} color={isDarkMode ? theme.text : "#1E293B"} />
           </TouchableOpacity>
           <Text style={styles.headerTitle}>Emergency Help</Text>
           <View style={{ width: 24 }} />
@@ -100,7 +104,7 @@ const EmergencyScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',

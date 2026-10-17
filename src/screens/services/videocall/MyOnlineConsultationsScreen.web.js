@@ -27,10 +27,14 @@ import { cancelBookedSlot } from '../../../services/slotBookingService';
 import { showAlert } from '../../../utils/alert';
 import { isGuestUser } from '../../../utils/authHelper';
 import { isDesktopLayout, isDesktopSiteRequested } from '../../../utils/responsiveLayoutHelper';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 
 const CONSULTATION_TABS = ['Upcoming', 'Completed', 'Cancelled'];
 
 const MyOnlineConsultationsScreenWeb = ({ navigation, route }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const desktopSiteMode = isDesktopSiteRequested();
   const isDesktop = desktopSiteMode || width >= 1024;
@@ -263,25 +267,13 @@ const MyOnlineConsultationsScreenWeb = ({ navigation, route }) => {
       ) : null}
 
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={true}>
-        {/* Breadcrumb Bar */}
-        <View style={styles.breadcrumbBar}>
-          <View style={[styles.innerContainer, styles.breadcrumbContent]}>
-            <TouchableOpacity onPress={() => navigation?.navigate('Home')} activeOpacity={0.7} style={styles.breadcrumbItem}>
-              <Ionicons name="home-outline" size={14} color="#64748B" />
-              <Text style={styles.breadcrumbText}>Home</Text>
-            </TouchableOpacity>
-            <Ionicons name="chevron-forward" size={12} color="#94A3B8" />
-            <Text style={styles.breadcrumbActive}>My Online Consultations</Text>
-          </View>
-        </View>
-
         {/* Page Hero Banner */}
         <View style={styles.innerContainer}>
           <PatientPageBanner
             onBack={() => navigation?.canGoBack?.() ? navigation.goBack() : navigation?.navigate('Home')}
             title="My Online Consultations"
-            subtitle="Dedicated private telehealth appointments. Join active HD video calls directly from your browser with certified medical specialists."
-            badgeText="TELEHEALTH PRIVATE VIDEO SUITE"
+            subtitle="HD video appointments with certified medical specialists."
+            badgeText="Telehealth"
             badgeIcon="videocam"
             iconName="videocam"
             theme="teal"
@@ -303,12 +295,14 @@ const MyOnlineConsultationsScreenWeb = ({ navigation, route }) => {
             ]}
             rightContent={
               <TouchableOpacity
-                style={styles.bookVideoBtn}
+                style={styles.organicHeroBtn}
                 onPress={() => navigation?.navigate('VideoConsultation')}
                 activeOpacity={0.85}
               >
-                <Ionicons name="videocam-outline" size={17} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.bookVideoBtnText}>Book Video Consult</Text>
+                <View style={styles.organicHeroArrowCircle}>
+                  <Ionicons name="videocam" size={13} color="#13BE9C" />
+                </View>
+                <Text style={styles.organicHeroBtnText}>Book Video Consult</Text>
               </TouchableOpacity>
             }
           />
@@ -327,20 +321,26 @@ const MyOnlineConsultationsScreenWeb = ({ navigation, route }) => {
                     key={tab}
                     style={[styles.tabBtn, active && styles.tabBtnActive]}
                     onPress={() => setActiveTab(tab)}
+                    activeOpacity={0.8}
                   >
                     <Text style={[styles.tabBtnText, active && styles.tabBtnTextActive]}>
-                      {tab} ({count})
+                      {tab}
                     </Text>
+                    <View style={[styles.tabCountBadge, active && styles.tabCountBadgeActive]}>
+                      <Text style={[styles.tabCountText, active && styles.tabCountTextActive]}>
+                        {count}
+                      </Text>
+                    </View>
                   </TouchableOpacity>
                 );
               })}
             </View>
 
             <View style={styles.searchBar}>
-              <Ionicons name="search-outline" size={18} color="#64748B" style={{ marginRight: 8 }} />
+              <Ionicons name="search-outline" size={18} color="#13BE9C" style={{ marginRight: 10 }} />
               <TextInput
                 style={styles.searchInput}
-                placeholder="Search by doctor name, specialty, or consultation ID..."
+                placeholder="Search doctors, specialty, or consultation ID..."
                 placeholderTextColor="#94A3B8"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -470,7 +470,7 @@ const MyOnlineConsultationsScreenWeb = ({ navigation, route }) => {
                       <View style={{ flex: 1 }}>
                         <Text style={styles.doctorName}>{item.doctor?.name}</Text>
                         <Text style={styles.doctorSpec}>
-                          {item.doctor?.specialty} <Text style={{ color: '#94A3B8' }}>({item.doctor?.qualification})</Text>
+                          {item.doctor?.specialty} • {item.doctor?.qualification}
                         </Text>
                         <Text style={styles.doctorExp}>
                           {item.doctor?.experienceYears} experience • {item.doctor?.clinicName}
@@ -487,8 +487,8 @@ const MyOnlineConsultationsScreenWeb = ({ navigation, route }) => {
                       {/* Date & Time Pillar */}
                       <View style={[styles.dateTimePillar, isReadyToJoin && styles.dateTimePillarReady]}>
                         <View style={styles.dateTimeHeader}>
-                          <Ionicons name="calendar" size={15} color={isReadyToJoin ? '#00B894' : '#1E3A8A'} />
-                          <Text style={[styles.dateText, isReadyToJoin && { color: '#00B894' }]}>{item.date}</Text>
+                          <Ionicons name="calendar" size={15} color={isReadyToJoin ? '#13BE9C' : '#1E3A8A'} />
+                          <Text style={[styles.dateText, isReadyToJoin && { color: '#13BE9C' }]}>{item.date}</Text>
                         </View>
                         <View style={styles.timeHeader}>
                           <Ionicons name="time-outline" size={15} color="#475569" />
@@ -501,40 +501,40 @@ const MyOnlineConsultationsScreenWeb = ({ navigation, route }) => {
                     {/* Action Bar */}
                     <View style={styles.cardActionsRow}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                        <Ionicons name="shield-checkmark" size={15} color="#00B894" />
-                        <Text style={styles.encryptedText}>HD 1080p TeleHealth • 256-Bit End-to-End Encrypted</Text>
+                        <Ionicons name="shield-checkmark" size={14} color="#13BE9C" />
+                        <Text style={styles.encryptedText}>256-Bit Encrypted HD TeleHealth</Text>
                       </View>
 
-                      <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
+                      <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
                         <TouchableOpacity
-                          style={styles.detailsBtn}
+                          style={styles.organicActionBtn}
                           onPress={() => setViewingConsultation(item)}
                           activeOpacity={0.8}
                         >
-                          <Ionicons name="information-circle-outline" size={15} color="#1E3A8A" style={{ marginRight: 4 }} />
-                          <Text style={styles.detailsBtnText}>View Details</Text>
+                          <View style={styles.organicArrowCircle}>
+                            <Ionicons name="arrow-forward" size={12} color="#13BE9C" />
+                          </View>
+                          <Text style={styles.organicPrimaryActionText}>View Details</Text>
                         </TouchableOpacity>
 
                         {/* Cancel Consultation Option */}
                         {isUpcoming && (
                           <TouchableOpacity
-                            style={[styles.detailsBtn, { borderColor: '#FFD7C7', backgroundColor: '#FFF2ED' }]}
+                            style={styles.organicActionBtn}
                             onPress={() => handleCancelConsultation(item)}
                             activeOpacity={0.8}
                           >
-                            <Ionicons name="close-circle-outline" size={15} color="#FF7F50" style={{ marginRight: 4 }} />
-                            <Text style={[styles.detailsBtnText, { color: '#FF7F50' }]}>Cancel</Text>
+                            <View style={[styles.organicActionIconCircle, { borderColor: '#EF4444' }]}>
+                              <Ionicons name="close-circle-outline" size={12} color="#DC2626" />
+                            </View>
+                            <Text style={[styles.organicActionText, { color: '#DC2626' }]}>Cancel</Text>
                           </TouchableOpacity>
                         )}
 
-                        {/* PROMINENT JOIN CONSULTATION BUTTON (Active only during appointment window) */}
+                        {/* Join Consultation Button */}
                         {isUpcoming && (
                           <TouchableOpacity
-                            style={[
-                              styles.joinCallBtn,
-                              !isReadyToJoin && styles.joinCallBtnDisabled,
-                              isReadyToJoin && { backgroundColor: '#059669', shadowColor: '#059669', shadowOpacity: 0.3, shadowRadius: 6 },
-                            ]}
+                            style={styles.organicActionBtn}
                             onPress={() => {
                               if (isReadyToJoin) {
                                 setActiveVideoCall(item);
@@ -542,11 +542,25 @@ const MyOnlineConsultationsScreenWeb = ({ navigation, route }) => {
                                 showToast(`Video room opens 10 minutes prior to your appointment (${item.time || item.timeSlot}).`);
                               }
                             }}
-                            activeOpacity={isReadyToJoin ? 0.85 : 0.6}
+                            activeOpacity={0.8}
                           >
-                            <Ionicons name="videocam" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                            <Text style={styles.joinCallBtnText}>
-                              {isReadyToJoin ? 'Join Video Call' : 'Opens 10 Mins Before Slot'}
+                            <View style={[
+                              styles.organicActionIconCircle,
+                              isReadyToJoin
+                                ? { backgroundColor: '#13BE9C', borderColor: '#13BE9C' }
+                                : { borderColor: '#94A3B8' }
+                            ]}>
+                              <Ionicons
+                                name={isReadyToJoin ? 'videocam' : 'time-outline'}
+                                size={12}
+                                color={isReadyToJoin ? '#FFFFFF' : '#64748B'}
+                              />
+                            </View>
+                            <Text style={[
+                              styles.organicActionText,
+                              isReadyToJoin ? { color: '#13BE9C', fontWeight: '800' } : { color: '#64748B' }
+                            ]}>
+                              {isReadyToJoin ? 'Join Video Call' : 'Opens 10m Prior'}
                             </Text>
                           </TouchableOpacity>
                         )}
@@ -554,12 +568,14 @@ const MyOnlineConsultationsScreenWeb = ({ navigation, route }) => {
                         {/* Completed Actions: View Rx */}
                         {item.status === 'Completed' && item.hasPrescription && (
                           <TouchableOpacity
-                            style={styles.prescriptionBtn}
+                            style={styles.organicActionBtn}
                             onPress={() => navigation?.navigate('MyMedicalRecords')}
                             activeOpacity={0.8}
                           >
-                            <Ionicons name="document-text-outline" size={15} color="#00B894" style={{ marginRight: 4 }} />
-                            <Text style={styles.prescriptionBtnText}>View Rx & Order Meds</Text>
+                            <View style={styles.organicArrowCircle}>
+                              <Ionicons name="document-text-outline" size={12} color="#13BE9C" />
+                            </View>
+                            <Text style={styles.organicPrimaryActionText}>View Prescription</Text>
                           </TouchableOpacity>
                         )}
                       </View>
@@ -814,7 +830,7 @@ const MyOnlineConsultationsScreenWeb = ({ navigation, route }) => {
 
 export default MyOnlineConsultationsScreenWeb;
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#E8F1F8',
@@ -830,31 +846,75 @@ const styles = StyleSheet.create({
     alignSelf: 'center',
     paddingHorizontal: 16,
   },
-  breadcrumbBar: {
-    backgroundColor: 'transparent',
-    borderBottomWidth: 0,
-    paddingTop: 16,
-    paddingBottom: 4,
-  },
-  breadcrumbContent: {
+  // Image 2 Exact Hero CTA (Circular Outline Arrow + Bold Text in #13BE9C)
+  organicHeroBtn: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 8,
+    backgroundColor: '#FFFFFF',
+    paddingHorizontal: 16,
+    paddingVertical: 9,
+    borderRadius: 24,
+    borderWidth: 1.8,
+    borderColor: '#13BE9C',
+    boxShadow: '0 2px 8px rgba(19, 190, 156, 0.15)',
+    cursor: 'pointer',
   },
-  breadcrumbItem: {
+  organicHeroArrowCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.8,
+    borderColor: '#13BE9C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  organicHeroBtnText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#13BE9C',
+    letterSpacing: 0.1,
+  },
+  // Image 2 Exact Action Buttons (Circular Outline Icon Ring + Bold Text in #13BE9C)
+  organicActionBtn: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 4,
+    gap: 7,
+    paddingVertical: 6,
+    paddingHorizontal: 4,
+    cursor: 'pointer',
   },
-  breadcrumbText: {
-    fontSize: 12.5,
-    color: '#64748B',
-    fontWeight: '500',
+  organicArrowCircle: {
+    width: 24,
+    height: 24,
+    borderRadius: 12,
+    borderWidth: 1.8,
+    borderColor: '#13BE9C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
   },
-  breadcrumbActive: {
-    fontSize: 12.5,
-    color: '#0F172A',
+  organicActionIconCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: '#13BE9C',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: 'transparent',
+  },
+  organicPrimaryActionText: {
+    fontSize: 13,
+    fontWeight: '800',
+    color: '#13BE9C',
+    letterSpacing: 0.1,
+  },
+  organicActionText: {
+    fontSize: 13,
     fontWeight: '700',
+    color: '#334155',
   },
   toastContainer: {
     position: 'absolute',
@@ -948,25 +1008,49 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   tabBtn: {
-    paddingHorizontal: 16,
-    paddingVertical: 8,
-    borderRadius: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    height: 32,
+    paddingHorizontal: 12,
+    borderRadius: 16,
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    cursor: 'pointer',
+    userSelect: 'none',
   },
   tabBtnActive: {
-    backgroundColor: '#00B894',
-    borderColor: '#00B894',
+    backgroundColor: '#13BE9C',
+    borderColor: '#13BE9C',
+    boxShadow: '0 2px 8px rgba(19, 190, 156, 0.2)',
   },
   tabBtnText: {
-    fontSize: 12.5,
-    fontWeight: '600',
+    fontSize: 12,
+    fontWeight: '700',
     color: '#475569',
+    userSelect: 'none',
   },
   tabBtnTextActive: {
     color: '#FFFFFF',
-    fontWeight: '700',
+    fontWeight: '800',
+  },
+  tabCountBadge: {
+    backgroundColor: '#E2E8F0',
+    paddingHorizontal: 6,
+    paddingVertical: 1,
+    borderRadius: 8,
+  },
+  tabCountBadgeActive: {
+    backgroundColor: 'rgba(255, 255, 255, 0.28)',
+  },
+  tabCountText: {
+    fontSize: 10.5,
+    fontWeight: '800',
+    color: '#475569',
+  },
+  tabCountTextActive: {
+    color: '#FFFFFF',
   },
   searchBar: {
     flexDirection: 'row',

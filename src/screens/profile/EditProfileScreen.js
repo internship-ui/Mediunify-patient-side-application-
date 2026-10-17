@@ -20,6 +20,9 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import colors from '../../theme/colors';
 import { syncActiveUser } from '../../services/dataSyncService';
+import WebFooter from '../../components/web/WebFooter';
+import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 
 const BLOOD_GROUPS = [
   'O+ Positive',
@@ -36,6 +39,8 @@ const GENDERS = ['Male', 'Female', 'Other'];
 import { useKeyboardVisibility } from '../../utils/keyboardUtils';
 
 const EditProfileScreen = ({ navigation, route }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const passedUser = route?.params?.user || {};
   const scrollViewRef = useRef(null);
@@ -518,30 +523,32 @@ const EditProfileScreen = ({ navigation, route }) => {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? theme.headerBg : "#FFFFFF"} />
 
       {/* TOP APP BAR */}
-      <View style={styles.header}>
-        <TouchableOpacity
-          style={styles.backBtn}
-          onPress={() => navigation.goBack()}
-          activeOpacity={0.8}
-        >
-          <Ionicons name="arrow-back" size={20} color="#1E293B" />
-        </TouchableOpacity>
+      <View style={[styles.header, Platform.OS === 'web' && { alignItems: 'center' }]}>
+        <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }, Platform.OS === 'web' && styles.webInnerContainer]}>
+          <TouchableOpacity
+            style={styles.backBtn}
+            onPress={() => navigation.goBack()}
+            activeOpacity={0.8}
+          >
+            <Ionicons name="arrow-back" size={20} color={isDarkMode ? theme.text : "#1E293B"} />
+          </TouchableOpacity>
 
-        <View style={styles.headerTitleWrap}>
-          <Text style={styles.headerTitle}>Personal Information</Text>
+          <View style={styles.headerTitleWrap}>
+            <Text style={styles.headerTitle}>Personal Information</Text>
+          </View>
+
+          <TouchableOpacity
+            style={styles.saveHeaderBtn}
+            onPress={handleSave}
+            activeOpacity={0.85}
+          >
+            <Ionicons name="checkmark" size={16} color="#FFFFFF" />
+            <Text style={styles.saveHeaderBtnText}>Save</Text>
+          </TouchableOpacity>
         </View>
-
-        <TouchableOpacity
-          style={styles.saveHeaderBtn}
-          onPress={handleSave}
-          activeOpacity={0.85}
-        >
-          <Ionicons name="checkmark" size={16} color="#FFFFFF" />
-          <Text style={styles.saveHeaderBtnText}>Save</Text>
-        </TouchableOpacity>
       </View>
 
       <KeyboardAvoidingView
@@ -554,12 +561,13 @@ const EditProfileScreen = ({ navigation, route }) => {
           showsVerticalScrollIndicator={false}
           contentContainerStyle={[
             styles.scrollContent,
-            { paddingBottom: isKeyboardVisible ? (Platform.OS === 'ios' ? 240 : 180) : 40 },
+            { paddingBottom: Platform.OS === 'web' ? 0 : (isKeyboardVisible ? (Platform.OS === 'ios' ? 240 : 180) : 40) },
           ]}
           keyboardShouldPersistTaps="handled"
           keyboardDismissMode="on-drag"
           automaticallyAdjustKeyboardInsets={Platform.OS === 'ios'}
         >
+        <View style={Platform.OS === 'web' ? styles.webInnerContainer : null}>
         {/* AVATAR HERO DISPLAY (AUTO-GENERATED FROM NAME + REAL-TIME MEMBERSHIP RING) */}
         <View style={styles.avatarCard}>
           <View
@@ -902,7 +910,10 @@ const EditProfileScreen = ({ navigation, route }) => {
           </View>
         </View>
 
-        <View style={{ height: 40 }} />
+          <View style={{ height: 40 }} />
+        </View>
+
+        {Platform.OS === 'web' && <WebFooter navigation={navigation} />}
       </ScrollView>
       </KeyboardAvoidingView>
 
@@ -1051,10 +1062,15 @@ const EditProfileScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',
+  },
+  webInnerContainer: {
+    maxWidth: 800,
+    width: '100%',
+    alignSelf: 'center',
   },
   header: {
     flexDirection: 'row',

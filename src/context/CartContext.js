@@ -6,6 +6,14 @@ import {
   getPharmacyCityConfig,
   normalizePharmacyCity,
 } from '../data/pharmacyStores';
+import {
+  isTestIncludedInCartPackages,
+  isPackageItem,
+  getPackageTests,
+  enrichLabItemDetails,
+  doesPackageIncludeTest,
+} from '../utils/labPackageMatcher.js';
+import { showAlert } from '../utils/alert.js';
 
 const DEFAULT_PHARMACY_STORE = getPharmacyStoreForCity('Mysuru');
 
@@ -205,15 +213,59 @@ export const CartProvider = ({ children }) => {
       console.log('[Cart] Blocked: Scans & X-Ray items cannot be added to the cart.');
       return;
     } else if (isLabItem(product, forcedType)) {
+      const isPkg = isPackageItem(product);
+
+      // 1. If adding an individual test, check if already covered in any package currently in labCart
+      if (!isPkg) {
+        const check = isTestIncludedInCartPackages(product, labCart);
+        if (check.included) {
+          showAlert(
+            'Test Already Included in Package',
+            `"${product.name}" is already included in "${check.packageName}" in your cart.\n\nYou do not need to book or pay for this test separately.`
+          );
+          return { success: false, reason: 'included_in_package', ...check };
+        }
+      }
+
+      // Enrich lab item with complete clinical parameters, sample info, and descriptions
+      const enrichedItem = enrichLabItemDetails(product) || product;
+      const finalItem = {
+        ...enrichedItem,
+        quantity: quantityToAdd,
+        cartType: 'lab',
+        isPackage: isPkg,
+      };
+
       setLabCart((prev) => {
-        const existing = prev.find((item) => item.id === product.id);
+        // If adding a package, remove any individual tests in cart that this package already covers
+        let filteredPrev = prev;
+        if (isPkg) {
+          const duplicateTests = prev.filter(
+            (item) => !isPackageItem(item) && doesPackageIncludeTest(product, item).included
+          );
+          if (duplicateTests.length > 0) {
+            filteredPrev = prev.filter(
+              (item) => isPackageItem(item) || !doesPackageIncludeTest(product, item).included
+            );
+            const duplicateNames = duplicateTests.map((t) => t.name).join(', ');
+            setTimeout(() => {
+              showAlert(
+                'Cart Optimized',
+                `"${duplicateNames}" is already included in your newly added package "${product.name}". We removed the duplicate test to save you money!`
+              );
+            }, 300);
+          }
+        }
+
+        const existing = filteredPrev.find((item) => item.id === product.id);
         if (existing) {
-          return prev.map((item) =>
-            item.id === product.id ? { ...item, quantity: item.quantity + quantityToAdd } : item
+          return filteredPrev.map((item) =>
+            item.id === product.id ? { ...item, ...finalItem, quantity: item.quantity + quantityToAdd } : item
           );
         }
-        return [...prev, { ...product, quantity: quantityToAdd, cartType: 'lab' }];
+        return [...filteredPrev, finalItem];
       });
+      return { success: true };
     } else {
       const cityStore = getPharmacyStoreForCity(selectedCity);
       const targetStore = storeOverride || cityStore || selectedPharmacyStore;
@@ -821,6 +873,9 @@ export const CartProvider = ({ children }) => {
         radiologyFinalTotal,
         groupedRadiologyCarts,
         clearRadiologyCenterCart,
+
+        // Lab Package Inclusions & Test Checks
+        checkTestInCartPackages: (test) => isTestIncludedInCartPackages(test, labCart),
 
         // Coupons
         appliedCoupon,

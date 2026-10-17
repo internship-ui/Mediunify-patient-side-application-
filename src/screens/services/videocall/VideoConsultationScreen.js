@@ -23,10 +23,181 @@ import WebFooter from '../../../components/web/WebFooter';
 import DoctorBookingModal from '../../../components/booking/DoctorBookingModal';
 import OptimizedImage from '../../../components/common/OptimizedImage';
 import Pagination from '../../../components/common/Pagination';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 
 const LANGUAGES_LIST = ['All', 'English', 'Kannada', 'Hindi'];
 
+const DoctorAvatar = ({ image, name }) => {
+  const styles = useThemedStyles(baseStyles);
+  const [imageFailed, setImageFailed] = useState(false);
+  const initials = name
+    ? name
+        .replace(/^Dr\.\s*/i, '')
+        .split(' ')
+        .map((n) => n[0])
+        .slice(0, 2)
+        .join('')
+        .toUpperCase()
+    : 'DR';
+
+  return (
+    <View style={styles.avatarWrapper}>
+      {!imageFailed && image ? (
+        <Image
+          source={{ uri: image }}
+          style={styles.avatar}
+          onError={() => setImageFailed(true)}
+        />
+      ) : (
+        <View style={styles.avatarFallback}>
+          <Text style={styles.avatarFallbackText}>{initials}</Text>
+          <Ionicons name="medical" size={13} color="#0D9488" style={styles.avatarFallbackIcon} />
+        </View>
+      )}
+      <View style={styles.onlineStatusDot} />
+    </View>
+  );
+};
+
+const formatExperience = (exp, years) => {
+  if (exp) {
+    return exp.replace(/\s*Years\s*Experience/i, ' yrs exp').replace(/\s*Years/i, ' yrs').replace(/\s*Experience/i, ' exp');
+  }
+  return `${years || '10+'} yrs exp`;
+};
+
+const formatSlot = (slot) => {
+  if (!slot) return 'Today, 04:30 PM';
+  const match = slot.match(/Today,\s*in\s*\d+\s*mins\s*\(([^)]+)\)/i);
+  if (match) {
+    return `Today, ${match[1]}`;
+  }
+  return slot;
+};
+
+// STREAMLINED DOCTOR CARD COMPONENT FOR ONLINE VIDEO CONSULTATION
+const DoctorCardItem = ({
+  item,
+  index = 0,
+  isDesktopWeb,
+  onSelectDoctor,
+  onBook,
+}) => {
+  const [isHovered, setIsHovered] = useState(false);
+
+  return (
+    <View
+      style={[
+        styles.card,
+        isDesktopWeb && styles.cardDesktop,
+        {
+          boxShadow: isHovered
+            ? '0 12px 28px -4px rgba(15, 23, 42, 0.08), 0 4px 10px rgba(15, 23, 42, 0.03)'
+            : '0 2px 12px -2px rgba(15, 23, 42, 0.05), 0 1px 3px rgba(15, 23, 42, 0.02)',
+          transform: isHovered && Platform.OS === 'web' ? [{ translateY: -2 }] : [{ translateY: 0 }],
+        },
+      ]}
+      {...(Platform.OS === 'web'
+        ? {
+            onMouseEnter: () => setIsHovered(true),
+            onMouseLeave: () => setIsHovered(false),
+          }
+        : {})}
+    >
+      {/* 1. DOCTOR MAIN DETAILS */}
+      <TouchableOpacity
+        style={styles.doctorMainRow}
+        activeOpacity={0.88}
+        onPress={onSelectDoctor}
+      >
+        <DoctorAvatar image={item.image} name={item.name} />
+
+        <View style={styles.doctorInfoCol}>
+          {/* Doctor Name & Today Tag - Auto-adjusts cleanly */}
+          <View style={styles.nameBadgeRow}>
+            <View style={styles.nameVerifiedWrap}>
+              <Text 
+                style={styles.doctorName} 
+                numberOfLines={2}
+                adjustsFontSizeToFit
+                minimumFontScale={0.88}
+              >
+                {item.name}
+              </Text>
+              <Ionicons name="checkmark-circle" size={14} color="#00B894" style={styles.verifiedCheckIcon} />
+            </View>
+            {item.availableToday && (
+              <View style={styles.availableTag}>
+                <View style={styles.liveAvailablePulse} />
+                <Text style={styles.availableTagText}>Available Today</Text>
+              </View>
+            )}
+          </View>
+
+          {/* Specialty & Experience - Automatically wraps gracefully on small screens */}
+          <Text style={styles.specialtyExpText} numberOfLines={2}>
+            {item.specialty} • {formatExperience(item.experience, item.experienceYears)}
+          </Text>
+
+          {/* Telehealth Channel - Automatically wraps */}
+          <View style={styles.clinicLocationWrap}>
+            <Ionicons name="videocam-outline" size={13} color="#007D69" style={{ marginRight: 3, flexShrink: 0 }} />
+            <Text style={styles.clinicNameText} numberOfLines={2}>
+              {item.hospital || 'Unnathi TeleHealth Network'}
+            </Text>
+          </View>
+
+          {/* Key Metrics: Rating & Next Slot - Consistent clean row */}
+          <View style={styles.metricsRow}>
+            <View style={styles.ratingChip}>
+              <Ionicons name="star" size={11} color="#F59E0B" />
+              <Text style={styles.ratingChipText}>{item.rating}</Text>
+              <Text style={styles.reviewsCountText}>({item.reviewCount || 420})</Text>
+            </View>
+
+            <View style={styles.slotBadge}>
+              <Ionicons name="flash" size={10.5} color="#059669" />
+              <Text style={styles.slotBadgeText}>{formatSlot(item.nextSlot)}</Text>
+            </View>
+          </View>
+        </View>
+      </TouchableOpacity>
+
+      {/* 2. BOTTOM FOOTER: FEE & ACTIONS */}
+      <View style={[styles.cardFooterRow, isDesktopWeb && styles.cardFooterRowDesktop]}>
+        <View style={styles.feeSectionCol}>
+          <Text style={styles.feeAmount}>₹{item.fee}</Text>
+          <Text style={styles.feeSubtext}>Free Follow-up</Text>
+        </View>
+
+        <View style={styles.cardActionsWrap}>
+          <TouchableOpacity
+            style={styles.navigateButton}
+            activeOpacity={0.82}
+            onPress={onSelectDoctor}
+          >
+            <Ionicons name="information-circle-outline" size={13} color="#1E3A8A" />
+            <Text style={styles.navigateButtonText}>Details</Text>
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.bookAppointmentButton}
+            activeOpacity={0.88}
+            onPress={onBook}
+          >
+            <Text style={styles.bookAppointmentButtonText}>Book Call</Text>
+            <Ionicons name="arrow-forward" size={12} color="#FFFFFF" />
+          </TouchableOpacity>
+        </View>
+      </View>
+    </View>
+  );
+};
+
 const VideoConsultationScreen = ({ navigation, route }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const isDesktopWeb = Platform.OS === 'web' && width >= 992;
   const isTablet = width >= 600;
@@ -77,7 +248,7 @@ const VideoConsultationScreen = ({ navigation, route }) => {
   const [minExperience, setMinExperience] = useState('all'); // 'all' | '5' | '10' | '15'
   const [maxFee, setMaxFee] = useState('all'); // 'all' | '500' | '700'
   const [onlyAvailableToday, setOnlyAvailableToday] = useState(false);
-  const [sortBy, setSortBy] = useState('nearest'); // 'nearest' | 'rating' | 'experience' | 'fee' | 'earliest'
+  const [sortBy, setSortBy] = useState('rating'); // 'rating' | 'experience' | 'fee' | 'earliest'
 
   const getSortLabel = (id) => {
     switch (id) {
@@ -85,7 +256,7 @@ const VideoConsultationScreen = ({ navigation, route }) => {
       case 'experience': return 'Experience';
       case 'fee': return 'Lowest Fee';
       case 'earliest': return 'Earliest';
-      default: return 'Nearest';
+      default: return 'Top Rated';
     }
   };
 
@@ -112,7 +283,7 @@ const VideoConsultationScreen = ({ navigation, route }) => {
     setMinExperience('all');
     setMaxFee('all');
     setOnlyAvailableToday(false);
-    setSortBy('nearest');
+    setSortBy('rating');
   };
 
   // Active Specialties for Video Consultation
@@ -226,75 +397,15 @@ const VideoConsultationScreen = ({ navigation, route }) => {
     return filteredDoctors.slice(startIndex, startIndex + DOCTORS_PER_PAGE);
   }, [filteredDoctors, safeCurrentPage]);
 
-  const renderDoctor = ({ item }) => {
+  const renderDoctor = ({ item, index = 0 }) => {
     return (
-      <View style={styles.card}>
-        {/* Doctor Info Row */}
-        <TouchableOpacity
-          style={styles.doctorMainRow}
-          activeOpacity={0.88}
-          onPress={() => setProfileDoctor(item)}
-        >
-          <OptimizedImage
-            source={{ uri: item.image }}
-            style={styles.avatar}
-            fallbackIcon="person-outline"
-            fallbackColor="#007D69"
-          />
-
-          <View style={styles.doctorInfoCol}>
-            <View style={styles.nameRow}>
-              <Text style={styles.doctorName} numberOfLines={1}>{item.name}</Text>
-              <Ionicons name="checkmark-circle" size={15} color="#007D69" style={{ marginLeft: 4 }} />
-            </View>
-
-            <Text style={styles.specialtyText} numberOfLines={1}>
-              {item.specialty} • {item.experience}
-            </Text>
-
-            {/* Price, Rating, Next Available Slot */}
-            <View style={styles.metricsRow}>
-              <Text style={styles.feeAmount}>₹{item.fee}</Text>
-
-              <Text style={styles.metricsBullet}>•</Text>
-
-              <View style={styles.ratingChip}>
-                <Ionicons name="star" size={12} color="#FFA000" />
-                <Text style={styles.ratingChipText}>{item.rating}</Text>
-              </View>
-
-              <Text style={styles.metricsBullet}>•</Text>
-
-              <View style={styles.slotBox}>
-                <Ionicons name="videocam" size={12} color={item.availableToday ? '#007D69' : '#0284C7'} />
-                <Text style={[styles.slotText, item.availableToday && { color: '#007D69', fontWeight: '700' }]}>
-                  {item.availableToday ? 'Today' : 'Tomorrow'}
-                </Text>
-              </View>
-            </View>
-          </View>
-        </TouchableOpacity>
-
-        {/* Clear Action Row: View Details & Book Video Call */}
-        <View style={styles.cardActionsRow}>
-          <TouchableOpacity
-            style={styles.bioButton}
-            activeOpacity={0.82}
-            onPress={() => setProfileDoctor(item)}
-          >
-            <Text style={styles.bioButtonText}>View Details</Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity
-            style={styles.bookVideoButton}
-            activeOpacity={0.88}
-            onPress={() => setSelectedDoctorForBooking(item)}
-          >
-            <Ionicons name="videocam" size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
-            <Text style={styles.bookVideoButtonText}>Book Video Call</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
+      <DoctorCardItem
+        item={item}
+        index={index}
+        isDesktopWeb={isDesktopWeb}
+        onSelectDoctor={() => setProfileDoctor(item)}
+        onBook={() => setSelectedDoctorForBooking(item)}
+      />
     );
   };
 
@@ -739,7 +850,7 @@ const VideoConsultationScreen = ({ navigation, route }) => {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? theme.headerBg : "#FFFFFF"} />
 
       <ScrollView
         ref={scrollViewRef}
@@ -756,7 +867,7 @@ const VideoConsultationScreen = ({ navigation, route }) => {
               onPress={() => navigation.goBack()}
               activeOpacity={0.8}
             >
-              <Ionicons name="arrow-back" size={22} color={colors.secondary} />
+              <Ionicons name="arrow-back" size={22} color={isDarkMode ? theme.text : colors.secondary} />
             </TouchableOpacity>
 
             <View style={styles.headerCenter}>
@@ -832,63 +943,101 @@ const VideoConsultationScreen = ({ navigation, route }) => {
         </View>
 
         {/* ==================================================
-            CLEAN CONTROL SECTION: [ Filter ]   [ Sort ]
-            (Only ONE Filter button on the entire screen!)
-        ================================================== */}
-        {!isDesktopWeb && (
-          <View style={[styles.controlBarContainer, isTablet && { maxWidth: 780, width: '100%', alignSelf: 'center' }]}>
-            <TouchableOpacity
-              style={[styles.controlBtn, activeFiltersCount > 0 && styles.controlBtnActive]}
-              onPress={() => setFilterModalVisible(true)}
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name="options-outline"
-                size={16}
-                color={activeFiltersCount > 0 ? '#FFFFFF' : '#007D69'}
-                style={{ marginRight: 7 }}
-              />
-              <Text style={[styles.controlBtnText, activeFiltersCount > 0 && styles.controlBtnTextActive]}>
-                Filter{activeFiltersCount > 0 ? ` (${activeFiltersCount})` : ''}
-              </Text>
-            </TouchableOpacity>
-
-            <TouchableOpacity
-              style={[styles.controlBtn, sortBy !== 'nearest' && styles.controlBtnActive]}
-              onPress={() => setSortModalVisible(true)}
-              activeOpacity={0.8}
-            >
-              <Ionicons
-                name="swap-vertical-outline"
-                size={16}
-                color={sortBy !== 'nearest' ? '#FFFFFF' : '#007D69'}
-                style={{ marginRight: 7 }}
-              />
-              <Text style={[styles.controlBtnText, sortBy !== 'nearest' && styles.controlBtnTextActive]}>
-                Sort{sortBy !== 'nearest' ? `: ${getSortLabel(sortBy)}` : ''}
-              </Text>
-            </TouchableOpacity>
-          </View>
-        )}
-
-        {/* ==================================================
-            MAIN CONTENT AREA: DESKTOP 2-COLUMN (VISIBLE FILTER SIDEBAR + DOCTORS LIST)
+            MAIN CONTENT AREA: CENTERED DOCTORS LIST (SINGLE UNIFIED FILTER OPTION)
         ================================================== */}
         <View style={[styles.mainLayoutWrap, isDesktopWeb && styles.mainLayoutWrapDesktop, isTablet && !isDesktopWeb && { maxWidth: 780, width: '100%', alignSelf: 'center' }]}>
-          {/* Left Filter Sidebar - Visible on Desktop! */}
-          {isDesktopWeb && (
-            <View style={styles.desktopSidebarCol}>
-              {renderDesktopSidebar()}
-            </View>
-          )}
-
-          {/* Right Content Column: Results count & Doctors Cards */}
+          {/* Main Content Column: Results count & Doctors Cards */}
           <View style={[styles.doctorsColWrap, isDesktopWeb && styles.doctorsColWrapDesktop]}>
-            <View style={styles.resultsHeaderRow}>
-              <Text style={styles.sectionHeadingTitle}>Available Doctors</Text>
-              <Text style={styles.resultsCountText}>
-                {totalDoctors} {totalDoctors === 1 ? 'doctor' : 'doctors'}
-              </Text>
+            <View style={[styles.resultsHeaderRow, isDesktopWeb && { marginBottom: 16 }]}>
+              <View style={styles.resultsHeadingWrap}>
+                <Text style={styles.sectionHeadingTitle}>Doctors</Text>
+                <View style={styles.resultsCountBadge}>
+                  <Text style={styles.resultsCountBadgeText}>{totalDoctors}</Text>
+                </View>
+              </View>
+
+              {/* UNIFIED SINGLE HORIZONTAL FILTER & SORT OPTION */}
+              <ScrollView
+                horizontal
+                showsHorizontalScrollIndicator={false}
+                contentContainerStyle={styles.sortPillsScroll}
+              >
+                {/* 1. Filter Trigger Pill */}
+                <TouchableOpacity
+                  style={[
+                    styles.sortPillBtn,
+                    activeFiltersCount > 0 && styles.sortPillBtnActive,
+                    { flexDirection: 'row', alignItems: 'center', gap: 5 },
+                  ]}
+                  onPress={() => setFilterModalVisible(true)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name="options-outline"
+                    size={13}
+                    color={activeFiltersCount > 0 ? '#FFFFFF' : '#007D69'}
+                  />
+                  <Text
+                    style={[
+                      styles.sortPillText,
+                      activeFiltersCount > 0 && styles.sortPillTextActive,
+                    ]}
+                  >
+                    Filter
+                  </Text>
+                  {activeFiltersCount > 0 && (
+                    <View style={styles.filterTriggerCountBadge}>
+                      <Text style={styles.filterTriggerCountBadgeText}>{activeFiltersCount}</Text>
+                    </View>
+                  )}
+                </TouchableOpacity>
+
+                {/* 2. Sort Pills */}
+                {[
+                  { id: 'rating', label: 'Top Rated' },
+                  { id: 'experience', label: 'Experience' },
+                  { id: 'fee', label: 'Lowest Fee' },
+                ].map((sItem) => {
+                  const isSortActive = sortBy === sItem.id;
+                  return (
+                    <TouchableOpacity
+                      key={sItem.id}
+                      style={[styles.sortPillBtn, isSortActive && styles.sortPillBtnActive]}
+                      onPress={() => setSortBy(sItem.id)}
+                      activeOpacity={0.8}
+                    >
+                      <Text style={[styles.sortPillText, isSortActive && styles.sortPillTextActive]}>
+                        {sItem.label}
+                      </Text>
+                    </TouchableOpacity>
+                  );
+                })}
+
+                {/* 3. Available Today Quick Toggle */}
+                <TouchableOpacity
+                  style={[
+                    styles.sortPillBtn,
+                    onlyAvailableToday && styles.sortPillBtnActiveGreen,
+                    { flexDirection: 'row', alignItems: 'center', gap: 4 },
+                  ]}
+                  onPress={() => setOnlyAvailableToday(!onlyAvailableToday)}
+                  activeOpacity={0.8}
+                >
+                  <Ionicons
+                    name="flash"
+                    size={11.5}
+                    color={onlyAvailableToday ? '#FFFFFF' : '#10B981'}
+                  />
+                  <Text
+                    style={[
+                      styles.sortPillText,
+                      onlyAvailableToday && styles.sortPillTextActive,
+                    ]}
+                  >
+                    Available Today
+                  </Text>
+                </TouchableOpacity>
+              </ScrollView>
             </View>
 
             {selectedSpecialty !== 'all' && (
@@ -941,9 +1090,9 @@ const VideoConsultationScreen = ({ navigation, route }) => {
             ) : (
               <>
                 <View style={styles.doctorsCardsList}>
-                  {paginatedDoctors.map((doc) => (
+                  {paginatedDoctors.map((doc, idx) => (
                     <View key={`video-${doc.id}`}>
-                      {renderDoctor({ item: doc })}
+                      {renderDoctor({ item: doc, index: idx })}
                     </View>
                   ))}
                 </View>
@@ -1420,7 +1569,6 @@ const VideoConsultationScreen = ({ navigation, route }) => {
 
             <View style={styles.sortOptionsList}>
               {[
-                { id: 'nearest', label: 'Nearest Doctor', icon: 'location-outline' },
                 { id: 'rating', label: 'Top Rated', icon: 'star-outline' },
                 { id: 'experience', label: 'Most Experienced', icon: 'ribbon-outline' },
                 { id: 'fee', label: 'Fee: Low to High', icon: 'pricetag-outline' },
@@ -1478,10 +1626,10 @@ const VideoConsultationScreen = ({ navigation, route }) => {
 // STYLES
 // ==================================================
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F1F2F4',
   },
   scrollContent: {
     flexGrow: 1,
@@ -1761,10 +1909,10 @@ const styles = StyleSheet.create({
     gap: 8,
   },
   searchBarContainerDesktop: {
-    maxWidth: 1200,
+    maxWidth: 1040,
     width: '100%',
     alignSelf: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 16,
     paddingTop: 18,
     paddingBottom: 8,
   },
@@ -1960,30 +2108,41 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     paddingHorizontal: 0,
     paddingVertical: 4,
-    marginBottom: 12,
-    flexWrap: 'wrap',
-    gap: 8,
+    marginBottom: 10,
+    gap: 10,
   },
-  resultsCountText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#64748B',
+  resultsHeadingWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
   },
   sectionHeadingTitle: {
-    fontSize: 18,
+    fontSize: 16,
     fontWeight: '900',
     color: '#0F172A',
-    letterSpacing: -0.3,
+    letterSpacing: -0.2,
   },
-  sortedByText: {
-    fontSize: 12,
-    color: '#64748B',
-    fontWeight: '500',
+  resultsCountBadge: {
+    backgroundColor: '#CCFBF1',
+    paddingHorizontal: 7,
+    paddingVertical: 2,
+    borderRadius: 10,
+  },
+  resultsCountBadgeText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#0D9488',
+  },
+  sortPillsScroll: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    paddingVertical: 2,
   },
   sortPillsRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    gap: 6,
+    gap: 7,
     flexWrap: 'wrap',
   },
   sortLabel: {
@@ -1994,15 +2153,37 @@ const styles = StyleSheet.create({
   },
   sortPillBtn: {
     paddingHorizontal: 10,
-    paddingVertical: 4.5,
-    borderRadius: 16,
+    paddingVertical: 5,
+    borderRadius: 14,
     backgroundColor: '#F1F5F9',
     borderWidth: 1,
     borderColor: '#E2E8F0',
+    ...(Platform.OS === 'web'
+      ? {
+          cursor: 'pointer',
+          transition: 'all 0.15s ease',
+        }
+      : {}),
   },
   sortPillBtnActive: {
     backgroundColor: '#00B894',
     borderColor: '#00B894',
+  },
+  sortPillBtnActiveGreen: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
+  },
+  filterTriggerCountBadge: {
+    backgroundColor: '#00B894',
+    paddingHorizontal: 5,
+    paddingVertical: 1,
+    borderRadius: 8,
+    marginLeft: 2,
+  },
+  filterTriggerCountBadgeText: {
+    fontSize: 9.5,
+    fontWeight: '800',
+    color: '#FFFFFF',
   },
   sortPillText: {
     fontSize: 11.5,
@@ -2019,13 +2200,12 @@ const styles = StyleSheet.create({
     width: '100%',
   },
   mainLayoutWrapDesktop: {
-    flexDirection: 'row',
-    maxWidth: 1320,
+    flexDirection: 'column',
+    maxWidth: 1040,
     width: '100%',
     alignSelf: 'center',
     paddingHorizontal: 16,
-    gap: 24,
-    alignItems: 'flex-start',
+    alignItems: 'stretch',
     marginTop: 8,
   },
   desktopSidebarCol: {
@@ -2036,7 +2216,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 16,
   },
   doctorsColWrapDesktop: {
-    flex: 1,
+    width: '100%',
     minWidth: 0,
     paddingHorizontal: 0,
   },
@@ -2447,138 +2627,398 @@ const styles = StyleSheet.create({
   card: {
     backgroundColor: '#FFFFFF',
     borderRadius: 16,
-    padding: 16,
+    padding: 15,
+    paddingTop: 15,
     marginBottom: 14,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    borderWidth: 0,
+    borderColor: 'transparent',
+    position: 'relative',
+    overflow: 'hidden',
     shadowColor: '#0F172A',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.04,
-    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.05,
+    shadowRadius: 14,
     elevation: 2,
     width: '100%',
+    ...(Platform.OS === 'web'
+      ? {
+          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+        }
+      : {}),
   },
-
-  // DOCTOR MAIN ROW
-  doctorMainRow: {
+  cardDesktop: {
+    padding: 22,
+    paddingTop: 20,
+    marginBottom: 18,
+  },
+  cardHeaderStrip: {
     flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'space-between',
     marginBottom: 12,
+    gap: 8,
+  },
+  primeHeaderBadges: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  primeGoldBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3.5,
+    backgroundColor: '#FEF3C7',
+    borderWidth: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  primeGoldBadgeText: {
+    fontSize: 10,
+    fontWeight: '900',
+    color: '#92400E',
+    letterSpacing: 0.6,
+  },
+  verifiedClinicBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 3.5,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  verifiedClinicBadgeText: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#065F46',
+  },
+  liveAvailableBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 5,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 0,
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 999,
+  },
+  liveAvailablePulse: {
+    width: 5.5,
+    height: 5.5,
+    borderRadius: 3,
+    backgroundColor: '#10B981',
+  },
+  liveAvailableText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  nextSlotQuickPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 0,
+    paddingHorizontal: 9,
+    paddingVertical: 3.5,
+    borderRadius: 999,
+  },
+  nextSlotQuickText: {
+    fontSize: 10.5,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+
+  // DOCTOR MAIN & AVATAR
+  doctorMainRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
   },
   avatar: {
-    width: 60,
-    height: 60,
-    borderRadius: 30,
-    backgroundColor: '#E2E8F0',
-    marginRight: 14,
+    width: 62,
+    height: 62,
+    borderRadius: 13,
+    backgroundColor: '#F1F5F9',
+    borderWidth: 0,
+  },
+  avatarWrapper: {
+    position: 'relative',
+    marginRight: 12,
+  },
+  avatarFallback: {
+    width: 62,
+    height: 62,
+    borderRadius: 13,
+    backgroundColor: '#CCFBF1',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 0,
+    position: 'relative',
+  },
+  avatarFallbackText: {
+    fontSize: 19,
+    fontWeight: '900',
+    color: '#0D9488',
+    letterSpacing: 0.5,
+  },
+  avatarFallbackIcon: {
+    position: 'absolute',
+    bottom: 4,
+    right: 4,
+  },
+  onlineStatusDot: {
+    position: 'absolute',
+    bottom: -1,
+    right: -1,
+    width: 12,
+    height: 12,
+    borderRadius: 6,
+    backgroundColor: '#10B981',
+    borderWidth: 2,
+    borderColor: '#FFFFFF',
   },
   doctorInfoCol: {
     flex: 1,
-    justifyContent: 'center',
+    minWidth: 0,
   },
-  nameRow: {
+  nameBadgeRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    gap: 6,
+  },
+  nameVerifiedWrap: {
     flexDirection: 'row',
     alignItems: 'center',
+    flex: 1,
+    minWidth: 0,
+    flexWrap: 'wrap',
+    gap: 3.5,
+  },
+  verifiedCheckIcon: {
+    flexShrink: 0,
+    marginLeft: 1,
   },
   doctorName: {
-    fontSize: 15.5,
+    fontSize: 16,
     fontWeight: '800',
     color: '#0F172A',
+    letterSpacing: -0.2,
   },
-  specialtyText: {
-    fontSize: 12.5,
-    color: '#007D69',
-    fontWeight: '600',
-    marginTop: 2,
-  },
-  metricsRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: 6,
-    gap: 8,
-    flexWrap: 'wrap',
-  },
-  feeAmount: {
-    fontSize: 14.5,
-    fontWeight: '800',
-    color: '#0F172A',
-  },
-  metricsBullet: {
-    fontSize: 12,
-    color: '#94A3B8',
-  },
-  ratingChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 3,
-  },
-  ratingChipText: {
-    fontSize: 12,
-    fontWeight: '700',
-    color: '#334155',
-  },
-  slotBox: {
+  availableTag: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 4,
     backgroundColor: '#F0FDF4',
     paddingHorizontal: 7,
     paddingVertical: 2,
-    borderRadius: 6,
+    borderRadius: 999,
+    flexShrink: 0,
+    marginTop: 1,
   },
-  slotText: {
-    fontSize: 11,
+  availableTagText: {
+    fontSize: 9.5,
+    fontWeight: '700',
+    color: '#15803D',
+  },
+  specialtyExpText: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: '#475569',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  specialtyTagPill: {
+    paddingHorizontal: 8,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    borderWidth: 0,
+    backgroundColor: '#F1F5F9',
+  },
+  specialtyTagText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  experienceText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#64748B',
+  },
+  clinicLocationWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 3.5,
+    gap: 4,
+    backgroundColor: 'transparent',
+    borderWidth: 0,
+  },
+  clinicNameText: {
+    fontSize: 11.5,
     fontWeight: '600',
     color: '#007D69',
+    flexShrink: 1,
+    lineHeight: 15,
+  },
+  distanceBadgeText: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#64748B',
   },
 
-  // CARD ACTIONS
-  cardActionsRow: {
+  // METRICS & BADGES
+  metricsRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6.5,
+    gap: 6,
+    flexWrap: 'wrap',
+  },
+  ratingChip: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#FFFBEB',
+    borderWidth: 0,
+    paddingHorizontal: 7.5,
+    paddingVertical: 3,
+    borderRadius: 6,
+    gap: 3,
+  },
+  ratingChipText: {
+    fontSize: 11,
+    fontWeight: '800',
+    color: '#92400E',
+  },
+  reviewsCountText: {
+    fontSize: 9.5,
+    fontWeight: '600',
+    color: '#B45309',
+  },
+  slotBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 0,
+    paddingHorizontal: 7.5,
+    paddingVertical: 3,
+    borderRadius: 6,
+    gap: 3,
+  },
+  slotBadgeText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#065F46',
+  },
+  primePerkBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#EFF6FF',
+    borderWidth: 0,
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 6,
+    gap: 3.5,
+  },
+  primePerkText: {
+    fontSize: 10.5,
+    fontWeight: '700',
+    color: '#1D4ED8',
+  },
+
+  // CARD FOOTER & ACTIONS
+  cardFooterRow: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    gap: 12,
-    paddingTop: 12,
+    paddingTop: 13,
+    marginTop: 13,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
-    width: '100%',
   },
-  bioButton: {
-    flex: 1,
-    minHeight: 44,
-    flexDirection: 'row',
-    alignItems: 'center',
+  cardFooterRowDesktop: {
+    paddingTop: 14,
+    marginTop: 14,
+  },
+  feeSectionCol: {
     justifyContent: 'center',
-    backgroundColor: '#F1F5F9',
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    borderWidth: 1,
-    borderColor: '#E2E8F0',
+    backgroundColor: 'transparent',
+    borderWidth: 0,
   },
-  bioButtonText: {
-    fontSize: 13,
+  feeLabel: {
+    fontSize: 9.5,
+    color: '#64748B',
+    fontWeight: '800',
+    letterSpacing: 0.6,
+  },
+  feeAmountRow: {
+    flexDirection: 'row',
+    alignItems: 'baseline',
+    gap: 5,
+    marginTop: 1,
+  },
+  feeAmount: {
+    fontSize: 19,
+    fontWeight: '900',
+    color: '#0F172A',
+  },
+  feeSubtext: {
+    fontSize: 11,
     fontWeight: '700',
-    color: '#007D69',
+    color: '#059669',
   },
-  bookVideoButton: {
-    flex: 1.5,
-    minHeight: 44,
+  cardActionsWrap: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  navigateButton: {
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    backgroundColor: '#007D69',
-    paddingHorizontal: 14,
-    borderRadius: 12,
-    shadowColor: '#007D69',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.2,
-    shadowRadius: 4,
-    elevation: 2,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 0,
+    paddingHorizontal: 13,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 4,
+    ...(Platform.OS === 'web'
+      ? {
+          cursor: 'pointer',
+          transition: 'all 0.15s ease',
+        }
+      : {}),
   },
-  bookVideoButtonText: {
-    fontSize: 13,
+  navigateButtonText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#334155',
+  },
+  bookAppointmentButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    backgroundColor: '#00B894',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 8,
+    gap: 5,
+    ...(Platform.OS === 'web'
+      ? {
+          cursor: 'pointer',
+          transition: 'all 0.2s cubic-bezier(0.16, 1, 0.3, 1)',
+          boxShadow: '0 4px 12px rgba(0, 184, 148, 0.25)',
+        }
+      : {}),
+  },
+  bookAppointmentButtonText: {
+    fontSize: 12.5,
     fontWeight: '800',
     color: '#FFFFFF',
+    letterSpacing: 0.2,
   },
 
   // EMPTY

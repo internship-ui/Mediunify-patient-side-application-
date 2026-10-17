@@ -16,6 +16,8 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { showAlert } from '../../../utils/alert';
 import WebFooter from '../../../components/web/WebFooter';
 import { isDesktopLayout } from '../../../utils/responsiveLayoutHelper';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 
 const COMING_SOON_FEATURES = [
   {
@@ -49,6 +51,8 @@ const COMING_SOON_FEATURES = [
 ];
 
 const HealthInsuranceScreen = ({ navigation }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const isDesktopWeb = Platform.OS === 'web' && isDesktopLayout(width);
 
@@ -104,7 +108,7 @@ const HealthInsuranceScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeArea}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? theme.headerBg : "#FFFFFF"} />
 
       {/* MOBILE TOP HEADER */}
       {!isDesktopWeb && (
@@ -120,7 +124,7 @@ const HealthInsuranceScreen = ({ navigation }) => {
             activeOpacity={0.8}
             style={styles.backBtn}
           >
-            <Ionicons name="arrow-back" size={24} color="#1E3A8A" />
+            <Ionicons name="arrow-back" size={24} color={isDarkMode ? theme.text : "#1E3A8A"} />
           </TouchableOpacity>
           <View style={{ flex: 1, marginLeft: 10 }}>
             <Text style={styles.mobileHeaderTitle}>Health Insurance</Text>
@@ -301,7 +305,7 @@ const HealthInsuranceScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F8FAFC',

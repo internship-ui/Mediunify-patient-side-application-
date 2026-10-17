@@ -22,7 +22,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { syncActiveUser } from '../../services/dataSyncService';
 import { promptLoginRequired } from '../../utils/authHelper';
 import WebFooter from '../../components/web/WebFooter';
-import ProfileScreenMobile from './ProfileScreenMobile';
+import ProfileScreenMobile from './ProfileScreen.js';
 import { isDesktopLayout, isDesktopSiteRequested } from '../../utils/responsiveLayoutHelper';
 
 const ProfileScreenWeb = ({ navigation, route }) => {
@@ -436,8 +436,8 @@ const ProfileScreenWeb = ({ navigation, route }) => {
 
   return (
     <SafeAreaView
-      edges={['top', 'left', 'right']}
-      style={[styles.container, { backgroundColor: isDarkMode ? '#0B0F19' : '#F8FAFC' }]}
+      edges={['top']}
+      style={[styles.container, { backgroundColor: isDarkMode ? '#0B0F19' : '#F5FEFB' }]}
     >
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
@@ -446,30 +446,9 @@ const ProfileScreenWeb = ({ navigation, route }) => {
 
       <ScrollView
         showsVerticalScrollIndicator={false}
+        style={styles.scrollView}
         contentContainerStyle={styles.scrollContent}
       >
-        {/* ============================================================
-            1. BREADCRUMB BAR (WEB CONTEXT)
-        ============================================================ */}
-        <View style={styles.breadcrumbBarWrap}>
-          <View style={styles.breadcrumbBarInner}>
-            <View style={styles.breadcrumbLeft}>
-              <TouchableOpacity onPress={() => navigation?.navigate('Home')} activeOpacity={0.8}>
-                <Text style={styles.breadcrumbLink}>Home</Text>
-              </TouchableOpacity>
-              <Ionicons name="chevron-forward" size={13} color="#94A3B8" />
-              <Text style={styles.breadcrumbCurrent}>
-                {(t('profile_title') || 'Profile').toUpperCase()}
-              </Text>
-            </View>
-
-            <View style={styles.securityBadgeWeb}>
-              <Ionicons name="shield-checkmark" size={14} color="#00B894" />
-              <Text style={styles.securityBadgeWebText}>256-Bit SSL Encrypted • NABH Partnered</Text>
-            </View>
-          </View>
-        </View>
-
         <View style={styles.webContainer}>
           {/* ============================================================
               2. REDESIGNED PROFILE HERO BANNER
@@ -494,9 +473,9 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                           backgroundColor: '#FFFFFF',
                         }
                       : {
-                          borderColor: '#00B894',
+                          borderColor: '#13BE9C',
                           borderWidth: 2.5,
-                          backgroundColor: '#00B894',
+                          backgroundColor: '#13BE9C',
                         },
                   ]}
                 >
@@ -505,7 +484,7 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                       styles.avatarFallback,
                       memInfo
                         ? { backgroundColor: memInfo.bgColor }
-                        : { backgroundColor: '#00B894' },
+                        : { backgroundColor: '#13BE9C' },
                     ]}
                   >
                     {user.photo || user.photoUri ? (
@@ -558,7 +537,7 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                     {/* UHID Pill */}
                     {!isGuest && user.uhid ? (
                       <View style={styles.uhidPillHero}>
-                        <Ionicons name="finger-print" size={12} color="#00B894" />
+                        <Ionicons name="finger-print" size={12} color="#13BE9C" />
                         <Text style={styles.uhidPillHeroText}>UHID: {user.uhid}</Text>
                       </View>
                     ) : null}
@@ -566,7 +545,7 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                     {/* Verified Identity Badge */}
                     {!isGuest && (
                       <View style={styles.verifiedPillHero}>
-                        <Ionicons name="checkmark-circle" size={13} color="#166534" />
+                        <Ionicons name="checkmark-circle" size={13} color="#13BE9C" />
                         <Text style={styles.verifiedPillHeroText}>Verified Patient</Text>
                       </View>
                     )}
@@ -597,7 +576,7 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                       ) : null}
 
                       <View style={styles.heroContactItem}>
-                        <Ionicons name="location-outline" size={14} color="#00B894" />
+                        <Ionicons name="location-outline" size={14} color="#13BE9C" />
                         <Text style={styles.heroContactText}>{user.location || 'Hassan, Karnataka'}</Text>
                       </View>
 
@@ -616,7 +595,7 @@ const ProfileScreenWeb = ({ navigation, route }) => {
               <View style={styles.heroActionArea}>
                 {isGuest ? (
                   <TouchableOpacity
-                    style={styles.singlePrimaryEditBtn}
+                    style={styles.organicHeroBtn}
                     onPress={() => {
                       const parent = navigation.getParent?.();
                       if (parent?.navigate) {
@@ -626,19 +605,23 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                     }}
                     activeOpacity={0.88}
                   >
-                    <Ionicons name="log-in-outline" size={16} color="#FFFFFF" />
-                    <Text style={styles.singlePrimaryEditBtnText}>
+                    <View style={styles.organicHeroArrowCircle}>
+                      <Ionicons name="log-in-outline" size={13} color="#13BE9C" />
+                    </View>
+                    <Text style={styles.organicHeroBtnText}>
                       {t('login_sign_in') || 'Login / Sign In'}
                     </Text>
                   </TouchableOpacity>
                 ) : (
                   <TouchableOpacity
-                    style={styles.singlePrimaryEditBtn}
+                    style={styles.organicHeroBtn}
                     onPress={handleEditProfile}
                     activeOpacity={0.88}
                   >
-                    <Ionicons name="create-outline" size={16} color="#FFFFFF" />
-                    <Text style={styles.singlePrimaryEditBtnText}>
+                    <View style={styles.organicHeroArrowCircle}>
+                      <Ionicons name="create-outline" size={13} color="#13BE9C" />
+                    </View>
+                    <Text style={styles.organicHeroBtnText}>
                       {t('edit_profile') || 'Edit Profile'}
                     </Text>
                   </TouchableOpacity>
@@ -813,7 +796,7 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                         {t('settings') || 'Account & Settings'}
                       </Text>
                       <Text style={styles.cardHeaderSubtitle}>
-                        Preferences, notifications & address
+                        Account preferences & details
                       </Text>
                     </View>
                   </View>
@@ -833,7 +816,7 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                     activeOpacity={0.75}
                   >
                     <View style={[styles.menuIconCircle, { backgroundColor: '#F0FDFA' }]}>
-                      <Ionicons name="location-outline" size={17} color="#00B894" />
+                      <Ionicons name="location-outline" size={17} color="#13BE9C" />
                     </View>
                     <View style={styles.menuTitleCol}>
                       <Text style={[styles.menuOptionTitle, { color: isDarkMode ? '#F8FAFC' : '#1E3A8A' }]}>
@@ -868,8 +851,11 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                         <Text style={styles.activePillText}>{userMembership.tierName} {t('active') || 'Active'}</Text>
                       </View>
                     ) : (
-                      <View style={styles.explorePill}>
-                        <Text style={styles.explorePillText}>{t('explore_plans') || 'Explore Plans'}</Text>
+                      <View style={styles.organicActionBtn}>
+                        <View style={styles.organicActionIconCircle}>
+                          <Ionicons name="sparkles" size={10} color="#13BE9C" />
+                        </View>
+                        <Text style={styles.organicActionText}>{t('explore_plans') || 'Explore Plans'}</Text>
                       </View>
                     )}
                     <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
@@ -1020,7 +1006,7 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                         {t('personal_info') || 'Personal Information'}
                       </Text>
                       <Text style={styles.cardHeaderSubtitle}>
-                        Registered clinical identity & contact details
+                        Clinical identity & contact details
                       </Text>
                     </View>
                   </View>
@@ -1100,16 +1086,19 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                   <View style={[styles.detailItem, { width: '100%' }]}>
                     <Text style={styles.detailLabel}>Registered Address</Text>
                     <View style={styles.addressSummaryRow}>
-                      <Ionicons name="location-outline" size={16} color="#00B894" />
+                      <Ionicons name="location-outline" size={16} color="#13BE9C" />
                       <Text style={[styles.addressSummaryText, { color: isDarkMode ? '#CBD5E1' : '#475569' }]}>
                         {user.address || user.location || 'Hassan, Karnataka'}
                       </Text>
                       <TouchableOpacity
-                        style={styles.changeAddressLink}
+                        style={styles.organicActionBtn}
                         onPress={() => setShowAddressModal(true)}
                         activeOpacity={0.8}
                       >
-                        <Text style={styles.changeAddressLinkText}>Change</Text>
+                        <View style={styles.organicActionIconCircle}>
+                          <Ionicons name="create-outline" size={11} color="#13BE9C" />
+                        </View>
+                        <Text style={styles.organicActionText}>Change</Text>
                       </TouchableOpacity>
                     </View>
                   </View>
@@ -1123,7 +1112,7 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                 <View style={styles.cardHeaderRow}>
                   <View style={styles.cardHeaderTitleGroup}>
                     <View style={[styles.iconCircleHeader, { backgroundColor: '#F0FDFA' }]}>
-                      <Ionicons name="people" size={18} color="#00B894" />
+                      <Ionicons name="people" size={18} color="#13BE9C" />
                     </View>
                     <View>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
@@ -1135,13 +1124,13 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                         </View>
                       </View>
                       <Text style={styles.cardHeaderSubtitle}>
-                        Dependents and linked patient profiles
+                        Linked family profiles
                       </Text>
                     </View>
                   </View>
 
                   <TouchableOpacity
-                    style={styles.cardActionBtn}
+                    style={styles.organicActionBtn}
                     onPress={() => {
                       if (isGuest) {
                         promptLoginRequired(navigation, { service: 'family' });
@@ -1151,8 +1140,10 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                     }}
                     activeOpacity={0.8}
                   >
-                    <Ionicons name="people-outline" size={14} color="#00B894" />
-                    <Text style={styles.cardActionBtnText}>Manage Family</Text>
+                    <View style={styles.organicActionIconCircle}>
+                      <Ionicons name="people-outline" size={11} color="#13BE9C" />
+                    </View>
+                    <Text style={styles.organicActionText}>Manage Family</Text>
                   </TouchableOpacity>
                 </View>
 
@@ -1208,8 +1199,8 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                           ) : null}
                           {member.bloodGroup ? (
                             <View style={styles.familyTagItem}>
-                              <Ionicons name="water" size={12} color="#00B894" />
-                              <Text style={[styles.familyTagText, { color: '#00B894', fontWeight: '700' }]}>
+                              <Ionicons name="water" size={12} color="#13BE9C" />
+                              <Text style={[styles.familyTagText, { color: '#13BE9C', fontWeight: '700' }]}>
                                 {member.bloodGroup}
                               </Text>
                             </View>
@@ -1226,7 +1217,7 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                       Add family members to book doctor visits, diagnostic tests, and manage prescriptions together.
                     </Text>
                     <TouchableOpacity
-                      style={styles.addFamilyBtn}
+                      style={styles.organicActionBtn}
                       onPress={() => {
                         if (isGuest) {
                           promptLoginRequired(navigation, { service: 'family' });
@@ -1236,8 +1227,10 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                       }}
                       activeOpacity={0.85}
                     >
-                      <Ionicons name="person-add-outline" size={14} color="#FFFFFF" />
-                      <Text style={styles.addFamilyBtnText}>+ Add Family Member</Text>
+                      <View style={styles.organicActionIconCircle}>
+                        <Ionicons name="person-add-outline" size={12} color="#13BE9C" />
+                      </View>
+                      <Text style={styles.organicActionText}>+ Add Family Member</Text>
                     </TouchableOpacity>
                   </View>
                 )}
@@ -1249,14 +1242,14 @@ const ProfileScreenWeb = ({ navigation, route }) => {
               <View style={[styles.privacyCard, { backgroundColor: isDarkMode ? '#111827' : '#FFFFFF', marginTop: 16 }]}>
                 <View style={styles.privacyCardInner}>
                   <View style={styles.privacyIconWrap}>
-                    <Ionicons name="shield-checkmark" size={20} color="#00B894" />
+                    <Ionicons name="shield-checkmark" size={18} color="#13BE9C" />
                   </View>
                   <View style={{ flex: 1 }}>
                     <Text style={[styles.privacyCardTitle, { color: isDarkMode ? '#F8FAFC' : '#1E3A8A' }]}>
                       Clinical Data Privacy & HIPAA Compliance
                     </Text>
                     <Text style={styles.privacyCardDesc}>
-                      Your healthcare identity, appointments, and prescriptions are protected with end-to-end 256-bit encryption under NABH security standards.
+                      256-Bit Encrypted & HIPAA Compliant Healthcare Vault.
                     </Text>
                   </View>
                 </View>
@@ -1511,59 +1504,16 @@ const ProfileScreenWeb = ({ navigation, route }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#F8FAFC',
+    backgroundColor: '#F5FEFB',
+    width: '100%',
+  },
+  scrollView: {
+    flex: 1,
+    width: '100%',
   },
   scrollContent: {
     flexGrow: 1,
-  },
-
-  // BREADCRUMB BAR
-  breadcrumbBarWrap: {
-    backgroundColor: '#FFFFFF',
-    borderBottomWidth: 1,
-    borderBottomColor: '#E2E8F0',
-    paddingVertical: 12,
-    paddingHorizontal: 24,
-  },
-  breadcrumbBarInner: {
-    maxWidth: 1280,
     width: '100%',
-    alignSelf: 'center',
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  breadcrumbLeft: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  breadcrumbLink: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: '#00B894',
-    cursor: 'pointer',
-  },
-  breadcrumbCurrent: {
-    fontSize: 13,
-    fontWeight: '600',
-    color: '#647488',
-  },
-  securityBadgeWeb: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    backgroundColor: '#F0FDFA',
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: 20,
-    borderWidth: 1,
-    borderColor: '#CCFBF1',
-  },
-  securityBadgeWebText: {
-    fontSize: 11.5,
-    fontWeight: '700',
-    color: '#00B894',
   },
 
   // MAIN CONTAINER
@@ -1734,29 +1684,64 @@ const styles = StyleSheet.create({
     fontWeight: '500',
   },
 
-  // THE ONLY EDIT PROFILE BUTTON ON THE SCREEN
+  // THE ONLY EDIT PROFILE BUTTON ON THE SCREEN (Image 2 approved design)
   heroActionArea: {
     alignItems: 'flex-end',
   },
-  singlePrimaryEditBtn: {
+  organicHeroBtn: {
     flexDirection: 'row',
     alignItems: 'center',
+    backgroundColor: '#FFFFFF',
+    paddingVertical: 9,
+    paddingHorizontal: 18,
+    borderRadius: 24,
+    boxShadow: '0 2px 10px rgba(0,0,0,0.06)',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     gap: 8,
-    backgroundColor: '#00B894',
-    paddingHorizontal: 22,
-    paddingVertical: 12,
-    borderRadius: 12,
-    shadowColor: '#00B894',
-    shadowOffset: { width: 0, height: 3 },
-    shadowOpacity: 0.3,
-    shadowRadius: 6,
-    elevation: 4,
   },
-  singlePrimaryEditBtnText: {
-    fontSize: 14.5,
+  organicHeroArrowCircle: {
+    width: 22,
+    height: 22,
+    borderRadius: 11,
+    borderWidth: 1.5,
+    borderColor: '#13BE9C',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  organicHeroBtnText: {
+    color: '#13BE9C',
+    fontSize: 14,
     fontWeight: '800',
-    color: '#FFFFFF',
     letterSpacing: 0.2,
+  },
+
+  // Organic Action Button (Circular Outline Icon Ring + Bold #13BE9C Text)
+  organicActionBtn: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5,
+    paddingHorizontal: 12,
+    borderRadius: 20,
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    gap: 6,
+    boxShadow: '0 1px 4px rgba(0,0,0,0.04)',
+  },
+  organicActionIconCircle: {
+    width: 20,
+    height: 20,
+    borderRadius: 10,
+    borderWidth: 1.5,
+    borderColor: '#13BE9C',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  organicActionText: {
+    fontSize: 12,
+    fontWeight: '800',
+    color: '#13BE9C',
   },
 
   // MAIN LAYOUT GRID (TWO COLUMNS)
