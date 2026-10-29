@@ -714,39 +714,181 @@ const HomeScreenWeb = ({ navigation }) => {
       }
       styleEl.innerHTML = `
         /* =============================================
-           SERVICE CARDS — RICH HOVER ANIMATIONS
+           HEALTHCARE SERVICE CARDS — ADVANCED 3D & HOVER ANIMATIONS
         ============================================= */
-        .service-card {
+        @keyframes serviceCardEnter {
+          0% {
+            opacity: 0;
+            transform: translateY(22px) scale(0.97);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes floatIcon0 {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-7px) rotate(1.2deg); }
+        }
+        @keyframes floatIcon1 {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-6px) rotate(-1.5deg); }
+        }
+        @keyframes floatIcon2 {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-7.5px) rotate(1.4deg); }
+        }
+        @keyframes floatIcon3 {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-6.5px) rotate(-1deg); }
+        }
+
+        @keyframes waveFlow {
+          0% { stroke-dashoffset: 0; }
+          100% { stroke-dashoffset: -32; }
+        }
+        .journey-wave-path, [data-journey-wave="true"] {
+          animation: waveFlow 3.5s linear infinite !important;
+        }
+
+        /* Ambient 3D Icon Idle Floating */
+        [data-card-id="video-consult"] [data-card-img="true"] {
+          animation: floatIcon0 3.8s ease-in-out infinite !important;
+        }
+        [data-card-id="lab-tests"] [data-card-img="true"] {
+          animation: floatIcon1 4.2s ease-in-out infinite 0.7s !important;
+        }
+        [data-card-id="pharmacy"] [data-card-img="true"] {
+          animation: floatIcon2 3.9s ease-in-out infinite 1.4s !important;
+        }
+        [data-card-id="radiology"] [data-card-img="true"] {
+          animation: floatIcon3 4.3s ease-in-out infinite 2.1s !important;
+        }
+
+        /* Card Base, Entrance & Smooth Transitions */
+        [data-service-card="true"], .service-card {
+          position: relative !important;
           transition:
-            transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
-            box-shadow 0.32s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            transform 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+            box-shadow 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+            border-color 0.3s ease,
+            border-top-color 0.3s ease,
+            border-bottom-color 0.3s ease !important;
+          cursor: pointer !important;
+          will-change: transform, box-shadow;
+          animation: serviceCardEnter 0.65s cubic-bezier(0.16, 1, 0.3, 1) backwards;
         }
-        .service-card:hover {
-          transform: translateY(-10px) scale(1.015) !important;
+        [data-card-id="video-consult"] { animation-delay: 0.05s; }
+        [data-card-id="lab-tests"] { animation-delay: 0.12s; }
+        [data-card-id="pharmacy"] { animation-delay: 0.19s; }
+        [data-card-id="radiology"] { animation-delay: 0.26s; }
+
+        /* Card Hover Elevation */
+        [data-service-card="true"]:hover, .service-card:hover {
+          transform: translateY(-12px) scale(1.022) !important;
+        }
+
+        /* Signature Brand Ambient Colored Glows on Hover */
+        [data-card-id="video-consult"]:hover {
+          border-top-color: #0284C7 !important;
+          border-right-color: rgba(2, 132, 199, 0.25) !important;
+          border-left-color: #0284C7 !important;
           box-shadow:
-            0 24px 48px -12px rgba(12, 59, 107, 0.14),
-            0 8px 20px -6px rgba(12, 59, 107, 0.07) !important;
+            0 24px 44px -8px rgba(2, 132, 199, 0.28),
+            0 8px 18px -4px rgba(2, 132, 199, 0.15),
+            0 0 0 1px rgba(2, 132, 199, 0.22) !important;
         }
-        .service-card:active {
-          transform: translateY(-4px) scale(1.005) !important;
+        [data-card-id="lab-tests"]:hover {
+          border-top-color: #00B894 !important;
+          border-right-color: rgba(0, 184, 148, 0.25) !important;
+          border-left-color: #00B894 !important;
+          box-shadow:
+            0 24px 44px -8px rgba(0, 184, 148, 0.28),
+            0 8px 18px -4px rgba(0, 184, 148, 0.15),
+            0 0 0 1px rgba(0, 184, 148, 0.22) !important;
         }
-        .service-card-image {
-          transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        [data-card-id="pharmacy"]:hover {
+          border-top-color: #7C3AED !important;
+          border-right-color: rgba(124, 58, 237, 0.25) !important;
+          border-left-color: #7C3AED !important;
+          box-shadow:
+            0 24px 44px -8px rgba(124, 58, 237, 0.28),
+            0 8px 18px -4px rgba(124, 58, 237, 0.15),
+            0 0 0 1px rgba(124, 58, 237, 0.22) !important;
         }
+        [data-card-id="radiology"]:hover {
+          border-top-color: #EA580C !important;
+          border-right-color: rgba(234, 88, 12, 0.25) !important;
+          border-left-color: #EA580C !important;
+          box-shadow:
+            0 24px 44px -8px rgba(234, 88, 12, 0.28),
+            0 8px 18px -4px rgba(234, 88, 12, 0.15),
+            0 0 0 1px rgba(234, 88, 12, 0.22) !important;
+        }
+
+        /* Tactile Active Press */
+        [data-service-card="true"]:active, .service-card:active {
+          transform: translateY(-4px) scale(0.995) !important;
+          box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.16) !important;
+          transition-duration: 0.1s !important;
+        }
+
+        /* 3D Illustration Interactive Hover Transformation */
+        [data-card-img="true"], .service-card-image {
+          transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), filter 0.42s ease !important;
+          will-change: transform, filter;
+        }
+        [data-service-card="true"]:hover [data-card-img="true"],
         .service-card:hover .service-card-image {
-          transform: scale(1.1) !important;
+          animation-play-state: paused !important;
+          transform: scale(1.15) translateY(-8px) rotate(2deg) !important;
+          filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.18)) !important;
         }
-        .service-card-btn {
-          transition: background-color 0.22s ease, transform 0.18s ease, box-shadow 0.22s ease !important;
+
+        /* Step Number Badge Hover Pulse */
+        [data-step-badge="true"] {
+          transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease !important;
         }
+        [data-service-card="true"]:hover [data-step-badge="true"] {
+          transform: scale(1.18) rotate(-6deg) !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+        }
+
+        /* CTA Arrow Circle & Text Animation */
+        [data-arrow-circle="true"], .service-card-btn {
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease !important;
+        }
+        [data-cta-text="true"], .service-card-btn-text {
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), letter-spacing 0.25s ease !important;
+        }
+        [data-service-card="true"]:hover [data-arrow-circle="true"],
         .service-card:hover .service-card-btn {
-          transform: translateX(3px) !important;
+          transform: translateX(6px) scale(1.12) !important;
         }
-        .service-card-btn-text {
-          transition: color 0.2s ease !important;
+        [data-service-card="true"]:hover [data-cta-text="true"] {
+          transform: translateX(6px) !important;
+          letter-spacing: 0.3px !important;
         }
-        .service-card-avail-badge {
-          transition: opacity 0.2s ease !important;
+        [data-card-id="video-consult"]:hover [data-arrow-circle="true"] {
+          background-color: #0284C7 !important;
+          border-color: #0284C7 !important;
+        }
+        [data-card-id="lab-tests"]:hover [data-arrow-circle="true"] {
+          background-color: #00B894 !important;
+          border-color: #00B894 !important;
+        }
+        [data-card-id="pharmacy"]:hover [data-arrow-circle="true"] {
+          background-color: #7C3AED !important;
+          border-color: #7C3AED !important;
+        }
+        [data-card-id="radiology"]:hover [data-arrow-circle="true"] {
+          background-color: #EA580C !important;
+          border-color: #EA580C !important;
+        }
+        [data-service-card="true"]:hover [data-arrow-circle="true"] svg,
+        [data-service-card="true"]:hover [data-arrow-circle="true"] * {
+          color: #FFFFFF !important;
         }
         /* Hero search banner gradient visible on all desktop and laptop monitors */
         .hero-search-section-bg {
@@ -764,7 +906,7 @@ const HomeScreenWeb = ({ navigation }) => {
           box-shadow: 0 20px 32px -8px rgba(12, 59, 107, 0.14), 0 6px 16px -4px rgba(12, 59, 107, 0.05) !important;
         }
         /* =============================================
-           EXISTING HOVER STYLES
+           OTHER INTERACTIVE ELEMENTS & HOVERS
         ============================================= */
         .practo-card-hover {
           transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.28s cubic-bezier(0.16, 1, 0.3, 1) !important;
@@ -773,25 +915,28 @@ const HomeScreenWeb = ({ navigation }) => {
           transform: translateY(-6px) !important;
           box-shadow: 0 16px 32px -8px rgba(12, 59, 107, 0.10), 0 4px 12px -2px rgba(12, 59, 107, 0.04) !important;
         }
-        .practo-spec-card {
+        [data-spec-card="true"], .practo-spec-card {
           transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.26s cubic-bezier(0.16, 1, 0.3, 1), border-color 0.26s ease !important;
           cursor: pointer !important;
         }
-        .practo-spec-card:hover {
+        [data-spec-card="true"]:hover, .practo-spec-card:hover {
           transform: translateY(-6px) !important;
           box-shadow: 0 16px 32px -8px rgba(25, 130, 156, 0.16), 0 4px 12px rgba(12, 59, 107, 0.04) !important;
           border-color: #00B894 !important;
         }
-        .practo-spec-card img {
+        [data-spec-card="true"] img, .practo-spec-card img {
           transition: transform 0.35s ease !important;
         }
-        .practo-spec-card:hover img {
+        [data-spec-card="true"]:hover img, .practo-spec-card:hover img {
           transform: scale(1.08) !important;
         }
+        [data-spec-card="true"]:hover [data-consult-btn="true"],
         .practo-spec-card:hover .consult-btn-hover {
           background-color: #00B894 !important;
           border-color: #00B894 !important;
         }
+        [data-spec-card="true"]:hover [data-consult-btn="true"] span,
+        [data-spec-card="true"]:hover [data-consult-btn="true"] div,
         .practo-spec-card:hover .consult-btn-hover span,
         .practo-spec-card:hover .consult-btn-hover div {
           color: #FFFFFF !important;
@@ -799,40 +944,46 @@ const HomeScreenWeb = ({ navigation }) => {
         .practo-search-input:focus {
           outline: none !important;
         }
-        .search-btn-hover {
-          transition: background-color 0.2s ease, transform 0.15s ease !important;
+        [data-search-btn="true"], .search-btn-hover {
+          transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease !important;
         }
-        .search-btn-hover:hover {
+        [data-search-btn="true"]:hover, .search-btn-hover:hover {
           background-color: #00A884 !important;
           transform: translateY(-1px) !important;
+          box-shadow: 0 6px 16px rgba(0, 184, 148, 0.25) !important;
         }
         .chip-hover:hover,
+        [data-popular-chip="true"]:hover,
         .popular-chip-hover:hover {
           border-color: #00B894 !important;
           background-color: #ECFDF5 !important;
           color: #00B894 !important;
           transform: translateY(-1px) !important;
         }
-        .popular-chip-hover {
+        [data-popular-chip="true"], .popular-chip-hover {
           transition: all 0.2s ease !important;
         }
-        .medi-ai-btn-hover {
-          transition: background-color 0.2s ease, transform 0.15s ease !important;
+        [data-medi-ai-btn="true"], .medi-ai-btn-hover {
+          transition: background-color 0.2s ease, transform 0.15s ease, box-shadow 0.2s ease !important;
         }
-        .medi-ai-btn-hover:hover {
+        [data-medi-ai-btn="true"]:hover, .medi-ai-btn-hover:hover {
           background-color: #08284d !important;
           transform: translateY(-1px) !important;
+          box-shadow: 0 6px 16px rgba(11, 46, 89, 0.25) !important;
         }
-        .carousel-arrow-btn {
+        [data-carousel-arrow="true"], .carousel-arrow-btn {
           transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1) !important;
           cursor: pointer !important;
         }
+        [data-carousel-arrow="true"]:hover:not(:disabled),
         .carousel-arrow-btn:hover:not(:disabled) {
           background-color: #00B894 !important;
           border-color: #00B894 !important;
           transform: scale(1.1) !important;
           box-shadow: 0 8px 22px rgba(25, 130, 156, 0.25) !important;
         }
+        [data-carousel-arrow="true"]:hover:not(:disabled) svg,
+        [data-carousel-arrow="true"]:hover:not(:disabled) *,
         .carousel-arrow-btn:hover:not(:disabled) svg,
         .carousel-arrow-btn:hover:not(:disabled) * {
           color: #FFFFFF !important;
@@ -911,6 +1062,7 @@ const HomeScreenWeb = ({ navigation }) => {
             ) : {},
           ]}
           // @ts-ignore
+          dataSet={{ heroBg: 'true' }}
           className="hero-search-section-bg"
         >
           <View
@@ -1111,6 +1263,7 @@ const HomeScreenWeb = ({ navigation }) => {
                 <TouchableOpacity
                   style={[styles.searchSubmitBtn, isDarkMode && { backgroundColor: '#00E5B0' }]}
                   // @ts-ignore
+                  dataSet={{ searchBtn: 'true' }}
                   className="search-btn-hover"
                   onPress={handleSearchSubmit}
                   activeOpacity={0.85}
@@ -1265,6 +1418,7 @@ const HomeScreenWeb = ({ navigation }) => {
                         isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.06)', borderColor: 'rgba(255, 255, 255, 0.12)' },
                       ]}
                       // @ts-ignore
+                      dataSet={{ popularChip: 'true' }}
                       className="popular-chip-hover"
                       onPress={() => handlePopularTagClick(tag)}
                       activeOpacity={0.75}
@@ -1326,6 +1480,7 @@ const HomeScreenWeb = ({ navigation }) => {
                   <TouchableOpacity
                     style={[styles.mediAiBtn, isDarkMode && { backgroundColor: '#00E5B0' }]}
                     // @ts-ignore
+                    dataSet={{ mediAiBtn: 'true' }}
                     className="medi-ai-btn-hover"
                     onPress={() => handleNavigateToService('Chatbot')}
                     activeOpacity={0.88}
@@ -1429,6 +1584,8 @@ const HomeScreenWeb = ({ navigation }) => {
                       preserveAspectRatio="none"
                     >
                       <path
+                        className="journey-wave-path"
+                        data-journey-wave="true"
                         d="M 10 24 Q 160 6 320 26 T 620 20 T 900 26 T 995 24"
                         stroke={isDarkMode ? 'rgba(0, 229, 176, 0.35)' : 'rgba(0, 184, 148, 0.22)'}
                         strokeWidth="2"
@@ -1458,16 +1615,23 @@ const HomeScreenWeb = ({ navigation }) => {
                         },
                       ]}
                       // @ts-ignore
+                      dataSet={{ serviceCard: 'true', cardId: card.id }}
                       className="service-card"
                       activeOpacity={0.92}
                       onPress={() => handleNavigateToService(card.route, card.route === 'Imaging' ? { city: selectedCity } : undefined)}
                     >
                       {/* Organic Fluid 3D Card Illustration (Matching Reference Design) */}
                       <View style={[styles.organicIllustrationWrap, isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.03)' }]}>
-                        <View style={[styles.stepNumberBadge, { backgroundColor: card.accentColor }]}>
+                        <View
+                          // @ts-ignore
+                          dataSet={{ stepBadge: 'true' }}
+                          style={[styles.stepNumberBadge, { backgroundColor: card.accentColor }]}
+                        >
                           <Text style={styles.stepNumberText}>{card.stepNumber}</Text>
                         </View>
                         <Image
+                          // @ts-ignore
+                          dataSet={{ cardImg: 'true' }}
                           source={card.image}
                           style={styles.organicIllustrationImage}
                           resizeMode="contain"
@@ -1485,10 +1649,18 @@ const HomeScreenWeb = ({ navigation }) => {
 
                         {/* Circular Arrow & Book Now CTA */}
                         <View style={styles.organicCtaRow}>
-                          <View style={[styles.organicArrowCircle, { borderColor: card.accentColor }, isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.06)' }]}>
+                          <View
+                            // @ts-ignore
+                            dataSet={{ arrowCircle: 'true' }}
+                            style={[styles.organicArrowCircle, { borderColor: card.accentColor }, isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.06)' }]}
+                          >
                             <Ionicons name="arrow-forward" size={11} color={card.accentColor} />
                           </View>
-                          <Text style={[styles.organicCtaText, { color: card.accentColor }]}>
+                          <Text
+                            // @ts-ignore
+                            dataSet={{ ctaText: 'true' }}
+                            style={[styles.organicCtaText, { color: card.accentColor }]}
+                          >
                             {t('book_now_btn', 'Book Now')}
                           </Text>
                         </View>
@@ -1552,16 +1724,23 @@ const HomeScreenWeb = ({ navigation }) => {
                       },
                     ]}
                     // @ts-ignore
+                    dataSet={{ serviceCard: 'true', cardId: card.id }}
                     className="service-card"
                     activeOpacity={0.92}
                     onPress={() => handleNavigateToService(card.route, card.route === 'Imaging' ? { city: selectedCity } : undefined)}
                   >
                     {/* Organic Fluid 3D Card Illustration (Matching Reference Design) */}
                     <View style={[styles.organicIllustrationWrap, isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.03)' }]}>
-                      <View style={[styles.stepNumberBadge, { backgroundColor: card.accentColor }]}>
+                      <View
+                        // @ts-ignore
+                        dataSet={{ stepBadge: 'true' }}
+                        style={[styles.stepNumberBadge, { backgroundColor: card.accentColor }]}
+                      >
                         <Text style={styles.stepNumberText}>{card.stepNumber}</Text>
                       </View>
                       <Image
+                        // @ts-ignore
+                        dataSet={{ cardImg: 'true' }}
                         source={card.image}
                         style={styles.organicIllustrationImage}
                         resizeMode="contain"
@@ -1577,10 +1756,18 @@ const HomeScreenWeb = ({ navigation }) => {
                       </Text>
 
                       <View style={styles.organicCtaRow}>
-                        <View style={[styles.organicArrowCircle, { borderColor: card.accentColor }, isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.06)' }]}>
+                        <View
+                          // @ts-ignore
+                          dataSet={{ arrowCircle: 'true' }}
+                          style={[styles.organicArrowCircle, { borderColor: card.accentColor }, isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.06)' }]}
+                        >
                           <Ionicons name="arrow-forward" size={11} color={card.accentColor} />
                         </View>
-                        <Text style={[styles.organicCtaText, { color: card.accentColor }]}>
+                        <Text
+                          // @ts-ignore
+                          dataSet={{ ctaText: 'true' }}
+                          style={[styles.organicCtaText, { color: card.accentColor }]}
+                        >
                           {t('book_now_btn', 'Book Now')}
                         </Text>
                       </View>
@@ -1634,6 +1821,7 @@ const HomeScreenWeb = ({ navigation }) => {
                 !isDesktop && !isTablet && { display: 'none' },
               ]}
               // @ts-ignore
+              dataSet={{ carouselArrow: 'true' }}
               className="carousel-arrow-btn"
               onPress={() => scrollSpecialties('left')}
               disabled={!canScrollLeft}
@@ -1676,6 +1864,7 @@ const HomeScreenWeb = ({ navigation }) => {
                     },
                   ]}
                   // @ts-ignore
+                  dataSet={{ specCard: 'true' }}
                   className="practo-spec-card"
                   onPress={() => handleConsultNow(spec.specialtyId)}
                   activeOpacity={0.88}
@@ -1712,6 +1901,7 @@ const HomeScreenWeb = ({ navigation }) => {
                       isIndic && { paddingHorizontal: 10, minWidth: 84 },
                     ]}
                     // @ts-ignore
+                    dataSet={{ consultBtn: 'true' }}
                     className="consult-btn-hover"
                   >
                     <Text style={[styles.consultNowText, spec.btnText ? { color: spec.btnText } : null, isDarkMode && { color: '#00E5B0' }, isIndic && { fontSize: 10, lineHeight: 14 }]}>
@@ -1733,6 +1923,7 @@ const HomeScreenWeb = ({ navigation }) => {
                 !isDesktop && !isTablet && { display: 'none' },
               ]}
               // @ts-ignore
+              dataSet={{ carouselArrow: 'true' }}
               className="carousel-arrow-btn"
               onPress={() => scrollSpecialties('right')}
               disabled={!canScrollRight}
