@@ -102,25 +102,161 @@ const FindDoctorsScreen = ({ navigation }) => {
         document.head.appendChild(styleEl);
       }
       styleEl.innerHTML = `
-        .service-card {
+        /* =============================================
+           DOCTOR CONSULTATION CARDS — ADVANCED 3D & HOVER ANIMATIONS
+        ============================================= */
+        @keyframes doctorCardEnter {
+          0% {
+            opacity: 0;
+            transform: translateY(22px) scale(0.97);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
+        }
+
+        @keyframes floatDoctor0 {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-7px) rotate(1.2deg); }
+        }
+        @keyframes floatDoctor1 {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-6px) rotate(-1.5deg); }
+        }
+        @keyframes floatDoctor2 {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-7.5px) rotate(1.4deg); }
+        }
+
+        @keyframes waveFlow {
+          0% { stroke-dashoffset: 0; }
+          100% { stroke-dashoffset: -32; }
+        }
+        .journey-wave-path, [data-journey-wave="true"] {
+          animation: waveFlow 3.5s linear infinite !important;
+        }
+
+        /* Ambient 3D Icon Idle Floating */
+        [data-card-id="in-clinic"] [data-card-img="true"] {
+          animation: floatDoctor0 3.8s ease-in-out infinite !important;
+        }
+        [data-card-id="video-call"] [data-card-img="true"] {
+          animation: floatDoctor1 4.2s ease-in-out infinite 0.7s !important;
+        }
+        [data-card-id="ayurveda"] [data-card-img="true"] {
+          animation: floatDoctor2 3.9s ease-in-out infinite 1.4s !important;
+        }
+
+        /* Card Base, Entrance & Smooth Transitions */
+        [data-service-card="true"], .service-card {
+          position: relative !important;
           transition:
-            transform 0.32s cubic-bezier(0.16, 1, 0.3, 1),
-            box-shadow 0.32s cubic-bezier(0.16, 1, 0.3, 1) !important;
+            transform 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+            box-shadow 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+            border-color 0.3s ease,
+            border-top-color 0.3s ease,
+            border-bottom-color 0.3s ease !important;
+          cursor: pointer !important;
+          will-change: transform, box-shadow;
+          animation: doctorCardEnter 0.65s cubic-bezier(0.16, 1, 0.3, 1) backwards;
         }
-        .service-card:hover {
-          transform: translateY(-10px) scale(1.015) !important;
+        [data-card-id="in-clinic"] { animation-delay: 0.06s; }
+        [data-card-id="video-call"] { animation-delay: 0.16s; }
+        [data-card-id="ayurveda"] { animation-delay: 0.26s; }
+
+        /* Card Hover Elevation */
+        [data-service-card="true"]:hover, .service-card:hover {
+          transform: translateY(-12px) scale(1.022) !important;
+        }
+
+        /* Signature Brand Ambient Colored Glows on Hover */
+        [data-card-id="in-clinic"]:hover {
+          border-top-color: #7C3AED !important;
+          border-right-color: rgba(124, 58, 237, 0.25) !important;
+          border-left-color: #7C3AED !important;
           box-shadow:
-            0 24px 48px -12px rgba(12, 59, 107, 0.14),
-            0 8px 20px -6px rgba(12, 59, 107, 0.07) !important;
+            0 24px 44px -8px rgba(124, 58, 237, 0.28),
+            0 8px 18px -4px rgba(124, 58, 237, 0.15),
+            0 0 0 1px rgba(124, 58, 237, 0.22) !important;
         }
-        .service-card:active {
-          transform: translateY(-4px) scale(1.005) !important;
+        [data-card-id="video-call"]:hover {
+          border-top-color: #0284C7 !important;
+          border-right-color: rgba(2, 132, 199, 0.25) !important;
+          border-left-color: #0284C7 !important;
+          box-shadow:
+            0 24px 44px -8px rgba(2, 132, 199, 0.28),
+            0 8px 18px -4px rgba(2, 132, 199, 0.15),
+            0 0 0 1px rgba(2, 132, 199, 0.22) !important;
         }
-        .service-card-image {
-          transition: transform 0.45s cubic-bezier(0.16, 1, 0.3, 1) !important;
+        [data-card-id="ayurveda"]:hover {
+          border-top-color: #00B894 !important;
+          border-right-color: rgba(0, 184, 148, 0.25) !important;
+          border-left-color: #00B894 !important;
+          box-shadow:
+            0 24px 44px -8px rgba(0, 184, 148, 0.28),
+            0 8px 18px -4px rgba(0, 184, 148, 0.15),
+            0 0 0 1px rgba(0, 184, 148, 0.22) !important;
         }
+
+        /* Tactile Active Press */
+        [data-service-card="true"]:active, .service-card:active {
+          transform: translateY(-4px) scale(0.995) !important;
+          box-shadow: 0 8px 20px -4px rgba(15, 23, 42, 0.16) !important;
+          transition-duration: 0.1s !important;
+        }
+
+        /* 3D Illustration Interactive Hover Transformation */
+        [data-card-img="true"], .service-card-image {
+          transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), filter 0.42s ease !important;
+          will-change: transform, filter;
+        }
+        [data-service-card="true"]:hover [data-card-img="true"],
         .service-card:hover .service-card-image {
-          transform: scale(1.08) !important;
+          animation-play-state: paused !important;
+          transform: scale(1.15) translateY(-8px) rotate(2deg) !important;
+          filter: drop-shadow(0 14px 20px rgba(0, 0, 0, 0.18)) !important;
+        }
+
+        /* Step Number Badge Hover Pulse */
+        [data-step-badge="true"] {
+          transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1), box-shadow 0.3s ease !important;
+        }
+        [data-service-card="true"]:hover [data-step-badge="true"] {
+          transform: scale(1.18) rotate(-6deg) !important;
+          box-shadow: 0 4px 12px rgba(0, 0, 0, 0.25) !important;
+        }
+
+        /* CTA Arrow Circle & Text Animation */
+        [data-arrow-circle="true"], .service-card-btn {
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s ease, border-color 0.25s ease, box-shadow 0.25s ease !important;
+        }
+        [data-cta-text="true"], .service-card-btn-text {
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), letter-spacing 0.25s ease !important;
+        }
+        [data-service-card="true"]:hover [data-arrow-circle="true"],
+        .service-card:hover .service-card-btn {
+          transform: translateX(6px) scale(1.12) !important;
+        }
+        [data-service-card="true"]:hover [data-cta-text="true"] {
+          transform: translateX(6px) !important;
+          letter-spacing: 0.3px !important;
+        }
+        [data-card-id="in-clinic"]:hover [data-arrow-circle="true"] {
+          background-color: #7C3AED !important;
+          border-color: #7C3AED !important;
+        }
+        [data-card-id="video-call"]:hover [data-arrow-circle="true"] {
+          background-color: #0284C7 !important;
+          border-color: #0284C7 !important;
+        }
+        [data-card-id="ayurveda"]:hover [data-arrow-circle="true"] {
+          background-color: #00B894 !important;
+          border-color: #00B894 !important;
+        }
+        [data-service-card="true"]:hover [data-arrow-circle="true"] svg,
+        [data-service-card="true"]:hover [data-arrow-circle="true"] * {
+          color: #FFFFFF !important;
         }
       `;
     }
@@ -182,6 +318,8 @@ const FindDoctorsScreen = ({ navigation }) => {
                   preserveAspectRatio="none"
                 >
                   <path
+                    className="journey-wave-path"
+                    data-journey-wave="true"
                     d="M 10 24 Q 160 6 320 26 T 620 20 T 900 26 T 995 24"
                     stroke="rgba(0, 184, 148, 0.22)"
                     strokeWidth="2"
@@ -216,19 +354,25 @@ const FindDoctorsScreen = ({ navigation }) => {
                     },
                   ]}
                   // @ts-ignore
+                  dataSet={{ serviceCard: 'true', cardId: card.id }}
                   className="service-card"
                   activeOpacity={0.92}
                   onPress={() => handleSelectOption(card)}
                 >
                   {/* Organic Fluid 3D Card Illustration */}
                   <View style={[styles.organicIllustrationWrap, isDarkMode && { backgroundColor: '#162032' }]}>
-                    <View style={[styles.stepNumberBadge, { backgroundColor: card.accentColor }]}>
+                    <View
+                      // @ts-ignore
+                      dataSet={{ stepBadge: 'true' }}
+                      style={[styles.stepNumberBadge, { backgroundColor: card.accentColor }]}
+                    >
                       <Text style={styles.stepNumberText}>{card.stepNumber}</Text>
                     </View>
                     <Image
+                      // @ts-ignore
+                      dataSet={{ cardImg: 'true' }}
                       source={card.image}
                       style={[styles.organicIllustrationImage, isDarkMode && { mixBlendMode: 'normal' }]}
-                      // @ts-ignore
                       className="service-card-image"
                       resizeMode="contain"
                     />
@@ -245,10 +389,18 @@ const FindDoctorsScreen = ({ navigation }) => {
 
                     {/* Circular Arrow & Book Now CTA */}
                     <View style={styles.organicCtaRow}>
-                      <View style={[styles.organicArrowCircle, { borderColor: card.accentColor }]}>
+                      <View
+                        // @ts-ignore
+                        dataSet={{ arrowCircle: 'true' }}
+                        style={[styles.organicArrowCircle, { borderColor: card.accentColor }]}
+                      >
                         <Ionicons name="arrow-forward" size={12} color={card.accentColor} />
                       </View>
-                      <Text style={[styles.organicCtaText, { color: card.accentColor }]}>
+                      <Text
+                        // @ts-ignore
+                        dataSet={{ ctaText: 'true' }}
+                        style={[styles.organicCtaText, { color: card.accentColor }]}
+                      >
                         {t('book_now_btn', 'Book Now')}
                       </Text>
                     </View>
