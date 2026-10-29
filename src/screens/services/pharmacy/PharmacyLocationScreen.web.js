@@ -139,7 +139,7 @@ const PharmacyLocationScreen = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, isDarkMode && { backgroundColor: '#080E1A', backgroundImage: 'none' }]}>
       {/* HEADER */}
       <View style={styles.header}>
         <WebBackButton

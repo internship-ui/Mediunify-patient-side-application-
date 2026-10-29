@@ -14,6 +14,11 @@ const LoginScreenWeb = (props) => {
     } catch (e) {
       console.warn('[LoginScreenWeb] Navigation redirect to Home:', e);
     }
+    if (typeof window !== 'undefined') {
+      setTimeout(() => {
+        window.dispatchEvent(new CustomEvent('open-auth-modal', { detail: { tab: 'login' } }));
+      }, 300);
+    }
   }, [navigation]);
 
   return <HomeScreenWeb navigation={navigation} route={route} />;

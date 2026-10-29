@@ -29,6 +29,7 @@ import {
 import { showAlert } from '../../../utils/alert';
 import OptimizedImage from '../../../components/common/OptimizedImage';
 import Pagination from '../../../components/common/Pagination';
+import { useThemedStyles } from '../../../utils/themeStyles';
 
 const pharmaVitaminC = require('../../../../assets/pharmacy/pharma_vitamin_c.jpg');
 const pharmaMultivitamin = require('../../../../assets/pharmacy/pharma_multivitamin.jpg');
@@ -532,6 +533,7 @@ const PharmacyScreen = ({ navigation, route }) => {
     updateAddress,
   } = useCart();
   const { isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
 
   const safeBottom = Math.max(insets.bottom, 0);
   // Position cart bar above iOS home indicator, Android navigation bar, or browser controls
@@ -873,7 +875,7 @@ const PharmacyScreen = ({ navigation, route }) => {
           >
             {/* Left Chevron */}
             <TouchableOpacity
-              style={[styles.carouselNavArrowLeft, isDarkMode && { backgroundColor: '#1E293B', borderColor: '#334155', borderWidth: 1 }]}
+              style={[styles.carouselNavArrowLeft, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)', borderWidth: 1 }]}
               onPress={() =>
                 setActiveSlideIndex(
                   (prev) => (prev - 1 + PHARMACY_HERO_SLIDES.length) % PHARMACY_HERO_SLIDES.length
@@ -892,7 +894,7 @@ const PharmacyScreen = ({ navigation, route }) => {
                     {activeSlide.pillText}
                   </Text>
                 </View>
-                <View style={[styles.brandTagFlipkart, isDarkMode && { backgroundColor: '#0F172A', borderColor: '#334155' }]}>
+                <View style={[styles.brandTagFlipkart, isDarkMode && { backgroundColor: 'rgba(56, 189, 248, 0.14)', borderColor: 'rgba(56, 189, 248, 0.28)' }]}>
                   <Ionicons
                     name={activeSlide.certIcon || 'shield-checkmark'}
                     size={11}
@@ -965,7 +967,7 @@ const PharmacyScreen = ({ navigation, route }) => {
 
             {/* Right Chevron */}
             <TouchableOpacity
-              style={[styles.carouselNavArrowRight, isDarkMode && { backgroundColor: '#1E293B', borderColor: '#334155', borderWidth: 1 }]}
+              style={[styles.carouselNavArrowRight, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)', borderWidth: 1 }]}
               onPress={() =>
                 setActiveSlideIndex((prev) => (prev + 1) % PHARMACY_HERO_SLIDES.length)
               }
@@ -1029,7 +1031,7 @@ const PharmacyScreen = ({ navigation, route }) => {
             activeOpacity={0.85}
           >
             <View style={styles.myOrdersBannerLeft}>
-              <View style={[styles.myOrdersIconBox, isDarkMode && { backgroundColor: '#134E4A' }]}>
+              <View style={[styles.myOrdersIconBox, isDarkMode && { backgroundColor: 'rgba(0, 229, 176, 0.14)' }]}>
                 <Ionicons name="receipt-outline" size={18} color={isDarkMode ? '#2DD4BF' : '#008B94'} />
               </View>
               <View>
@@ -1037,7 +1039,7 @@ const PharmacyScreen = ({ navigation, route }) => {
                 <Text style={[styles.myOrdersBannerSub, isDarkMode && { color: theme.textSecondary }]}>Track delivery & return items</Text>
               </View>
             </View>
-            <View style={[styles.myOrdersBannerRight, isDarkMode && { backgroundColor: '#134E4A' }]}>
+            <View style={[styles.myOrdersBannerRight, isDarkMode && { backgroundColor: 'rgba(0, 229, 176, 0.14)' }]}>
               <Text style={[styles.myOrdersBannerCta, isDarkMode && { color: '#2DD4BF' }]}>View Orders →</Text>
             </View>
           </TouchableOpacity>
@@ -1089,7 +1091,7 @@ const PharmacyScreen = ({ navigation, route }) => {
         <View style={styles.browseSectionWrap}>
           <View style={styles.browseHeaderBadgeRow}>
             <Text style={[styles.browseMainHeading, isDarkMode && { color: theme.text }]}>Browse medicines & health products</Text>
-            <View style={[styles.browseHeaderPill, isDarkMode && { backgroundColor: '#134E4A' }]}>
+            <View style={[styles.browseHeaderPill, isDarkMode && { backgroundColor: 'rgba(0, 229, 176, 0.14)' }]}>
               <Ionicons name="sparkles" size={12} color="#00B894" />
               <Text style={[styles.browseHeaderPillText, isDarkMode && { color: '#2DD4BF' }]}>100% Genuine</Text>
             </View>
@@ -1396,7 +1398,7 @@ const PharmacyScreen = ({ navigation, route }) => {
 
             {Boolean(selectedCategory !== 'all' || selectedCondition || searchQuery.trim()) && (
               <TouchableOpacity
-                style={[styles.viewStoreBtn, isDarkMode && { backgroundColor: '#134E4A' }]}
+                style={[styles.viewStoreBtn, isDarkMode && { backgroundColor: 'rgba(0, 229, 176, 0.14)' }]}
                 onPress={() => {
                   setSelectedCategory('all');
                   setSelectedCondition(null);
@@ -1454,8 +1456,8 @@ const PharmacyScreen = ({ navigation, route }) => {
                       ]}
                     >
                       {/* Discount Badge */}
-                      <View style={[styles.pharmacyBadge, isDarkMode && { backgroundColor: '#431407', borderColor: '#7C2D12' }]}>
-                        <Text style={[styles.pharmacyBadgeText, isDarkMode && { color: '#FDBA74' }]} numberOfLines={1}>
+                      <View style={[styles.pharmacyBadge, isDarkMode && { backgroundColor: 'rgba(251, 146, 60, 0.14)', borderColor: 'rgba(251, 146, 60, 0.28)' }]}>
+                        <Text style={[styles.pharmacyBadgeText, isDarkMode && { color: '#FB923C' }]} numberOfLines={1}>
                           {prod.discount ? prod.discount.toUpperCase() : 'FLAT 20% OFF'}
                         </Text>
                       </View>
@@ -1506,7 +1508,7 @@ const PharmacyScreen = ({ navigation, route }) => {
 
                         {/* Rating */}
                         <View style={styles.pharmacyRatingRow}>
-                          <View style={[styles.ratingTag, isDarkMode && { backgroundColor: '#431407' }]}>
+                          <View style={[styles.ratingTag, isDarkMode && { backgroundColor: 'rgba(251, 191, 36, 0.14)', borderWidth: 1, borderColor: 'rgba(251, 191, 36, 0.28)' }]}>
                             <Ionicons name="star" size={10} color="#FF7F50" />
                             <Text style={styles.ratingTagText}>{prod.rating || 4.8}</Text>
                           </View>
@@ -1740,7 +1742,7 @@ const PharmacyScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',

@@ -21,10 +21,14 @@ import {
   saveFeedbackList,
 } from '../../data/patientDashboardData';
 import { isGuestUser, promptLoginRequired } from '../../utils/authHelper';
+import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 
 const MyFeedbackScreenWeb = ({ navigation, route }) => {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
 
   const [patient, setPatient] = useState(null);
   const [feedbackList, setFeedbackList] = useState([]);
@@ -155,7 +159,7 @@ const MyFeedbackScreenWeb = ({ navigation, route }) => {
   }, [filteredFeedback, currentPage]);
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, isDarkMode && { backgroundColor: '#080E1A', backgroundImage: 'none' }]}>
       {/* Notification Toast */}
       {toastMessage ? (
         <View style={styles.toastContainer}>
@@ -438,7 +442,7 @@ const MyFeedbackScreenWeb = ({ navigation, route }) => {
 
 export default MyFeedbackScreenWeb;
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F5FEFB',

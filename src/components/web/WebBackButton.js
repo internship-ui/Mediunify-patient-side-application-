@@ -7,6 +7,8 @@ import {
   Platform,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
+import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 
 /**
  * Standardized MediUnify Web Back Button
@@ -39,6 +41,9 @@ const WebBackButton = ({
   accessibilityLabel = 'Go back to previous screen',
   children,
 }) => {
+  const { isDarkMode } = useTheme();
+  const styles = useThemedStyles(baseStyles);
+  const resolvedIconColor = iconColor === '#1E3A8A' ? (isDarkMode ? '#F8FAFC' : '#1E3A8A') : iconColor;
   const [isHovered, setIsHovered] = useState(false);
   const [isPressed, setIsPressed] = useState(false);
 
@@ -83,7 +88,7 @@ const WebBackButton = ({
       <Ionicons
         name="arrow-back"
         size={iconSize}
-        color={iconColor}
+        color={resolvedIconColor}
         style={styles.iconCenter}
       />
     </TouchableOpacity>
@@ -124,7 +129,7 @@ const WebBackButton = ({
 
 export default WebBackButton;
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   circleButton: {
     width: 42,
     height: 42,

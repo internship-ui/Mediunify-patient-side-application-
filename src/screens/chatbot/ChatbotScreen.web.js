@@ -23,12 +23,13 @@ import doctors from '../../data/doctors';
 import { radiologyLabs } from '../../data/radiologyLabsData';
 import { useCart } from '../../context/CartContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import WebBackButton from '../../components/web/WebBackButton';
 
 // ─── Quick topic chips shown in sidebar & welcome ─────────────────────────
 const QUICK_CATEGORIES = [
   { id: 'fever',     icon: 'thermometer', label: 'Fever & Cold',       prompt: 'I have fever and body pain',              color: '#FF7F50', bg: '#FFF2ED' },
-  { id: 'doctor',    icon: 'person',      label: 'Find a Doctor',      prompt: 'Find best doctor for consultation',       color: '#007D69', bg: '#E6F4F1' },
+  { id: 'doctor',    icon: 'person',      label: 'Find a Doctor',      prompt: 'Find best doctor for consultation',       color: '#00B894', bg: '#E6F8F5' },
   { id: 'lab',       icon: 'flask',       label: 'Book Lab Test',      prompt: 'Book a Lab Test at home',                 color: '#00C2CB', bg: '#E0F7FA' },
   { id: 'scans',     icon: 'scan',        label: 'Scan & X-Ray',      prompt: 'View Scan & X-Ray diagnostics',          color: '#1E3A8A', bg: '#EBF4FF' },
   { id: 'meds',      icon: 'medkit',      label: 'Order Medicines',    prompt: 'Order medicines from pharmacy',          color: '#8B5CF6', bg: '#F3E8FF' },
@@ -71,7 +72,7 @@ const INITIAL_MESSAGES = [
     text: "Hi! I'm MediUnify AI.\n\nHow can I help you today?",
     quickPrompts: [
       { icon: 'flask-outline',    color: '#00C2CB', bg: '#E0F7FA', text: 'Book a Lab Test' },
-      { icon: 'person-outline',   color: '#007D69', bg: '#E6F4F1', text: 'Find a Doctor' },
+      { icon: 'person-outline',   color: '#00B894', bg: '#E6F8F5', text: 'Find a Doctor' },
       { icon: 'medkit-outline',   color: '#8B5CF6', bg: '#F3E8FF', text: 'Order Medicine' },
       { icon: 'scan-outline',     color: '#1E3A8A', bg: '#EBF4FF', text: 'View Scan & X-Ray' },
       { icon: 'fitness-outline',  color: '#FF7F50', bg: '#FFF2ED', text: 'I have fever and body pain' },
@@ -84,7 +85,8 @@ const ChatbotScreenWeb = ({ navigation }) => {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 960;
   const { addToCart } = useCart();
-  const { t, isIndic } = useTheme();
+  const { t, isIndic, isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
 
   const [messages, setMessages]                     = useState(INITIAL_MESSAGES);
   const [inputText, setInputText]                   = useState('');
@@ -661,7 +663,7 @@ const ChatbotScreenWeb = ({ navigation }) => {
 
   // ─── Main render ──────────────────────────────────────────────────────────
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, isDarkMode && { backgroundColor: '#080E1A', backgroundImage: 'none' }]}>
       <View style={styles.webContainer}>
 
         {/* LEFT SIDEBAR (desktop only) */}
@@ -876,7 +878,7 @@ const ChatbotScreenWeb = ({ navigation }) => {
 };
 
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FAFCFD',

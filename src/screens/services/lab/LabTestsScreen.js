@@ -47,6 +47,7 @@ import { isPackageItem } from '../../../utils/labPackageMatcher.js';
 import { useAuthGuard } from '../../../context/AuthGuardContext';
 import Pagination from '../../../components/common/Pagination';
 import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 
 // Helper to normalize city names
 const normalizeCity = (cityStr) => {
@@ -136,8 +137,70 @@ const getShortCategoryLabel = (item) => {
   return 'Diagnostic Test';
 };
 
+export const getCompactLabTestName = (name) => {
+  if (!name) return 'Diagnostic Test';
+  return name
+    .replace(/\s+with\s+Automated\s+Differential/gi, '')
+    .replace(/\s*-\s*Comprehensive\s*\([^)]*\)/gi, ' (Comprehensive)')
+    .replace(/\s*\([^)]*(?:Cholesterol|Triglycerides|Total\s+T3|Total\s+T4|TSH|Enzymes|Glycosylated)[^)]*\)/gi, '')
+    .replace(/\s+Panel\s+Comprehensive/gi, ' Panel')
+    .replace(/\s*-\s*Diagnostic\s+Hub/gi, '')
+    .trim();
+};
+
+export const formatCompactLabDateTime = (dateStr, timeSlot) => {
+  if (!dateStr && !timeSlot) return '';
+  let cleanTime = '';
+  if (timeSlot) {
+    const timeMatch = timeSlot.match(/^0?(\d{1,2}:\d{2}\s*(?:AM|PM))/i);
+    cleanTime = timeMatch ? timeMatch[1] : timeSlot.replace(/^0(\d:)/, '$1');
+  }
+
+  if (!dateStr) return cleanTime;
+
+  let cleanDate = dateStr
+    .replace(/,\s*\d{4}/g, '')
+    .replace(/\s+\d{4}/g, '')
+    .trim();
+
+  if (/^Today/i.test(cleanDate)) {
+    return cleanTime ? `Today, ${cleanTime}` : 'Today';
+  }
+  if (/^Tomorrow/i.test(cleanDate)) {
+    return cleanTime ? `Tomorrow, ${cleanTime}` : 'Tomorrow';
+  }
+
+  cleanDate = cleanDate.replace(/^([A-Za-z]+),\s+([A-Za-z]+)\s+(\d{1,2})/, '$1, $3 $2');
+  return cleanTime ? `${cleanDate} • ${cleanTime}` : cleanDate;
+};
+
+export const getCompactLabLocation = (b, currentCity) => {
+  if (!b) return '';
+  if (b.collectionMethod === 'HOME') {
+    const addr = b.collectionAddress || '';
+    const cleanAddr = addr.replace(/\b\d{6}\b/g, '').replace(/\s*,\s*$/, '').trim();
+    const parts = cleanAddr.split(',').map((s) => s.trim()).filter(Boolean);
+    if (parts.length >= 2) {
+      const nonNum = parts.filter((p) => !/^#?\d+[\/-]?\d*/.test(p) && !/^House/i.test(p) && !/^Flat/i.test(p));
+      if (nonNum.length >= 2) {
+        return `Home • ${nonNum[nonNum.length - 2]}, ${nonNum[nonNum.length - 1]}`;
+      }
+      return `Home • ${parts.slice(-2).join(', ')}`;
+    }
+    return `Home Sample • ${currentCity || 'Mysuru'}`;
+  }
+
+  const centreName = b.diagnosticCentre?.name || `${currentCity || 'Mysuru'} Lab Partner`;
+  const cleanCentre = centreName
+    .replace(/\s*&\s*Diagnostic\s+Center/i, '')
+    .replace(/\s*Diagnostic\s+Center/i, '')
+    .trim();
+  return cleanCentre;
+};
+
 const LabTestsScreenMobile = (props) => {
   const { t, isIndic, isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const isDark = isDarkMode;
   const { navigation, route } = props;
   const { width } = useWindowDimensions();
@@ -212,7 +275,7 @@ const LabTestsScreenMobile = (props) => {
     let customHandler = null;
     let pollInterval = null;
 
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
       storageHandler = (e) => {
         if (e.key === '@mediunify_selected_city' || e.key === '@unnathi_user_location') {
           syncHomeScreenLocation();
@@ -243,10 +306,10 @@ const LabTestsScreenMobile = (props) => {
 
     return () => {
       if (unsub) unsub();
-      if (storageHandler && typeof window !== 'undefined') {
+      if (storageHandler && Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
         window.removeEventListener('storage', storageHandler);
       }
-      if (customHandler && typeof window !== 'undefined') {
+      if (customHandler && Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
         window.removeEventListener('cityChanged', customHandler);
         window.removeEventListener('locationChanged', customHandler);
       }
@@ -298,6 +361,12 @@ const LabTestsScreenMobile = (props) => {
 
   // Top Tabs: 'BROWSE' | 'BOOKINGS' | 'REPORTS'
   const [activeTab, setActiveTab] = useState(route?.params?.initialTab || 'BROWSE');
+
+  useEffect(() => {
+    if (route?.params?.initialTab) {
+      setActiveTab(route.params.initialTab);
+    }
+  }, [route?.params?.initialTab]);
 
   // Search & Category Filter State
   const [searchQuery, setSearchQuery] = useState(route?.params?.query || route?.params?.search || '');
@@ -1110,7 +1179,7 @@ const LabTestsScreenMobile = (props) => {
             {t('lab_tab_bookings', 'Bookings')}
           </Text>
           {bookingsList.length > 0 && (
-            <View style={[styles.tabBadge, isDark && { backgroundColor: '#334155' }]}>
+            <View style={[styles.tabBadge, isDark && { backgroundColor: '#16223D', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)' }]}>
               <Text style={[styles.tabBadgeText, isDark && { color: '#E2E8F0' }]}>{bookingsList.length}</Text>
             </View>
           )}
@@ -1130,7 +1199,7 @@ const LabTestsScreenMobile = (props) => {
             {t('Reports')}
           </Text>
           {reportsList.length > 0 && (
-            <View style={[styles.tabBadge, isDark && { backgroundColor: '#334155' }]}>
+            <View style={[styles.tabBadge, isDark && { backgroundColor: '#16223D', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)' }]}>
               <Text style={[styles.tabBadgeText, isDark && { color: '#E2E8F0' }]}>{reportsList.length}</Text>
             </View>
           )}
@@ -1246,9 +1315,9 @@ const LabTestsScreenMobile = (props) => {
                           {item.displayCategory || (isPkg ? 'Health Checkup' : 'Diagnostic Test')}
                         </Text>
                       </View>
-                      <View style={[styles.tatBadge, isDark && { backgroundColor: '#064E3B', borderColor: '#059669' }]}>
-                        <Ionicons name="time-outline" size={12} color={isDark ? '#A7F3D0' : '#047857'} style={{ marginRight: 4 }} />
-                        <Text style={[styles.tatBadgeText, isDark && { color: '#A7F3D0' }]}>
+                      <View style={[styles.tatBadge, isDark && { backgroundColor: 'rgba(0, 229, 176, 0.12)', borderColor: 'rgba(0, 229, 176, 0.28)' }]}>
+                        <Ionicons name="time-outline" size={12} color={isDark ? '#00E5B0' : '#047857'} style={{ marginRight: 4 }} />
+                        <Text style={[styles.tatBadgeText, isDark && { color: '#00E5B0' }]}>
                           {item.tatSummary}
                         </Text>
                       </View>
@@ -1411,12 +1480,21 @@ const LabTestsScreenMobile = (props) => {
             <>
               {paginatedBookings.map((b) => {
                 const isConfirmed = b.status === 'CONFIRMED' || b.status === 'PROCESSING';
+                const compactId = b.id ? b.id.replace(/^LAB-2026-?/i, '#') : '';
+                const compactTitle = getCompactLabTestName(b.testName);
+                const compactDateTime = formatCompactLabDateTime(b.bookingDate, b.timeSlot);
+                const compactLocation = getCompactLabLocation(b, currentCity);
+                const matchedCentre = b.collectionMethod === 'CENTRE'
+                  ? ALL_CITY_DIAGNOSTIC_CENTRES.find(c => c.name === b.diagnosticCentre?.name)
+                  : null;
+
                 return (
                   <View key={b.id} style={[styles.bookingCard, isDark && { backgroundColor: theme.card, borderColor: theme.border }]}>
+                    {/* Header Row: ID + Test Title & Status Badge */}
                     <View style={styles.bookingCardHeader}>
-                      <View style={{ flex: 1 }}>
-                        <Text style={[styles.bookingIdText, isDark && { color: theme.textSecondary }]}>ID: {b.id}</Text>
-                        <Text style={[styles.bookingTestTitle, isDark && { color: theme.text }]}>{b.testName}</Text>
+                      <View style={{ flex: 1, marginRight: 8 }}>
+                        <Text style={[styles.bookingIdText, isDark && { color: theme.textSecondary }]}>{compactId}</Text>
+                        <Text style={[styles.bookingTestTitle, isDark && { color: theme.text }]} numberOfLines={1}>{compactTitle}</Text>
                       </View>
                       <View
                         style={[
@@ -1444,70 +1522,31 @@ const LabTestsScreenMobile = (props) => {
                             },
                           ]}
                         >
-                          {b.status}
+                          {b.status === 'CONFIRMED' ? '● Confirmed' : b.status === 'COMPLETED' ? '✓ Completed' : b.status === 'CANCELLED' ? '✕ Cancelled' : b.status}
                         </Text>
                       </View>
                     </View>
 
+                    {/* Meta Row 1: Compact Schedule */}
                     <View style={styles.bookingMetaRow}>
-                      <Ionicons name="calendar-outline" size={14} color="#64748B" />
-                      <Text style={styles.bookingMetaText}>{b.bookingDate} • {b.timeSlot}</Text>
+                      <Ionicons name="calendar-outline" size={13} color="#0D9488" />
+                      <Text style={styles.bookingMetaText}>{compactDateTime}</Text>
                     </View>
 
+                    {/* Meta Row 2: Compact Location */}
                     <View style={styles.bookingMetaRow}>
                       <Ionicons
-                        name={b.collectionMethod === 'HOME' ? 'home-outline' : 'business-outline'}
-                        size={14}
+                        name={b.collectionMethod === 'HOME' ? 'home-outline' : 'location-outline'}
+                        size={13}
                         color="#64748B"
                       />
                       <Text style={styles.bookingMetaText} numberOfLines={1}>
-                        {b.collectionMethod === 'HOME'
-                          ? b.collectionAddress || `Home Sample Collection (${currentCity})`
-                          : b.diagnosticCentre?.name || `${currentCity} Partner Diagnostic Center`}
+                        {compactLocation}
+                        {matchedCentre?.distanceKm ? ` (${matchedCentre.distanceKm} km)` : ''}
                       </Text>
                     </View>
 
-                    {/* Centre Visit Card with Location & Direction Button */}
-                    {b.collectionMethod === 'CENTRE' && (
-                      <View style={styles.centreVisitCardBox}>
-                        <View style={styles.centreVisitHeaderRow}>
-                          <View style={styles.labVisitTag}>
-                            <Ionicons name="location" size={11} color="#007D69" />
-                            <Text style={styles.labVisitTagText}>Lab Visit Appointment</Text>
-                          </View>
-                          {(() => {
-                            const matched = ALL_CITY_DIAGNOSTIC_CENTRES.find(c => c.name === b.diagnosticCentre?.name);
-                            if (!matched?.distanceKm) return null;
-                            return (
-                              <Text style={styles.centreDistanceText}>{matched.distanceKm} km away</Text>
-                            );
-                          })()}
-                        </View>
-
-                        {(() => {
-                          const matched = ALL_CITY_DIAGNOSTIC_CENTRES.find(c => c.name === b.diagnosticCentre?.name);
-                          const fullAddr = matched?.address || b.diagnosticCentre?.address || b.diagnosticCentre?.location;
-                          if (!fullAddr) return null;
-                          return (
-                            <Text style={styles.centreAddressFullText} numberOfLines={2}>
-                              {fullAddr}
-                            </Text>
-                          );
-                        })()}
-
-                        <TouchableOpacity
-                          style={styles.getDirectionsBtn}
-                          onPress={() => handleOpenCentreDirections(b)}
-                          activeOpacity={0.8}
-                          accessibilityRole="button"
-                          accessibilityLabel="Get Directions to Lab in Google Maps"
-                        >
-                          <Ionicons name="navigate" size={14} color="#FFFFFF" style={{ marginRight: 6 }} />
-                          <Text style={styles.getDirectionsBtnText}>Get Directions to Lab</Text>
-                        </TouchableOpacity>
-                      </View>
-                    )}
-
+                    {/* Footer Row: Price & Buttons on 1 Line */}
                     <View style={styles.bookingFooterRow}>
                       <Text style={styles.bookingAmountText}>₹{b.amountPaid}</Text>
                       <View style={{ flexDirection: 'row', gap: 8, alignItems: 'center' }}>
@@ -1517,7 +1556,7 @@ const LabTestsScreenMobile = (props) => {
                             onPress={() => handleOpenCentreDirections(b)}
                             activeOpacity={0.8}
                           >
-                            <Ionicons name="navigate-outline" size={13} color="#007D69" style={{ marginRight: 4 }} />
+                            <Ionicons name="navigate-outline" size={13} color="#007D69" style={{ marginRight: 3 }} />
                             <Text style={styles.footerDirectionsBtnText}>Directions</Text>
                           </TouchableOpacity>
                         )}
@@ -2273,7 +2312,7 @@ const LabTestsScreenMobile = (props) => {
 // =============================================================================
 // STYLES
 // =============================================================================
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F8FAFC',
@@ -3177,10 +3216,10 @@ const styles = StyleSheet.create({
   },
   bookingCard: {
     backgroundColor: '#FFFFFF',
-    borderRadius: 16,
-    padding: 16,
-    marginHorizontal: 16,
-    marginBottom: 12,
+    borderRadius: 14,
+    padding: 13,
+    marginHorizontal: 14,
+    marginBottom: 10,
     borderWidth: 1,
     borderColor: '#E2E8F0',
   },
@@ -3188,36 +3227,37 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'flex-start',
     justifyContent: 'space-between',
-    marginBottom: 8,
+    marginBottom: 6,
   },
   bookingIdText: {
     fontSize: 11,
     fontWeight: '700',
-    color: '#64748B',
+    color: '#94A3B8',
+    fontFamily: 'monospace',
   },
   bookingTestTitle: {
-    fontSize: 14.5,
-    fontWeight: '800',
+    fontSize: 14,
+    fontWeight: '700',
     color: '#0F172A',
     marginTop: 2,
   },
   statusBadge: {
-    paddingHorizontal: 8,
-    paddingVertical: 3,
-    borderRadius: 6,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 10,
   },
   statusBadgeText: {
-    fontSize: 11,
-    fontWeight: '800',
+    fontSize: 10.5,
+    fontWeight: '700',
   },
   bookingMetaRow: {
     flexDirection: 'row',
     alignItems: 'center',
     gap: 6,
-    marginBottom: 4,
+    marginBottom: 3,
   },
   bookingMetaText: {
-    fontSize: 12,
+    fontSize: 11.5,
     color: '#475569',
     flex: 1,
   },
@@ -3225,13 +3265,13 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'space-between',
-    paddingTop: 10,
-    marginTop: 8,
+    paddingTop: 8,
+    marginTop: 6,
     borderTopWidth: 1,
     borderTopColor: '#F1F5F9',
   },
   bookingAmountText: {
-    fontSize: 15,
+    fontSize: 14.5,
     fontWeight: '800',
     color: '#0F172A',
   },
@@ -3239,23 +3279,25 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     backgroundColor: '#007D69',
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
   },
   trackBookingBtnText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     color: '#FFFFFF',
   },
   cancelBookingBtn: {
-    paddingHorizontal: 12,
-    paddingVertical: 7,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
     borderRadius: 8,
-    backgroundColor: '#FEE2E2',
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
   },
   cancelBookingBtnText: {
-    fontSize: 12,
+    fontSize: 11.5,
     fontWeight: '700',
     color: '#DC2626',
   },

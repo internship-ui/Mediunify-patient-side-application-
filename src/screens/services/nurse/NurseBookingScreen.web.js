@@ -3535,7 +3535,7 @@ const NurseBookingScreen = ({ navigation, route, ...props }) => {
   };
 
   return (
-    <SafeAreaView style={styles.rootContainer}>
+    <SafeAreaView style={[styles.rootContainer, isDarkMode && { backgroundColor: '#080E1A', backgroundImage: 'none' }]}>
       {currentView === 'LANDING' && renderLandingView()}
       {currentView === 'REQUEST_FLOW' && renderRequestFlowView()}
       {currentView === 'MY_REQUESTS' && renderMyRequestsView()}

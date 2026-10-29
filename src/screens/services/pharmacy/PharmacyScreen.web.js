@@ -67,13 +67,13 @@ const PHARMACY_HERO_SLIDES = [
     id: 'pharma-slide-2',
     pillText: 'AYURVEDA & WELLNESS',
     pillBg: '#ECFDF5',
-    pillColor: '#007D69',
+    pillColor: '#00B894',
     certText: '100% Herbal & Pure',
     certIcon: 'leaf',
     title: 'Ayurvedic & Herbal Wellness Care',
     priceText: 'Up to 25% OFF',
     priceSub: 'Natural Healing',
-    priceColor: '#007D69',
+    priceColor: '#00B894',
     subTitle: 'Explore herbal supplements, immunity boosters, and pure natural Ayurvedic care.',
     bullets: [
       'Authentic certified herbal formulations',
@@ -81,7 +81,7 @@ const PHARMACY_HERO_SLIDES = [
       'Natural immunity & vitality boosters',
     ],
     ctaText: 'Explore Wellness',
-    ctaBg: '#007D69',
+    ctaBg: '#00B894',
     bgColor: '#ECFDF5',
     borderColor: '#A7F3D0',
     image: 'https://images.unsplash.com/photo-1540555700478-4be289fbecef?w=900',
@@ -942,7 +942,7 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
   const activeSlide = heroSlides[activeSlideIndex] || PHARMACY_HERO_SLIDES[0];
 
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaView style={[styles.container, isDarkMode && { backgroundColor: '#080E1A', backgroundImage: 'none' }]}>
       {/* MOBILE TOP HEADER (SHOWN ON MOBILE WEBPAGE WIDTHS) */}
       {!isDesktop && (
         <View style={styles.mobileHeader}>
@@ -1005,20 +1005,26 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
               style={[
                 styles.fullWidthBannerCard,
                 {
-                  backgroundColor: activeSlide.bgColor,
-                  borderColor: activeSlide.borderColor || '#E2E8F0',
+                  backgroundColor: isDarkMode ? '#111C35' : activeSlide.bgColor,
+                  borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : (activeSlide.borderColor || '#E2E8F0'),
                 },
               ]}
             >
               {/* Left Navigation Chevron Button */}
               <TouchableOpacity
-                style={styles.carouselNavArrowLeft}
+                style={[
+                  styles.carouselNavArrowLeft,
+                  isDarkMode && {
+                    backgroundColor: '#16223D',
+                    borderColor: 'rgba(255, 255, 255, 0.12)',
+                  },
+                ]}
                 onPress={() =>
                   setActiveSlideIndex((prev) => (prev - 1 + PHARMACY_HERO_SLIDES.length) % PHARMACY_HERO_SLIDES.length)
                 }
                 activeOpacity={0.85}
               >
-                <Ionicons name="chevron-back" size={20} color="#1E3A8A" />
+                <Ionicons name="chevron-back" size={20} color={isDarkMode ? '#00E5B0' : '#1E3A8A'} />
               </TouchableOpacity>
 
               {/* Left Column: Offer Details, Bullets & CTAs */}
@@ -1044,18 +1050,18 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
                   </View>
                 </View>
 
-                <Text style={styles.fullWidthTitle}>{activeSlide.title}</Text>
+                <Text style={[styles.fullWidthTitle, isDarkMode && { color: '#FFFFFF' }]}>{activeSlide.title}</Text>
 
                 <View style={styles.fullWidthPriceRow}>
                   <Text style={[styles.fullWidthPriceText, { color: activeSlide.priceColor }]}>
                     {activeSlide.priceText}
                   </Text>
                   {Boolean(activeSlide.priceSub) ? (
-                    <Text style={styles.fullWidthPriceSubText}>• {activeSlide.priceSub}</Text>
+                    <Text style={[styles.fullWidthPriceSubText, isDarkMode && { color: '#94A3B8' }]}>• {activeSlide.priceSub}</Text>
                   ) : null}
                 </View>
 
-                <Text style={styles.fullWidthSubTitle} numberOfLines={2}>
+                <Text style={[styles.fullWidthSubTitle, isDarkMode && { color: '#94A3B8' }]} numberOfLines={2}>
                   {activeSlide.subTitle}
                 </Text>
 
@@ -1101,11 +1107,17 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
 
               {/* Right Navigation Chevron Button */}
               <TouchableOpacity
-                style={styles.carouselNavArrowRight}
+                style={[
+                  styles.carouselNavArrowRight,
+                  isDarkMode && {
+                    backgroundColor: '#16223D',
+                    borderColor: 'rgba(255, 255, 255, 0.12)',
+                  },
+                ]}
                 onPress={() => setActiveSlideIndex((prev) => (prev + 1) % PHARMACY_HERO_SLIDES.length)}
                 activeOpacity={0.85}
               >
-                <Ionicons name="chevron-forward" size={20} color="#1E3A8A" />
+                <Ionicons name="chevron-forward" size={20} color={isDarkMode ? '#00E5B0' : '#1E3A8A'} />
               </TouchableOpacity>
             </View>
 
@@ -1128,14 +1140,22 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
         ============================================================ */}
         <View style={styles.searchSectionWrap}>
           <View style={styles.searchSectionInner}>
-            <View style={styles.searchBarBox}>
-              <View style={styles.searchIconBox}>
-                <Ionicons name="search" size={20} color="#00B894" />
+            <View
+              style={[
+                styles.searchBarBox,
+                isDarkMode && {
+                  backgroundColor: '#111C35',
+                  borderColor: 'rgba(255, 255, 255, 0.12)',
+                },
+              ]}
+            >
+              <View style={[styles.searchIconBox, isDarkMode && { backgroundColor: 'rgba(0, 229, 176, 0.15)' }]}>
+                <Ionicons name="search" size={20} color={isDarkMode ? '#00E5B0' : '#00B894'} />
               </View>
               <TextInput
-                style={styles.searchInput}
+                style={[styles.searchInput, isDarkMode && { color: '#FFFFFF' }]}
                 placeholder="Search medicines, vitamins, wellness products..."
-                placeholderTextColor="#64748B"
+                placeholderTextColor={isDarkMode ? '#94A3B8' : '#64748B'}
                 value={searchQuery}
                 onChangeText={setSearchQuery}
               />
@@ -1543,7 +1563,7 @@ const PharmacyScreenWeb = ({ navigation, route }) => {
                         resizeMode="contain"
                         placeholderColor="transparent"
                         fallbackIcon="medkit-outline"
-                        fallbackColor="#007D69"
+                        fallbackColor="#00B894"
                       />
                     </TouchableOpacity>
 

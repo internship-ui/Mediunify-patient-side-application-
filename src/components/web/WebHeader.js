@@ -16,6 +16,7 @@ import { Ionicons } from '@expo/vector-icons';
 import colors from '../../theme/colors';
 import { useCart } from '../../context/CartContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import { navigationRef } from '../../navigation/navigationRef';
 import { isDesktopSiteRequested } from '../../utils/responsiveLayoutHelper';
 import GuestLeadModal from '../common/GuestLeadModal';
@@ -62,7 +63,7 @@ const INITIAL_NOTIFICATIONS = [
     icon: 'cart',
     iconColor: '#00B894',
     iconBg: '#EEF7FC',
-    route: 'Pharmacy',
+    route: 'MyMedicineOrders',
   },
   {
     id: 'notif-3',
@@ -73,7 +74,7 @@ const INITIAL_NOTIFICATIONS = [
     icon: 'document-text',
     iconColor: '#00B894',
     iconBg: '#F1F8FB',
-    route: 'LabTests',
+    route: 'Reports',
   },
   {
     id: 'notif-4',
@@ -252,6 +253,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
   const isCompactDesktop = width >= 1024 && width < 1340;
 
   const { language, changeLanguage, LANGUAGES, t, isIndic, isDarkMode, toggleTheme, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const currentLangObj = LANGUAGES.find((l) => l.code === language) || LANGUAGES[0];
 
   const [infoModal, setInfoModal] = useState(null);
@@ -344,21 +346,21 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
           cursor: pointer !important;
         }
         .mediunify-lang-item:hover {
-          background-color: #F0FDF4 !important;
+          background-color: ${isDarkMode ? '#1E2B4E' : '#F0FDF4'} !important;
         }
         .practo-profile-item:hover {
-          background-color: #F8FAFC !important;
+          background-color: ${isDarkMode ? '#1E2B4E' : '#F8FAFC'} !important;
         }
         .practo-provider-footer:hover {
-          background-color: #F1F5F9 !important;
+          background-color: ${isDarkMode ? '#16223D' : '#F1F5F9'} !important;
         }
         .mediunify-nav-link {
           transition: color 0.15s ease, background-color 0.15s ease !important;
           cursor: pointer !important;
         }
         .mediunify-nav-link:hover {
-          color: #00B894 !important;
-          background-color: #E6F8F4 !important;
+          color: #00E5B0 !important;
+          background-color: ${isDarkMode ? '#16223D' : '#E6F8F4'} !important;
         }
         .mediunify-utility-item {
           transition: color 0.15s ease !important;
@@ -373,22 +375,22 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
         }
         .mediunify-login-btn:hover {
           transform: translateY(-2px) !important;
-          box-shadow: 0 6px 16px -2px rgba(0, 184, 148, 0.35) !important;
-          background-color: #009E7E !important;
+          box-shadow: 0 6px 16px -2px rgba(0, 229, 176, 0.35) !important;
+          background-color: #00B894 !important;
         }
         .more-service-item-hover:hover {
-          background-color: #F8FAFC !important;
+          background-color: ${isDarkMode ? '#1E2B4E' : '#F8FAFC'} !important;
         }
         .more-service-item-hover:hover .service-arrow-hover {
           transform: translateX(3px) !important;
-          color: #00B894 !important;
+          color: #00E5B0 !important;
         }
         .more-service-footer-hover:hover {
-          background-color: #E6F8F4 !important;
+          background-color: ${isDarkMode ? '#16223D' : '#E6F8F4'} !important;
         }
         .mediunify-logout-cancel-btn:hover {
-          background-color: #F1F5F9 !important;
-          border-color: #CBD5E1 !important;
+          background-color: ${isDarkMode ? '#1E2B4E' : '#F1F5F9'} !important;
+          border-color: ${isDarkMode ? 'rgba(255, 255, 255, 0.2)' : '#CBD5E1'} !important;
         }
         .mediunify-logout-confirm-btn:hover {
           background-color: #F46F3F !important;
@@ -396,7 +398,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
         }
       `;
     }
-  }, []);
+  }, [isDarkMode]);
 
   const handleLogout = () => {
     setOpenDropdown(null);
@@ -521,6 +523,14 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
       targetRoute = 'DoctorList';
       params = { ...params, specialty: 'ivf-fertility-group' };
     }
+    if (
+      targetRoute === 'MyTests' &&
+      (params?.initialTab === 'REPORTS' ||
+        params?.initialTab === 'reports' ||
+        params?.tab === 'reports')
+    ) {
+      targetRoute = 'Reports';
+    }
 
     // Navigate smoothly inside MainApp or direct stack
     if (['Login', 'Register', 'Auth'].includes(targetRoute)) {
@@ -559,6 +569,10 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
       }
       if (navigationRef?.isReady?.()) {
         try {
+          navigationRef.navigate(targetRoute, params);
+          return;
+        } catch (e) {}
+        try {
           navigationRef.navigate('MainApp', { screen: targetRoute, params });
           return;
         } catch (e) {}
@@ -583,7 +597,39 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
         } catch (e) {
           try {
             navigation.navigate(targetRoute, params);
+            return;
           } catch (e2) {}
+        }
+      }
+    }
+
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const routePathMap = {
+        MyAppointments: 'my-appointments',
+        MyMedicineOrders: 'my-medicine-orders',
+        Pharmacy: 'pharmacy',
+        LabTests: 'lab-tests',
+        MyTests: 'my-tests',
+        Reports: 'reports',
+        Wallet: 'wallet',
+        MyOnlineConsultations: 'my-online-consultations',
+        Settings: 'settings',
+        Profile: 'profile',
+      };
+      const path = routePathMap[targetRoute] || targetRoute.toLowerCase();
+      const currentUrl = window.location.href;
+      if (currentUrl.includes('#/')) {
+        window.location.hash = `#/${path}`;
+      } else {
+        try {
+          if (window.history && typeof window.history.pushState === 'function') {
+            window.history.pushState({}, '', `/${path}`);
+            window.dispatchEvent(new PopStateEvent('popstate'));
+          } else {
+            window.location.href = `/${path}`;
+          }
+        } catch (e) {
+          window.location.href = `/${path}`;
         }
       }
     }
@@ -608,7 +654,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
         styles.headerRoot,
         desktopSiteMode && { minWidth: 1200, width: '100%' },
         (currentRoute === 'Cart' || currentRoute === 'CartScreen') && { borderBottomWidth: 0, borderBottomColor: 'transparent' },
-        isDarkMode && { backgroundColor: theme.headerBg, borderBottomColor: theme.border },
+        isDarkMode && { backgroundColor: '#0B132B', borderBottomColor: 'rgba(255, 255, 255, 0.08)' },
       ]}
       nativeID="mediunify-web-header"
     >
@@ -625,11 +671,11 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
             <View style={styles.brandRow}>
               <View style={styles.brandTextCol}>
                 <View style={styles.brandTitleRow}>
-                  <Text style={styles.brandTitle}>Medi</Text>
-                  <Text style={styles.brandTitleAccent}>Unify</Text>
+                  <Text style={[styles.brandTitle, isDarkMode && { color: '#FFFFFF' }]}>Medi</Text>
+                  <Text style={[styles.brandTitleAccent, isDarkMode && { color: '#00E5B0' }]}>Unify</Text>
                 </View>
                 {(isDesktop || width >= 768) && (
-                  <Text style={styles.brandTagline} numberOfLines={1}>
+                  <Text style={[styles.brandTagline, isDarkMode && { color: '#94A3B8' }]} numberOfLines={1}>
                     All your healthcare. One intelligent platform.
                   </Text>
                 )}
@@ -640,12 +686,15 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
           {/* TABLET MENU TRIGGER (iPad & Android Tablets) */}
           {isTablet && (
             <TouchableOpacity
-              style={styles.tabletMenuBtn}
+              style={[
+                styles.tabletMenuBtn,
+                isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' },
+              ]}
               onPress={() => setIsTabletDrawerOpen(true)}
               activeOpacity={0.8}
             >
-              <Ionicons name="menu" size={20} color="#00B894" />
-              <Text style={styles.tabletMenuBtnText}>Services</Text>
+              <Ionicons name="menu" size={20} color={isDarkMode ? '#00E5B0' : '#00B894'} />
+              <Text style={[styles.tabletMenuBtnText, isDarkMode && { color: '#00E5B0' }]}>Services</Text>
             </TouchableOpacity>
           )}
 
@@ -662,7 +711,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                     style={[
                       styles.navLinkBtn,
                       isIndic && { paddingHorizontal: width < 1360 ? 8 : 10 },
-                      active && styles.navLinkBtnActive,
+                      active && (isDarkMode ? { backgroundColor: 'rgba(0, 229, 176, 0.15)' } : styles.navLinkBtnActive),
                     ]}
                     // @ts-ignore
                     className="mediunify-nav-link"
@@ -674,11 +723,12 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                     <Text
                       style={[
                         styles.navLinkText,
+                        isDarkMode && { color: active ? '#00E5B0' : '#E2E8F0' },
                         isIndic && {
                           fontSize: width < 1360 ? 12.5 : 13,
                           lineHeight: 18,
                         },
-                        active && styles.navLinkTextActive,
+                        active && (isDarkMode ? { color: '#00E5B0', fontWeight: '800' } : styles.navLinkTextActive),
                       ]}
                       numberOfLines={1}
                     >
@@ -711,23 +761,32 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                   <Ionicons
                     name="globe-outline"
                     size={14}
-                    color={openDropdown === 'language' ? '#00B894' : '#475569'}
+                    color={openDropdown === 'language' ? (isDarkMode ? '#00E5B0' : '#00B894') : (isDarkMode ? '#94A3B8' : '#475569')}
                     style={{ marginRight: 2 }}
                   />
-                  <Text style={[styles.utilityText, openDropdown === 'language' && { color: '#00B894' }, isIndic && { fontSize: 12.5, lineHeight: 17 }]}>
+                  <Text style={[
+                    styles.utilityText,
+                    isDarkMode && { color: '#CBD5E1' },
+                    openDropdown === 'language' && { color: isDarkMode ? '#00E5B0' : '#00B894' },
+                    isIndic && { fontSize: 12.5, lineHeight: 17 }
+                  ]}>
                     {currentLangObj.name || currentLangObj.native || 'English'}
                   </Text>
                   <Ionicons
                     name={openDropdown === 'language' ? 'chevron-up' : 'chevron-down'}
                     size={13}
-                    color={openDropdown === 'language' ? '#00B894' : '#475569'}
+                    color={openDropdown === 'language' ? (isDarkMode ? '#00E5B0' : '#00B894') : (isDarkMode ? '#94A3B8' : '#475569')}
                     style={{ marginLeft: 2 }}
                   />
                 </TouchableOpacity>
 
                 {/* Language Popover Dropdown (Matches More Services Dropdown Design) */}
                 {openDropdown === 'language' && (
-                  <View style={[styles.moreServicesDropdown, { width: 220, right: 0, left: 'auto' }]}>
+                  <View style={[
+                    styles.moreServicesDropdown,
+                    { width: 220, right: 0, left: 'auto' },
+                    isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.12)' },
+                  ]}>
                     <View style={styles.moreServicesMenuList}>
                       {LANGUAGES.map((langItem) => {
                         const isSelected = language === langItem.code;
@@ -736,7 +795,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                             key={langItem.code}
                             style={[
                               styles.moreServiceMenuItem,
-                              isSelected && { backgroundColor: '#F0FDF4' },
+                              isSelected && (isDarkMode ? { backgroundColor: 'rgba(0, 229, 176, 0.15)' } : { backgroundColor: '#F0FDF4' }),
                             ]}
                             // @ts-ignore
                             className="practo-profile-item"
@@ -750,13 +809,14 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                               <Text
                                 style={[
                                   styles.moreServiceMenuText,
-                                  isSelected && { color: '#00B894', fontWeight: '700' },
+                                  isDarkMode && { color: '#E2E8F0' },
+                                  isSelected && { color: isDarkMode ? '#00E5B0' : '#00B894', fontWeight: '700' },
                                 ]}
                               >
                                 {langItem.name} {langItem.name !== langItem.native ? `(${langItem.native})` : ''}
                               </Text>
                               {isSelected && (
-                                <Ionicons name="checkmark-circle" size={16} color="#00B894" />
+                                <Ionicons name="checkmark-circle" size={16} color={isDarkMode ? '#00E5B0' : '#00B894'} />
                               )}
                             </View>
                           </TouchableOpacity>
@@ -776,20 +836,27 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                   onPress={() => setOpenDropdown(openDropdown === 'more-services' ? null : 'more-services')}
                   activeOpacity={0.8}
                 >
-                  <Text style={[styles.utilityText, openDropdown === 'more-services' && { color: '#00B894' }]}>
+                  <Text style={[
+                    styles.utilityText,
+                    isDarkMode && { color: '#CBD5E1' },
+                    openDropdown === 'more-services' && { color: isDarkMode ? '#00E5B0' : '#00B894' }
+                  ]}>
                     {t('nav_more_services', 'More Services')}
                   </Text>
                   <Ionicons
                     name={openDropdown === 'more-services' ? 'chevron-up' : 'chevron-down'}
                     size={13}
-                    color={openDropdown === 'more-services' ? '#00B894' : '#475569'}
+                    color={openDropdown === 'more-services' ? (isDarkMode ? '#00E5B0' : '#00B894') : (isDarkMode ? '#94A3B8' : '#475569')}
                     style={{ marginLeft: 2 }}
                   />
                 </TouchableOpacity>
 
                 {/* More Services Popover Dropdown (Clean, Simple & User-Friendly matching reference) */}
                 {openDropdown === 'more-services' && (
-                  <View style={styles.moreServicesDropdown}>
+                  <View style={[
+                    styles.moreServicesDropdown,
+                    isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.12)' },
+                  ]}>
                     <View style={styles.moreServicesMenuList}>
                       {REMAINING_SERVICES.map((item) => (
                         <TouchableOpacity
@@ -803,7 +870,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                           }}
                           activeOpacity={0.7}
                         >
-                          <Text style={[styles.moreServiceMenuText, isIndic && { lineHeight: 18 }]}>
+                          <Text style={[styles.moreServiceMenuText, isDarkMode && { color: '#E2E8F0' }, isIndic && { lineHeight: 18 }]}>
                             {REMAINING_KEYS[item.id] ? t(REMAINING_KEYS[item.id], item.title) : item.title}
                           </Text>
                         </TouchableOpacity>
@@ -821,7 +888,8 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
               <TouchableOpacity
                 style={[
                   styles.headerNotifBtn,
-                  (openDropdown === 'notifications' || unreadNotifsCount > 0) && styles.headerNotifBtnActive,
+                  isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.1)' },
+                  (openDropdown === 'notifications' || unreadNotifsCount > 0) && (isDarkMode ? { backgroundColor: 'rgba(0, 229, 176, 0.15)', borderColor: '#00E5B0' } : styles.headerNotifBtnActive),
                 ]}
                 onPress={() => setOpenDropdown(openDropdown === 'notifications' ? null : 'notifications')}
                 activeOpacity={0.8}
@@ -829,7 +897,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                 <Ionicons
                   name={openDropdown === 'notifications' ? 'notifications' : 'notifications-outline'}
                   size={19}
-                  color={openDropdown === 'notifications' ? '#00B894' : '#1E3A8A'}
+                  color={openDropdown === 'notifications' ? (isDarkMode ? '#00E5B0' : '#00B894') : (isDarkMode ? '#E2E8F0' : '#1E3A8A')}
                 />
                 {unreadNotifsCount > 0 && (
                   <View style={styles.headerNotifBadge}>
@@ -840,12 +908,12 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
 
               {/* Notification Popover Dropdown */}
               {openDropdown === 'notifications' && (
-                <View style={styles.notifDropdown}>
+                <View style={[styles.notifDropdown, isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
                   {/* Popover Header */}
-                  <View style={styles.notifDropdownHeader}>
+                  <View style={[styles.notifDropdownHeader, isDarkMode && { backgroundColor: '#16223D', borderBottomColor: 'rgba(255, 255, 255, 0.08)' }]}>
                     <View style={styles.notifDropdownTitleRow}>
-                      <Ionicons name="notifications" size={16} color="#00B894" />
-                      <Text style={styles.notifDropdownTitle}>Notifications</Text>
+                      <Ionicons name="notifications" size={16} color={isDarkMode ? '#00E5B0' : '#00B894'} />
+                      <Text style={[styles.notifDropdownTitle, isDarkMode && { color: '#FFFFFF' }]}>Notifications</Text>
                       {unreadNotifsCount > 0 && (
                         <View style={styles.notifBadgeCount}>
                           <Text style={styles.notifBadgeCountText}>{unreadNotifsCount} new</Text>
@@ -859,7 +927,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                         }}
                         activeOpacity={0.7}
                       >
-                        <Text style={styles.notifMarkAllText}>Mark all read</Text>
+                        <Text style={[styles.notifMarkAllText, isDarkMode && { color: '#00E5B0' }]}>Mark all read</Text>
                       </TouchableOpacity>
                     )}
                   </View>
@@ -869,7 +937,11 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                     {notificationsList.map((item) => (
                       <TouchableOpacity
                         key={item.id}
-                        style={[styles.notifItem, item.unread && styles.notifItemUnread]}
+                        style={[
+                          styles.notifItem,
+                          isDarkMode && { borderBottomColor: 'rgba(255, 255, 255, 0.06)' },
+                          item.unread && (isDarkMode ? { backgroundColor: 'rgba(0, 229, 176, 0.08)' } : styles.notifItemUnread),
+                        ]}
                         onPress={() => {
                           setNotificationsList((prev) =>
                             prev.map((n) => (n.id === item.id ? { ...n, unread: false } : n))
@@ -879,18 +951,18 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                         }}
                         activeOpacity={0.7}
                       >
-                        <View style={[styles.notifIconBox, { backgroundColor: item.iconBg }]}>
-                          <Ionicons name={item.icon} size={17} color={item.iconColor} />
+                        <View style={[styles.notifIconBox, { backgroundColor: isDarkMode ? 'rgba(0, 229, 176, 0.12)' : item.iconBg }]}>
+                          <Ionicons name={item.icon} size={17} color={isDarkMode ? '#00E5B0' : item.iconColor} />
                         </View>
                         <View style={styles.notifContentCol}>
-                          <Text style={styles.notifItemTitle} numberOfLines={1}>
+                          <Text style={[styles.notifItemTitle, isDarkMode && { color: '#FFFFFF' }]} numberOfLines={1}>
                             {item.title}
                           </Text>
-                          <Text style={styles.notifItemMsg} numberOfLines={2}>
+                          <Text style={[styles.notifItemMsg, isDarkMode && { color: '#94A3B8' }]} numberOfLines={2}>
                             {item.message}
                           </Text>
                           <View style={styles.notifItemFooter}>
-                            <Text style={styles.notifItemTime}>{item.time}</Text>
+                            <Text style={[styles.notifItemTime, isDarkMode && { color: '#64748B' }]}>{item.time}</Text>
                             {item.unread && <View style={styles.notifUnreadDot} />}
                           </View>
                         </View>
@@ -899,7 +971,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                   </ScrollView>
 
                   {/* Dropdown Footer */}
-                  <View style={styles.notifDropdownFooter}>
+                  <View style={[styles.notifDropdownFooter, isDarkMode && { backgroundColor: '#16223D', borderTopColor: 'rgba(255, 255, 255, 0.08)' }]}>
                     <TouchableOpacity
                       style={styles.notifViewAllBtn}
                       onPress={() => {
@@ -908,18 +980,8 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                       }}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.notifViewAllText}>View All Notifications</Text>
-                      <Ionicons name="arrow-forward" size={13} color="#1E3A8A" />
-                    </TouchableOpacity>
-                    <TouchableOpacity
-                      style={styles.notifSettingsBtn}
-                      onPress={() => {
-                        setOpenDropdown(null);
-                        handleNavigate('Settings');
-                      }}
-                      activeOpacity={0.7}
-                    >
-                      <Ionicons name="settings-outline" size={15} color="#64748B" />
+                      <Text style={[styles.notifViewAllText, isDarkMode && { color: '#00E5B0' }]}>View All Notifications</Text>
+                      <Ionicons name="arrow-forward" size={13} color={isDarkMode ? '#00E5B0' : '#1E3A8A'} />
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -931,7 +993,8 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
           <TouchableOpacity
             style={[
               styles.headerCartBtn,
-              totalCartCount > 0 && styles.headerCartBtnActive,
+              isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.1)' },
+              totalCartCount > 0 && (isDarkMode ? { backgroundColor: 'rgba(0, 229, 176, 0.15)', borderColor: '#00E5B0' } : styles.headerCartBtnActive),
               { marginRight: 8 },
             ]}
             onPress={() => {
@@ -945,7 +1008,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
             <Ionicons
               name="cart-outline"
               size={19}
-              color={totalCartCount > 0 ? '#00B894' : '#1E3A8A'}
+              color={totalCartCount > 0 ? (isDarkMode ? '#00E5B0' : '#00B894') : (isDarkMode ? '#E2E8F0' : '#1E3A8A')}
             />
             {totalCartCount > 0 && (
               <View style={styles.headerCartBadge}>
@@ -958,7 +1021,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
           <TouchableOpacity
             style={[
               styles.headerNotifBtn,
-              isDarkMode && { backgroundColor: '#1E293B', borderColor: '#334155' },
+              isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.1)' },
               { marginRight: 8 },
             ]}
             onPress={toggleTheme}
@@ -978,40 +1041,41 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
               <TouchableOpacity
                 style={[
                   styles.userProfileTrigger,
-                  openDropdown === 'user-profile' && styles.userProfileTriggerActive,
+                  isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)', borderWidth: 1 },
+                  openDropdown === 'user-profile' && (isDarkMode ? { backgroundColor: '#1C2B4E' } : styles.userProfileTriggerActive),
                 ]}
                 onPress={() => setOpenDropdown(openDropdown === 'user-profile' ? null : 'user-profile')}
                 activeOpacity={0.8}
               >
-                <Text style={styles.userProfileTriggerText} numberOfLines={1}>
+                <Text style={[styles.userProfileTriggerText, isDarkMode && { color: '#FFFFFF' }]} numberOfLines={1}>
                   {displayName.split(' ')[0]}...
                 </Text>
                 <Ionicons
                   name={openDropdown === 'user-profile' ? 'chevron-up' : 'chevron-down'}
                   size={12}
-                  color="#475569"
+                  color={isDarkMode ? '#94A3B8' : '#475569'}
                 />
               </TouchableOpacity>
 
               {/* Practo Profile Dropdown Card */}
               {openDropdown === 'user-profile' && (
-                <View style={styles.practoProfileDropdown}>
+                <View style={[styles.practoProfileDropdown, isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
                   {/* User Info Header matching reference */}
                   <View style={styles.practoProfileHeader}>
-                    <View style={styles.practoAvatarBox}>
-                      <Ionicons name="person" size={24} color="#94A3B8" />
+                    <View style={[styles.practoAvatarBox, isDarkMode && { backgroundColor: '#16223D' }]}>
+                      <Ionicons name="person" size={24} color={isDarkMode ? '#00E5B0' : '#94A3B8'} />
                     </View>
                     <View style={{ flex: 1 }}>
-                      <Text style={styles.practoProfileName} numberOfLines={1}>
+                      <Text style={[styles.practoProfileName, isDarkMode && { color: '#FFFFFF' }]} numberOfLines={1}>
                         {displayName}
                       </Text>
-                      <Text style={styles.practoProfilePhone}>
+                      <Text style={[styles.practoProfilePhone, isDarkMode && { color: '#94A3B8' }]}>
                         {displayPhone}
                       </Text>
                     </View>
                   </View>
 
-                  <View style={styles.practoProfileDivider} />
+                  <View style={[styles.practoProfileDivider, isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]} />
 
                   {/* Menu Items matching Practo */}
                   <View style={styles.practoProfileMenuList}>
@@ -1022,7 +1086,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                       onPress={() => handleNavigate('MyAppointments')}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.practoProfileMenuText}>{t('my_appointments', 'My Appointments')}</Text>
+                      <Text style={[styles.practoProfileMenuText, isDarkMode && { color: '#E2E8F0' }]}>{t('my_appointments', 'My Appointments')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -1032,7 +1096,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                       onPress={() => handleNavigate('MyTests')}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.practoProfileMenuText}>{t('my_tests', 'My Tests')}</Text>
+                      <Text style={[styles.practoProfileMenuText, isDarkMode && { color: '#E2E8F0' }]}>{t('my_tests', 'My Tests')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -1042,7 +1106,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                       onPress={() => handleNavigate('MyMedicineOrders')}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.practoProfileMenuText}>{t('my_medicine_orders', 'My Medicine Orders')}</Text>
+                      <Text style={[styles.practoProfileMenuText, isDarkMode && { color: '#E2E8F0' }]}>{t('my_medicine_orders', 'My Medicine Orders')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -1052,7 +1116,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                       onPress={() => handleNavigate('MyMedicalRecords')}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.practoProfileMenuText}>{t('my_medical_records', 'My Medical Records')}</Text>
+                      <Text style={[styles.practoProfileMenuText, isDarkMode && { color: '#E2E8F0' }]}>{t('my_medical_records', 'My Medical Records')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -1062,7 +1126,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                       onPress={() => handleNavigate('MyOnlineConsultations')}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.practoProfileMenuText}>{t('my_online_consultations', 'My Online Consultations')}</Text>
+                      <Text style={[styles.practoProfileMenuText, isDarkMode && { color: '#E2E8F0' }]}>{t('my_online_consultations', 'My Online Consultations')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -1072,7 +1136,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                       onPress={() => handleNavigate('MyFeedback')}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.practoProfileMenuText}>{t('my_feedback', 'My Feedback')}</Text>
+                      <Text style={[styles.practoProfileMenuText, isDarkMode && { color: '#E2E8F0' }]}>{t('my_feedback', 'My Feedback')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -1082,7 +1146,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                       onPress={() => handleNavigate('Profile', { editMode: true })}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.practoProfileMenuText}>{t('view_update_profile', 'View / Update Profile')}</Text>
+                      <Text style={[styles.practoProfileMenuText, isDarkMode && { color: '#E2E8F0' }]}>{t('view_update_profile', 'View / Update Profile')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -1092,7 +1156,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                       onPress={() => handleNavigate('Settings')}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.practoProfileMenuText}>{t('settings', 'Settings & Preferences')}</Text>
+                      <Text style={[styles.practoProfileMenuText, isDarkMode && { color: '#E2E8F0' }]}>{t('settings', 'Settings')}</Text>
                     </TouchableOpacity>
 
                     <TouchableOpacity
@@ -1102,7 +1166,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                       onPress={handleLogout}
                       activeOpacity={0.7}
                     >
-                      <Text style={styles.practoProfileMenuText}>{t('logout', 'Logout')}</Text>
+                      <Text style={[styles.practoProfileMenuText, isDarkMode && { color: '#F87171' }]}>{t('logout', 'Logout')}</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -1111,9 +1175,9 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
           ) : (
             <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
               {isGuest && (
-                <View style={styles.headerGuestPill}>
-                  <Ionicons name="person-outline" size={13} color="#1E3A8A" />
-                  <Text style={styles.headerGuestPillText}>Guest</Text>
+                <View style={[styles.headerGuestPill, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
+                  <Ionicons name="person-outline" size={13} color={isDarkMode ? '#00E5B0' : '#1E3A8A'} />
+                  <Text style={[styles.headerGuestPillText, isDarkMode && { color: '#E2E8F0' }]}>Guest</Text>
                 </View>
               )}
               <TouchableOpacity
@@ -1140,7 +1204,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
           TABLET HORIZONTAL TOUCH NAVIGATION STRIP (iPad & Android Tablets)
       ============================================================ */}
       {isTablet && (
-        <View style={styles.tabletNavStrip}>
+        <View style={[styles.tabletNavStrip, isDarkMode && { backgroundColor: '#0B132B', borderTopColor: 'rgba(255, 255, 255, 0.08)', borderBottomColor: 'rgba(255, 255, 255, 0.08)' }]}>
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -1151,7 +1215,11 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
               return (
                 <TouchableOpacity
                   key={item.id}
-                  style={[styles.tabletNavPill, active && styles.tabletNavPillActive]}
+                  style={[
+                    styles.tabletNavPill,
+                    isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.1)' },
+                    active && (isDarkMode ? { backgroundColor: 'rgba(0, 229, 176, 0.15)', borderColor: '#00E5B0' } : styles.tabletNavPillActive),
+                  ]}
                   onPress={() => {
                     if (item.hasDropdown) {
                       setIsTabletDrawerOpen(true);
@@ -1161,21 +1229,25 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                   }}
                   activeOpacity={0.75}
                 >
-                  <Text style={[styles.tabletNavPillText, active && styles.tabletNavPillTextActive]}>
+                  <Text style={[
+                    styles.tabletNavPillText,
+                    isDarkMode && { color: '#E2E8F0' },
+                    active && (isDarkMode ? { color: '#00E5B0', fontWeight: '800' } : styles.tabletNavPillTextActive),
+                  ]}>
                     {item.shortLabel || item.label}
                   </Text>
                   {item.isAi && (
-                    <View style={{ backgroundColor: active ? '#00B894' : '#ECFDF5', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 5, marginLeft: 4 }}>
-                      <Ionicons name="sparkles" size={9} color={active ? '#FFFFFF' : '#00B894'} />
+                    <View style={{ backgroundColor: active ? '#00B894' : (isDarkMode ? '#16223D' : '#ECFDF5'), paddingHorizontal: 4, paddingVertical: 1, borderRadius: 5, marginLeft: 4 }}>
+                      <Ionicons name="sparkles" size={9} color={active ? '#FFFFFF' : '#00E5B0'} />
                     </View>
                   )}
                   {item.isVip && (
-                    <View style={{ backgroundColor: active ? '#1E3A8A' : '#E0F7FA', paddingHorizontal: 4, paddingVertical: 1, borderRadius: 5, marginLeft: 4 }}>
-                      <Text style={{ fontSize: 8.5, fontWeight: '900', color: active ? '#FFFFFF' : '#1E3A8A' }}>VIP</Text>
+                    <View style={{ backgroundColor: active ? '#1E3A8A' : (isDarkMode ? '#16223D' : '#E0F7FA'), paddingHorizontal: 4, paddingVertical: 1, borderRadius: 5, marginLeft: 4 }}>
+                      <Text style={{ fontSize: 8.5, fontWeight: '900', color: active ? '#FFFFFF' : (isDarkMode ? '#00E5B0' : '#1E3A8A') }}>VIP</Text>
                     </View>
                   )}
                   {item.hasDropdown && (
-                    <Ionicons name="chevron-down" size={10} color={active ? '#00B894' : '#64748B'} style={{ marginLeft: 3 }} />
+                    <Ionicons name="chevron-down" size={10} color={active ? '#00B894' : (isDarkMode ? '#94A3B8' : '#64748B')} style={{ marginLeft: 3 }} />
                   )}
                 </TouchableOpacity>
               );
@@ -1265,29 +1337,29 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
         animationType="fade"
         onRequestClose={() => setShowLogoutConfirmModal(false)}
       >
-        <View style={styles.modalOverlay}>
-          <View style={[styles.cityModalCard, { maxWidth: 440, width: '92%', padding: 26, borderRadius: 18 }]}>
-            <View style={{ width: 58, height: 58, borderRadius: 29, backgroundColor: '#FFF2ED', borderWidth: 1.5, borderColor: '#FFD7C7', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 16 }}>
+        <View style={[styles.modalOverlay, isDarkMode && { backgroundColor: 'rgba(8, 14, 26, 0.85)' }]}>
+          <View style={[styles.cityModalCard, { maxWidth: 440, width: '92%', padding: 26, borderRadius: 18 }, isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
+            <View style={[{ width: 58, height: 58, borderRadius: 29, backgroundColor: '#FFF2ED', borderWidth: 1.5, borderColor: '#FFD7C7', alignItems: 'center', justifyContent: 'center', alignSelf: 'center', marginBottom: 16 }, isDarkMode && { backgroundColor: 'rgba(255, 127, 80, 0.15)', borderColor: 'rgba(255, 127, 80, 0.3)' }]}>
               <Ionicons name="log-out-outline" size={26} color="#FF7F50" />
             </View>
 
-            <Text style={{ fontSize: 19, fontWeight: '800', color: '#1E3A8A', textAlign: 'center', marginBottom: 8, letterSpacing: -0.2 }}>
+            <Text style={[{ fontSize: 19, fontWeight: '800', color: '#1E3A8A', textAlign: 'center', marginBottom: 8, letterSpacing: -0.2 }, isDarkMode && { color: '#FFFFFF' }]}>
               Logout from MediUnify
             </Text>
 
-            <Text style={{ fontSize: 13.5, color: '#64748B', textAlign: 'center', lineHeight: 21, marginBottom: 24, paddingHorizontal: 4 }}>
+            <Text style={[{ fontSize: 13.5, color: '#64748B', textAlign: 'center', lineHeight: 21, marginBottom: 24, paddingHorizontal: 4 }, isDarkMode && { color: '#94A3B8' }]}>
               Are you sure you want to logout? You will need to sign in again to access your appointments, medical records, and tests.
             </Text>
 
             <View style={{ flexDirection: 'row', gap: 12 }}>
               <TouchableOpacity
-                style={{ flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1.2, borderColor: '#DCE7EC', backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.15s ease' } : {}) }}
+                style={[{ flex: 1, paddingVertical: 12, borderRadius: 10, borderWidth: 1.2, borderColor: '#DCE7EC', backgroundColor: '#F8FAFC', alignItems: 'center', justifyContent: 'center', ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.15s ease' } : {}) }, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' }]}
                 // @ts-ignore
                 className="mediunify-logout-cancel-btn"
                 onPress={() => setShowLogoutConfirmModal(false)}
                 activeOpacity={0.8}
               >
-                <Text style={{ fontSize: 14, fontWeight: '700', color: '#475569' }}>Cancel</Text>
+                <Text style={[{ fontSize: 14, fontWeight: '700', color: '#475569' }, isDarkMode && { color: '#CBD5E1' }]}>Cancel</Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -1327,17 +1399,17 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
         onRequestClose={() => setShowSearchModal(false)}
       >
         <TouchableOpacity
-          style={styles.modalOverlay}
+          style={[styles.modalOverlay, isDarkMode && { backgroundColor: 'rgba(8, 14, 26, 0.85)' }]}
           activeOpacity={1}
           onPress={() => setShowSearchModal(false)}
         >
-          <View style={styles.searchModalCard}>
-            <View style={styles.searchModalInputRow}>
-              <Ionicons name="search" size={20} color="#64748B" />
+          <View style={[styles.searchModalCard, isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
+            <View style={[styles.searchModalInputRow, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
+              <Ionicons name="search" size={20} color={isDarkMode ? '#94A3B8' : '#64748B'} />
               <TextInput
-                style={styles.searchModalInput}
+                style={[styles.searchModalInput, isDarkMode && { color: '#FFFFFF' }]}
                 placeholder="Search doctors, lab tests, scans, medicines..."
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={isDarkMode ? '#64748B' : '#94A3B8'}
                 autoFocus
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -1378,12 +1450,12 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
 
             {/* Quick Suggestions */}
             <View style={styles.searchSuggestions}>
-              <Text style={styles.suggestionsLabel}>Popular searches:</Text>
+              <Text style={[styles.suggestionsLabel, isDarkMode && { color: '#94A3B8' }]}>Popular searches:</Text>
               <View style={styles.suggestionPills}>
                 {['CBC Test', 'Thyroid Profile', 'Vitamin D', 'MRI Scan', 'CT Scan', 'Cardiologist'].map((s, i) => (
                   <TouchableOpacity
                     key={i}
-                    style={styles.suggestionPill}
+                    style={[styles.suggestionPill, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.1)' }]}
                     onPress={async () => {
                       const shouldShow = await shouldShowGuestLeadPopup();
                       if (shouldShow) {
@@ -1396,7 +1468,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                       handleNavigate('GlobalSearch', { query: s });
                     }}
                   >
-                    <Text style={styles.suggestionPillText}>{s}</Text>
+                    <Text style={[styles.suggestionPillText, isDarkMode && { color: '#CBD5E1' }]}>{s}</Text>
                   </TouchableOpacity>
                 ))}
               </View>
@@ -1414,10 +1486,10 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
         animationType="fade"
         onRequestClose={() => setIsTabletDrawerOpen(false)}
       >
-        <View style={styles.tabletServicesOverlay}>
-          <View style={styles.tabletDrawerCard}>
+        <View style={[styles.tabletServicesOverlay, isDarkMode && { backgroundColor: 'rgba(8, 14, 26, 0.95)' }]}>
+          <View style={[styles.tabletDrawerCard, isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
             {/* Modal Header */}
-            <View style={styles.tabletDrawerHeader}>
+            <View style={[styles.tabletDrawerHeader, isDarkMode && { borderBottomColor: 'rgba(255, 255, 255, 0.08)' }]}>
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                 <Image
                   source={require('../../../assets/logo.png')}
@@ -1425,17 +1497,17 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                   resizeMode="contain"
                 />
                 <View>
-                  <Text style={styles.tabletDrawerTitle}>MediUnify Healthcare</Text>
-                  <Text style={styles.tabletDrawerSub}>My Services</Text>
+                  <Text style={[styles.tabletDrawerTitle, isDarkMode && { color: '#FFFFFF' }]}>MediUnify Healthcare</Text>
+                  <Text style={[styles.tabletDrawerSub, isDarkMode && { color: '#00E5B0' }]}>My Services</Text>
                 </View>
               </View>
               <TouchableOpacity
-                style={styles.tabletDrawerCloseBtn}
+                style={[styles.tabletDrawerCloseBtn, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.1)' }]}
                 onPress={() => setIsTabletDrawerOpen(false)}
                 activeOpacity={0.8}
                 accessibilityLabel="Close Services Menu"
               >
-                <Ionicons name="close" size={20} color="#475569" />
+                <Ionicons name="close" size={20} color={isDarkMode ? '#FFFFFF' : '#475569'} />
               </TouchableOpacity>
             </View>
 
@@ -1452,6 +1524,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                     style={[
                       styles.tabletDrawerTile,
                       item.isEmergency && styles.tabletDrawerTileEmergency,
+                      isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.1)' },
                     ]}
                     // @ts-ignore
                     className="more-service-item-hover"
@@ -1461,20 +1534,21 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
                     }}
                     activeOpacity={0.75}
                   >
-                    <View style={[styles.tabletDrawerTileIconBox, { backgroundColor: item.iconBg }]}>
-                      <Ionicons name={item.icon} size={20} color={item.iconColor} />
+                    <View style={[styles.tabletDrawerTileIconBox, { backgroundColor: isDarkMode ? 'rgba(0, 229, 176, 0.12)' : item.iconBg }]}>
+                      <Ionicons name={item.icon} size={20} color={isDarkMode ? '#00E5B0' : item.iconColor} />
                     </View>
                     <View style={{ flex: 1 }}>
                       <Text
                         style={[
                           styles.tabletDrawerTileTitle,
                           item.isEmergency && { color: '#DC2626' },
+                          isDarkMode && !item.isEmergency && { color: '#FFFFFF' },
                         ]}
                         numberOfLines={1}
                       >
                         {item.title}
                       </Text>
-                      <Text style={styles.tabletDrawerTileDesc} numberOfLines={2}>
+                      <Text style={[styles.tabletDrawerTileDesc, isDarkMode && { color: '#94A3B8' }]} numberOfLines={2}>
                         {item.desc}
                       </Text>
                     </View>
@@ -1504,7 +1578,7 @@ const WebHeader = ({ navigation, currentRoute = 'Home', currentParams = {} }) =>
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   headerRoot: {
     backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,

@@ -15,7 +15,7 @@ import { isDesktopSiteRequested } from '../../utils/responsiveLayoutHelper';
 
 export default function PromotionalAdsSection({ onNavigate }) {
   const { width } = useWindowDimensions();
-  const { t, isIndic } = useTheme();
+  const { t, isIndic, isDarkMode } = useTheme();
   const desktopSiteMode = isDesktopSiteRequested();
   const isDesktop = desktopSiteMode || width >= 1024;
   const isTablet = !desktopSiteMode && (width >= 768 && width < 1024);
@@ -68,11 +68,11 @@ export default function PromotionalAdsSection({ onNavigate }) {
       {/* SECTION HEADER WITH SLIDER CONTROLS */}
       <View style={styles.sectionHeaderRow}>
         <View style={styles.headerLeft}>
-          <View style={styles.badgeWrap}>
-            <Ionicons name="sparkles" size={13} color="#059669" style={{ marginRight: 6 }} />
-            <Text style={styles.badgeText}>{t('special_deals_badge', 'OFFERS & DEALS')}</Text>
+          <View style={[styles.badgeWrap, isDarkMode && { backgroundColor: 'rgba(5, 150, 105, 0.15)', borderColor: 'rgba(5, 150, 105, 0.35)' }]}>
+            <Ionicons name="sparkles" size={13} color={isDarkMode ? '#00E5B0' : '#059669'} style={{ marginRight: 6 }} />
+            <Text style={[styles.badgeText, isDarkMode && { color: '#00E5B0' }]}>{t('special_deals_badge', 'OFFERS & DEALS')}</Text>
           </View>
-          <Text style={[styles.sectionTitle, isIndic && { lineHeight: 32 }]}>
+          <Text style={[styles.sectionTitle, isIndic && { lineHeight: 32 }, isDarkMode && { color: '#FFFFFF' }]}>
             {t('special_deals_title', 'Healthcare Deals & Savings')}
           </Text>
         </View>
@@ -92,24 +92,24 @@ export default function PromotionalAdsSection({ onNavigate }) {
       >
         {/* Floating Side Arrow: Previous (Z-Index above slides, does not overlap text thanks to 68px card padding) */}
         <TouchableOpacity
-          style={[styles.floatingSideArrow, styles.floatingArrowLeft]}
+          style={[styles.floatingSideArrow, styles.floatingArrowLeft, isDarkMode && { backgroundColor: '#18253D', borderColor: 'rgba(255, 255, 255, 0.15)', boxShadow: '0 4px 16px rgba(0,0,0,0.5)' }]}
           onPress={handlePrev}
           activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel="Previous Offer"
         >
-          <Ionicons name="chevron-back" size={20} color="#0C3B6B" />
+          <Ionicons name="chevron-back" size={20} color={isDarkMode ? '#FFFFFF' : '#0C3B6B'} />
         </TouchableOpacity>
 
         {/* Floating Side Arrow: Next */}
         <TouchableOpacity
-          style={[styles.floatingSideArrow, styles.floatingArrowRight]}
+          style={[styles.floatingSideArrow, styles.floatingArrowRight, isDarkMode && { backgroundColor: '#18253D', borderColor: 'rgba(255, 255, 255, 0.15)', boxShadow: '0 4px 16px rgba(0,0,0,0.5)' }]}
           onPress={handleNext}
           activeOpacity={0.85}
           accessibilityRole="button"
           accessibilityLabel="Next Offer"
         >
-          <Ionicons name="chevron-forward" size={20} color="#0C3B6B" />
+          <Ionicons name="chevron-forward" size={20} color={isDarkMode ? '#FFFFFF' : '#0C3B6B'} />
         </TouchableOpacity>
 
         {/* Sliding Track containing all offer cards */}
@@ -142,12 +142,17 @@ export default function PromotionalAdsSection({ onNavigate }) {
                   style={[
                     styles.adShowcaseCard,
                     {
-                      borderColor: ad.borderColor,
-                      backgroundColor: ad.solidBg,
+                      borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.12)' : ad.borderColor,
+                      backgroundColor: isDarkMode ? '#121D32' : ad.solidBg,
                       paddingHorizontal: isDesktop ? 68 : isTablet ? 56 : 20,
                       ...(Platform.OS === 'web'
                         ? {
-                            backgroundImage: `linear-gradient(135deg, ${ad.gradientColors[0]} 0%, ${ad.gradientColors[1]} 50%, ${ad.gradientColors[2]} 100%)`,
+                            backgroundImage: isDarkMode
+                              ? 'linear-gradient(145deg, #131E35 0%, #0E1626 100%)'
+                              : `linear-gradient(135deg, ${ad.gradientColors[0]} 0%, ${ad.gradientColors[1]} 50%, ${ad.gradientColors[2]} 100%)`,
+                            boxShadow: isDarkMode
+                              ? '0 14px 34px -4px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.06)'
+                              : '0 8px 24px rgba(12, 59, 107, 0.08)',
                           }
                         : {}),
                     },
@@ -158,13 +163,13 @@ export default function PromotionalAdsSection({ onNavigate }) {
                   {/* TOP BADGE ROW */}
                   <View style={styles.showcaseTopRow}>
                     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-                      <View style={[styles.categoryBadge, { backgroundColor: '#FFFFFF', borderColor: ad.borderColor }]}>
-                        <Text style={[styles.categoryBadgeText, { color: ad.tagColor }]}>{ad.discount || ad.badge}</Text>
+                      <View style={[styles.categoryBadge, { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#FFFFFF', borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.14)' : ad.borderColor }]}>
+                        <Text style={[styles.categoryBadgeText, { color: isDarkMode ? (ad.accentColor || '#00E5B0') : ad.tagColor }]}>{ad.discount || ad.badge}</Text>
                       </View>
                     </View>
 
-                    <View style={styles.slideCounterTag}>
-                      <Text style={styles.slideCounterTagText}>
+                    <View style={[styles.slideCounterTag, isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.08)', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
+                      <Text style={[styles.slideCounterTagText, isDarkMode && { color: '#94A3B8' }]}>
                         {idx + 1} / {totalOffers}
                       </Text>
                     </View>
@@ -174,16 +179,16 @@ export default function PromotionalAdsSection({ onNavigate }) {
                   <View style={[styles.showcaseBody, isMobile && { flexDirection: 'column-reverse' }]}>
                     {/* Left Column: Title, Single Short Benefit, Pricing, CTA */}
                     <View style={styles.showcaseLeftCol}>
-                      <Text style={styles.showcaseTitle}>{ad.title}</Text>
+                      <Text style={[styles.showcaseTitle, isDarkMode && { color: '#FFFFFF' }]}>{ad.title}</Text>
 
                       {/* One short benefit */}
                       <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, marginBottom: 16 }}>
                         <Ionicons name="checkmark-circle" size={16} color={ad.accentColor} style={{ marginRight: 6 }} />
-                        <Text style={{ fontSize: 14, fontWeight: '600', color: '#334155' }}>{ad.subtitle}</Text>
+                        <Text style={{ fontSize: 14, fontWeight: '600', color: isDarkMode ? '#94A3B8' : '#334155' }}>{ad.subtitle}</Text>
                       </View>
 
                       {/* Bottom Pricing & Action Bar */}
-                      <View style={styles.bottomActionBar}>
+                      <View style={[styles.bottomActionBar, isDarkMode && { borderTopColor: 'rgba(255, 255, 255, 0.08)' }]}>
                         {/* Price Block */}
                         <View style={styles.priceBlock}>
                           <View style={styles.priceRow}>
@@ -197,7 +202,12 @@ export default function PromotionalAdsSection({ onNavigate }) {
                         {/* Coupon Code Chip */}
                         {ad.couponCode && (
                           <TouchableOpacity
-                            style={[styles.couponBox, { borderColor: ad.borderColor }, isCopied && styles.couponBoxActive]}
+                            style={[
+                              styles.couponBox,
+                              { borderColor: isDarkMode ? 'rgba(0, 229, 176, 0.4)' : ad.borderColor },
+                              isDarkMode && { backgroundColor: '#17243E' },
+                              isCopied && styles.couponBoxActive,
+                            ]}
                             onPress={(e) => handleCopyCoupon(ad.id, ad.couponCode, e)}
                             activeOpacity={0.8}
                             accessibilityRole="button"
@@ -206,12 +216,12 @@ export default function PromotionalAdsSection({ onNavigate }) {
                             <Ionicons
                               name={isCopied ? 'checkmark-circle' : 'copy-outline'}
                               size={14}
-                              color={isCopied ? '#059669' : '#0C3B6B'}
+                              color={isCopied ? '#00E5B0' : (isDarkMode ? '#00E5B0' : '#0C3B6B')}
                               style={{ marginRight: 6 }}
                             />
                             <View>
-                              <Text style={styles.couponLabelText}>{t('coupon_code', 'COUPON CODE')}</Text>
-                              <Text style={[styles.couponCodeText, isCopied && styles.couponCodeTextActive]}>
+                              <Text style={[styles.couponLabelText, isDarkMode && { color: '#94A3B8' }]}>{t('coupon_code', 'COUPON CODE')}</Text>
+                              <Text style={[styles.couponCodeText, isDarkMode && { color: '#00E5B0' }, isCopied && styles.couponCodeTextActive]}>
                                 {isCopied ? t('coupon_copied', 'COPIED!') : ad.couponCode}
                               </Text>
                             </View>
@@ -232,7 +242,7 @@ export default function PromotionalAdsSection({ onNavigate }) {
 
                     {/* Right Column: High-Res Medical Visual */}
                     <View style={[styles.showcaseRightCol, isMobile && { width: '100%', height: 180, marginBottom: 12 }]}>
-                      <View style={styles.imageContainer}>
+                      <View style={[styles.imageContainer, isDarkMode && { borderColor: 'rgba(255, 255, 255, 0.15)' }]}>
                         <Image source={ad.image} style={styles.adHeroPhoto} resizeMode="cover" />
                         <View style={[styles.discountFloatingBadge, { backgroundColor: ad.accentColor }]}>
                           <Text style={styles.discountFloatingText}>{ad.discount}</Text>
@@ -260,7 +270,7 @@ export default function PromotionalAdsSection({ onNavigate }) {
                 styles.dotItem,
                 isActive
                   ? [styles.dotItemActive, { backgroundColor: ad.accentColor, width: 34 }]
-                  : styles.dotItemInactive,
+                  : [styles.dotItemInactive, isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.2)' }],
               ]}
               onPress={(e) => handleDotClick(idx, e)}
               activeOpacity={0.7}

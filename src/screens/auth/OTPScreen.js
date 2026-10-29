@@ -21,9 +21,12 @@ import colors from '../../theme/colors';
 import { safeNavigateToMain } from '../../utils/navigationHelper';
 import { syncRegister } from '../../services/dataSyncService';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import { useKeyboardVisibility } from '../../utils/keyboardUtils';
 
 const OTPScreen = ({ navigation, route }) => {
+  const { isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { t, isIndic } = useTheme();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -278,7 +281,7 @@ const OTPScreen = ({ navigation, route }) => {
       ]}
       edges={['top', 'left', 'right', 'bottom']}
     >
-      <StatusBar barStyle="dark-content" backgroundColor="#F8FAFC" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? '#080E1A' : '#F8FAFC'} />
 
       {/* TOP HEADER */}
       <View style={styles.topHeader}>
@@ -463,7 +466,7 @@ const OTPScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F8FAFC',

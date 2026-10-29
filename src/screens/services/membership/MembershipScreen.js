@@ -22,6 +22,7 @@ import { saveTransaction } from '../../../services/transactionService';
 import { showAlert } from '../../../utils/alert';
 import { isGuestUser, promptLoginRequired } from '../../../utils/authHelper';
 import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 import WebFooter from '../../../components/web/WebFooter';
 
 const PAYMENT_METHODS = [
@@ -32,7 +33,8 @@ const PAYMENT_METHODS = [
 ];
 
 const MembershipScreen = ({ navigation }) => {
-  const { t, isIndic } = useTheme();
+  const { t, isIndic, isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const isTablet = width >= 600;
   const isDesktop = width >= 1024;
@@ -200,7 +202,7 @@ const MembershipScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? '#080E1A' : '#FFFFFF'} />
 
       {/* ============================================================
           TOP HEADER
@@ -671,7 +673,7 @@ const MembershipScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',

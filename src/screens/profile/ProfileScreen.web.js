@@ -19,6 +19,7 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import colors from '../../theme/colors';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import { syncActiveUser } from '../../services/dataSyncService';
 import { promptLoginRequired } from '../../utils/authHelper';
 import WebFooter from '../../components/web/WebFooter';
@@ -28,6 +29,7 @@ import { isDesktopLayout, isDesktopSiteRequested } from '../../utils/responsiveL
 const ProfileScreenWeb = ({ navigation, route }) => {
   const { width } = useWindowDimensions();
   const { isDarkMode, language, changeLanguage, LANGUAGES, t } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const currentLang = LANGUAGES.find((l) => l.code === language) || LANGUAGES[0];
   const desktopSiteMode = isDesktopSiteRequested();
   const isDesktop = desktopSiteMode || width >= 992;
@@ -437,7 +439,7 @@ const ProfileScreenWeb = ({ navigation, route }) => {
   return (
     <SafeAreaView
       edges={['top']}
-      style={[styles.container, { backgroundColor: isDarkMode ? '#0B0F19' : '#F5FEFB' }]}
+      style={[styles.container, { backgroundColor: isDarkMode ? '#080E1A' : '#F5FEFB', backgroundImage: isDarkMode ? 'none' : undefined }]}
     >
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
@@ -784,24 +786,8 @@ const ProfileScreenWeb = ({ navigation, route }) => {
                 </View>
               </View>
 
-              {/* ACCOUNT & SETTINGS CARD */}
+              {/* ACCOUNT & PREFERENCES CARD */}
               <View style={[styles.cardContainer, { backgroundColor: isDarkMode ? '#111827' : '#FFFFFF', marginTop: 16 }]}>
-                <View style={styles.cardHeaderRow}>
-                  <View style={styles.cardHeaderTitleGroup}>
-                    <View style={[styles.iconCircleHeader, { backgroundColor: '#F1F5F9' }]}>
-                      <Ionicons name="settings-outline" size={18} color="#647488" />
-                    </View>
-                    <View>
-                      <Text style={[styles.cardHeaderTitle, { color: isDarkMode ? '#F8FAFC' : '#1E3A8A' }]}>
-                        {t('settings') || 'Account & Settings'}
-                      </Text>
-                      <Text style={styles.cardHeaderSubtitle}>
-                        Account preferences & details
-                      </Text>
-                    </View>
-                  </View>
-                </View>
-
                 <View style={styles.menuOptionsList}>
                   {/* Address */}
                   <TouchableOpacity
@@ -1501,7 +1487,7 @@ const ProfileScreenWeb = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F5FEFB',

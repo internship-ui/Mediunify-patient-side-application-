@@ -87,7 +87,7 @@ const MyOnlineConsultationsScreenWeb = ({ navigation, route }) => {
       loadData();
     };
 
-    if (typeof window !== 'undefined') {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
       window.addEventListener('storage', handleStorageChange);
       window.addEventListener('mediunify_consultations_updated', handleUpdate);
     }
@@ -103,11 +103,17 @@ const MyOnlineConsultationsScreenWeb = ({ navigation, route }) => {
     }, 15000);
 
     return () => {
-      if (unsubscribeFocus) unsubscribeFocus();
+      if (typeof unsubscribeFocus === 'function') {
+        try { unsubscribeFocus(); } catch (e) {}
+      } else if (unsubscribeFocus && typeof unsubscribeFocus.remove === 'function') {
+        try { unsubscribeFocus.remove(); } catch (e) {}
+      }
       clearInterval(clockInterval);
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('storage', handleStorageChange);
-        window.removeEventListener('mediunify_consultations_updated', handleUpdate);
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
+        try {
+          window.removeEventListener('storage', handleStorageChange);
+          window.removeEventListener('mediunify_consultations_updated', handleUpdate);
+        } catch (e) {}
       }
     };
   }, [navigation]);
@@ -257,7 +263,7 @@ const MyOnlineConsultationsScreenWeb = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, isDarkMode && { backgroundColor: '#080E1A', backgroundImage: 'none' }]}>
       {/* Notification Toast */}
       {toastMessage ? (
         <View style={styles.toastContainer}>

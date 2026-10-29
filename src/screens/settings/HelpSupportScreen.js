@@ -4,6 +4,7 @@ import {
   Text,
   StyleSheet,
   ScrollView,
+  StatusBar,
   TouchableOpacity,
   TextInput,
   Linking,
@@ -17,6 +18,8 @@ import { showAlert } from '../../utils/alert';
 import { Ionicons } from '@expo/vector-icons';
 
 import colors from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import WebFooter from '../../components/web/WebFooter';
 
 const FAQS = [
@@ -54,6 +57,8 @@ const FAQS = [
 
 const HelpSupportScreen = ({ navigation }) => {
   const insets = useSafeAreaInsets();
+  const { isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const scrollViewRef = useRef(null);
   const [isKeyboardVisible, setIsKeyboardVisible] = useState(false);
 
@@ -103,7 +108,8 @@ const HelpSupportScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={styles.container}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, isDarkMode && { backgroundColor: '#080E1A' }]}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? '#0B132B' : '#FFFFFF'} />
       {/* HEADER */}
       <View style={styles.header}>
         <View style={styles.webHeaderInner}>
@@ -299,7 +305,7 @@ const HelpSupportScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F4F8FA',

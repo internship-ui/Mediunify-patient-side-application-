@@ -11,6 +11,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../theme/colors';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import { isDesktopSiteRequested } from '../../utils/responsiveLayoutHelper';
 import { navigationRef } from '../../navigation/navigationRef';
 
@@ -48,6 +49,7 @@ const SOCIAL_LINKS = [
 const WebFooter = ({ navigation, style }) => {
   const { width } = useWindowDimensions();
   const { t, isIndic, isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const desktopSiteMode = isDesktopSiteRequested();
 
   // Responsive device categorization
@@ -162,7 +164,11 @@ const WebFooter = ({ navigation, style }) => {
     <View
       style={[
         styles.footerWrapper,
-        isDarkMode && { backgroundColor: '#0B1120', backgroundImage: 'none', borderTopColor: '#334155' },
+        isDarkMode && {
+          backgroundColor: '#0B132B',
+          backgroundImage: 'none',
+          borderTopColor: 'rgba(255, 255, 255, 0.08)',
+        },
         desktopSiteMode && { minWidth: 1200, width: '100%' },
         style,
       ]}
@@ -191,16 +197,16 @@ const WebFooter = ({ navigation, style }) => {
             <View style={styles.brandRow}>
               <View>
                 <View style={styles.brandTitleRow}>
-                  <Text style={styles.brandTitle}>Medi</Text>
-                  <Text style={styles.brandTitleAccent}>Unify</Text>
+                  <Text style={[styles.brandTitle, isDarkMode && { color: '#FFFFFF' }]}>Medi</Text>
+                  <Text style={[styles.brandTitleAccent, isDarkMode && { color: '#00E5B0' }]}>Unify</Text>
                 </View>
-                <Text style={styles.brandTagline}>
+                <Text style={[styles.brandTagline, isDarkMode && { color: '#94A3B8' }]}>
                   {t('brand_tagline', 'All your healthcare. One intelligent platform.')}
                 </Text>
               </View>
             </View>
 
-            <Text style={[styles.brandDesc, isIndic && { lineHeight: 22 }]}>
+            <Text style={[styles.brandDesc, isIndic && { lineHeight: 22 }, isDarkMode && { color: '#94A3B8' }]}>
               {t(
                 'footer_brand_desc',
                 'All your healthcare on one intelligent platform. Trusted doctors, diagnostics, and hospital care.'
@@ -225,7 +231,7 @@ const WebFooter = ({ navigation, style }) => {
 
           {/* Column 2: Patient Services */}
           <View style={[styles.footerCol, styles.footerColLinks]}>
-            <Text style={styles.colHeading}>
+            <Text style={[styles.colHeading, isDarkMode && { color: '#FFFFFF' }]}>
               {t('footer_patient_services', 'Patient Services')}
             </Text>
             {OUR_SERVICES.map((item, i) => (
@@ -235,7 +241,7 @@ const WebFooter = ({ navigation, style }) => {
                 onPress={() => handleNavigate(item.route)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.footerLinkText}>
+                <Text style={[styles.footerLinkText, isDarkMode && { color: '#94A3B8' }]}>
                   {item.labelKey ? t(item.labelKey, item.label) : item.label}
                 </Text>
               </TouchableOpacity>
@@ -244,7 +250,7 @@ const WebFooter = ({ navigation, style }) => {
 
           {/* Column 3: Support & Trust */}
           <View style={[styles.footerCol, styles.footerColLinks]}>
-            <Text style={styles.colHeading}>
+            <Text style={[styles.colHeading, isDarkMode && { color: '#FFFFFF' }]}>
               {t('footer_support_trust', 'Support & Trust')}
             </Text>
             {SUPPORT_LINKS.map((item, i) => (
@@ -254,7 +260,7 @@ const WebFooter = ({ navigation, style }) => {
                 onPress={() => handleNavigate(item.route)}
                 activeOpacity={0.7}
               >
-                <Text style={styles.footerLinkText}>
+                <Text style={[styles.footerLinkText, isDarkMode && { color: '#94A3B8' }]}>
                   {item.labelKey ? t(item.labelKey, item.label) : item.label}
                 </Text>
               </TouchableOpacity>
@@ -263,10 +269,10 @@ const WebFooter = ({ navigation, style }) => {
 
           {/* Column 4: Download App */}
           <View style={[styles.footerCol, styles.footerColApps]}>
-            <Text style={styles.colHeading}>{t('app_download', 'Download App')}</Text>
+            <Text style={[styles.colHeading, isDarkMode && { color: '#FFFFFF' }]}>{t('app_download', 'Download App')}</Text>
 
             <TouchableOpacity
-              style={styles.storeBadge}
+              style={[styles.storeBadge, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)', borderWidth: 1 }]}
               onPress={() => handleStoreClick('https://play.google.com/store')}
               activeOpacity={0.85}
             >
@@ -278,7 +284,7 @@ const WebFooter = ({ navigation, style }) => {
             </TouchableOpacity>
 
             <TouchableOpacity
-              style={[styles.storeBadge, { marginTop: 10 }]}
+              style={[styles.storeBadge, { marginTop: 10 }, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)', borderWidth: 1 }]}
               onPress={() => handleStoreClick('https://www.apple.com/app-store/')}
               activeOpacity={0.85}
             >
@@ -292,30 +298,30 @@ const WebFooter = ({ navigation, style }) => {
 
           {/* Column 5: Subscribe to our newsletter */}
           <View style={[styles.footerCol, styles.footerColNewsletter]}>
-            <Text style={styles.colHeading}>
+            <Text style={[styles.colHeading, isDarkMode && { color: '#FFFFFF' }]}>
               {t('newsletter_subscribe', 'Subscribe to our newsletter')}
             </Text>
-            <Text style={styles.newsletterSub}>
+            <Text style={[styles.newsletterSub, isDarkMode && { color: '#94A3B8' }]}>
               {t('newsletter_desc', 'Get health tips, offers and updates.')}
             </Text>
 
-            <View style={styles.subscribeInputRow}>
+            <View style={[styles.subscribeInputRow, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.14)' }]}>
               <TextInput
-                style={styles.newsletterInput}
+                style={[styles.newsletterInput, isDarkMode && { color: '#FFFFFF' }]}
                 placeholder={t('enter_email', 'Enter your email')}
-                placeholderTextColor="#94A3B8"
+                placeholderTextColor={isDarkMode ? '#64748B' : '#94A3B8'}
                 value={emailInput}
                 onChangeText={setEmailInput}
                 keyboardType="email-address"
                 autoCapitalize="none"
               />
               <TouchableOpacity
-                style={styles.subscribeBtn}
+                style={[styles.subscribeBtn, isDarkMode && { backgroundColor: '#00E5B0' }]}
                 onPress={handleSubscribe}
                 activeOpacity={0.88}
                 accessibilityLabel="Subscribe"
               >
-                <Ionicons name="arrow-forward" size={17} color="#FFFFFF" />
+                <Ionicons name="arrow-forward" size={17} color={isDarkMode ? '#080E1A' : '#FFFFFF'} />
               </TouchableOpacity>
             </View>
             {subscribed && (
@@ -332,8 +338,8 @@ const WebFooter = ({ navigation, style }) => {
         {/* ============================================================
             BOTTOM STRIP: COPYRIGHT, BRAND PROMISE & SCROLL TO TOP
         ============================================================ */}
-        <View style={[styles.bottomStrip, isMobile && styles.bottomStripMobile]}>
-          <Text style={[styles.copyrightText, isIndic && { lineHeight: 18 }]}>
+        <View style={[styles.bottomStrip, isDarkMode && { borderTopColor: 'rgba(255, 255, 255, 0.08)' }, isMobile && styles.bottomStripMobile]}>
+          <Text style={[styles.copyrightText, isIndic && { lineHeight: 18 }, isDarkMode && { color: '#64748B' }]}>
             {t(
               'footer_rights',
               '© 2026 Unnathi Healthcare / MediUnify • All rights reserved. Registered Telemedicine Network in India.'
@@ -342,20 +348,20 @@ const WebFooter = ({ navigation, style }) => {
 
           <View style={[styles.bottomRightWrap, isMobile && styles.bottomRightWrapMobile]}>
             <View style={styles.madeWithWrap}>
-              <Text style={styles.madeWithText}>{t('made_with_love', 'Made with')}</Text>
+              <Text style={[styles.madeWithText, isDarkMode && { color: '#64748B' }]}>{t('made_with_love', 'Made with')}</Text>
               <Ionicons name="heart" size={13} color="#EF4444" style={{ marginHorizontal: 4 }} />
-              <Text style={styles.madeWithText}>
+              <Text style={[styles.madeWithText, isDarkMode && { color: '#64748B' }]}>
                 {t('healthier_tomorrow', 'for a healthier tomorrow.')}
               </Text>
             </View>
 
             <TouchableOpacity
-              style={styles.scrollTopBtn}
+              style={[styles.scrollTopBtn, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)', borderWidth: 1 }]}
               onPress={scrollToTop}
               activeOpacity={0.8}
               accessibilityLabel="Scroll to top"
             >
-              <Ionicons name="arrow-up" size={18} color="#FFFFFF" />
+              <Ionicons name="arrow-up" size={18} color={isDarkMode ? '#00E5B0' : '#FFFFFF'} />
             </TouchableOpacity>
           </View>
         </View>
@@ -364,7 +370,7 @@ const WebFooter = ({ navigation, style }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   footerWrapper: {
     backgroundColor: '#E0ECF6',
     backgroundImage: 'linear-gradient(180deg, #DDEAF5 0%, #E5F0F8 45%, #DCE8F3 100%)',

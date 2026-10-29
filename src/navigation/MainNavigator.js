@@ -142,7 +142,7 @@ import MembershipScreen from '../screens/services/membership/MembershipScreen';
 // ==================================================
 // DEDICATED PATIENT PROFILE MENU SCREENS
 // ==================================================
-import MyAppointmentsScreen from '../screens/services/booking/MyAppointmentsScreen.web';
+import MyAppointmentsScreen from '../screens/services/booking/MyAppointmentsScreen';
 import MyTestsScreen from '../screens/services/lab/MyTestsScreen';
 import MyMedicineOrdersScreen from '../screens/services/pharmacy/MyMedicineOrdersScreen';
 import MyMedicalRecordsScreen from '../screens/health/MyMedicalRecordsScreen.web';
@@ -205,18 +205,27 @@ const BottomNavigation = ({
   // ==================================================
 
   const goTo = (route) => {
+    console.log('Bottom navigation pressed:', route);
 
-    console.log(
-      'Bottom navigation pressed:',
-      route
-    );
+    if (navigationRef?.isReady?.()) {
+      try {
+        navigationRef.navigate('MainApp', { screen: route });
+      } catch (e) {}
+      try {
+        navigationRef.navigate(route);
+        return;
+      } catch (e) {}
+    }
 
-    navigation.navigate(
-      'MainApp',
-      {
-        screen: route,
+    if (navigation?.navigate) {
+      try {
+        navigation.navigate('MainApp', { screen: route });
+      } catch (e) {
+        try {
+          navigation.navigate(route);
+        } catch (e2) {}
       }
-    );
+    }
   };
 
 
@@ -234,7 +243,7 @@ const BottomNavigation = ({
   const isAlertsActive = ['Notifications', 'Alerts'].includes(currentRoute);
   const isHistoryActive = ['TransactionHistory', 'History'].includes(currentRoute);
 
-  const activeColor = '#00B894';
+  const activeColor = isDarkMode ? '#00E5B0' : '#00B894';
   const inactiveColor = isDarkMode ? '#94A3B8' : '#647488';
 
   return (
@@ -248,8 +257,10 @@ const BottomNavigation = ({
           height: isTabletDevice ? 64 : 62,
         },
         isDarkMode && {
-          backgroundColor: theme.card,
-          borderColor: theme.border,
+          backgroundColor: '#0A1120',
+          borderColor: 'rgba(255, 255, 255, 0.08)',
+          shadowColor: '#000000',
+          shadowOpacity: 0.6,
         },
       ]}
     >
@@ -268,8 +279,8 @@ const BottomNavigation = ({
           style={[
             styles.bottomText,
             isIndic && { fontSize: 8.5, lineHeight: 12 },
-            isDarkMode && { color: '#94A3B8' },
-            isHomeActive && styles.activeBottomText,
+            isDarkMode && { color: inactiveColor },
+            isHomeActive && (isDarkMode ? { color: '#00E5B0', fontWeight: '800' } : styles.activeBottomText),
           ]}
           numberOfLines={1}
         >
@@ -292,8 +303,8 @@ const BottomNavigation = ({
           style={[
             styles.bottomText,
             isIndic && { fontSize: 8.5, lineHeight: 12 },
-            isDarkMode && { color: '#94A3B8' },
-            isSearchActive && styles.activeBottomText,
+            isDarkMode && { color: inactiveColor },
+            isSearchActive && (isDarkMode ? { color: '#00E5B0', fontWeight: '800' } : styles.activeBottomText),
           ]}
           numberOfLines={1}
         >
@@ -313,6 +324,10 @@ const BottomNavigation = ({
             style={[
               styles.vaultGlowHalo,
               { transform: [{ scale: pulseAnim }] },
+              isDarkMode && {
+                backgroundColor: 'rgba(0, 229, 176, 0.16)',
+                borderColor: 'rgba(0, 229, 176, 0.35)',
+              },
             ]}
           />
 
@@ -320,7 +335,19 @@ const BottomNavigation = ({
           <View
             style={[
               styles.centerVaultCircle,
+              isDarkMode && {
+                backgroundColor: '#111C35',
+                borderColor: '#00E5B0',
+                shadowColor: '#00E5B0',
+                shadowOpacity: 0.35,
+              },
               isChatbotActive && styles.centerVaultCircleActive,
+              isChatbotActive && isDarkMode && {
+                backgroundColor: '#162846',
+                borderColor: '#00E5B0',
+                shadowColor: '#00E5B0',
+                shadowOpacity: 0.6,
+              },
             ]}
           >
             <Image
@@ -333,7 +360,15 @@ const BottomNavigation = ({
             />
 
             {/* Sparkle Badge / Live AI Status */}
-            <View style={styles.aiSparkleBadge}>
+            <View
+              style={[
+                styles.aiSparkleBadge,
+                isDarkMode && {
+                  borderColor: '#111C35',
+                  backgroundColor: '#00E5B0',
+                },
+              ]}
+            >
               <Ionicons name="sparkles" size={9.5} color="#FFFFFF" />
             </View>
           </View>
@@ -344,8 +379,8 @@ const BottomNavigation = ({
             styles.bottomText,
             styles.centerAiText,
             isIndic && { fontSize: 8.5, lineHeight: 12 },
-            isDarkMode && { color: '#94A3B8' },
-            isChatbotActive && styles.activeBottomText,
+            isDarkMode && { color: inactiveColor },
+            isChatbotActive && (isDarkMode ? { color: '#00E5B0', fontWeight: '800' } : styles.activeBottomText),
           ]}
           numberOfLines={1}
         >
@@ -365,14 +400,21 @@ const BottomNavigation = ({
             size={isTabletDevice ? 21 : 23}
             color={isAlertsActive ? activeColor : inactiveColor}
           />
-          <View style={styles.notifBadgeDot} />
+          <View
+            style={[
+              styles.notifBadgeDot,
+              isDarkMode && {
+                borderColor: '#0A1120',
+              },
+            ]}
+          />
         </View>
         <Text
           style={[
             styles.bottomText,
             isIndic && { fontSize: 8.5, lineHeight: 12 },
-            isDarkMode && { color: '#94A3B8' },
-            isAlertsActive && styles.activeBottomText,
+            isDarkMode && { color: inactiveColor },
+            isAlertsActive && (isDarkMode ? { color: '#00E5B0', fontWeight: '800' } : styles.activeBottomText),
           ]}
           numberOfLines={1}
         >
@@ -395,8 +437,8 @@ const BottomNavigation = ({
           style={[
             styles.bottomText,
             isIndic && { fontSize: 8.5, lineHeight: 12 },
-            isDarkMode && { color: '#94A3B8' },
-            isHistoryActive && styles.activeBottomText,
+            isDarkMode && { color: inactiveColor },
+            isHistoryActive && (isDarkMode ? { color: '#00E5B0', fontWeight: '800' } : styles.activeBottomText),
           ]}
           numberOfLines={1}
         >
@@ -425,11 +467,6 @@ const PROTECTED_ROUTES = [
   'VideoBooking',
   'LabBooking',
   'SurgeryQuoteRequest',
-  'Bookings',
-  'MyAppointments',
-  'MyTests',
-  'MyMedicineOrders',
-  'TransactionHistory',
 ];
 
 import { isDesktopLayout, isDesktopSiteRequested, syncResponsiveViewport } from '../utils/responsiveLayoutHelper';
@@ -499,16 +536,31 @@ const MainNavigator = ({
           setCurrentRoute((prev) => (prev !== route.name ? route.name : prev));
           setCurrentParams(route.params || {});
 
-          // Protected route check: guests cannot directly enter booking/order/history routes
+          // Protected route check: guests cannot directly enter checkout/payment routes
           if (PROTECTED_ROUTES.includes(route.name)) {
             AsyncStorage.getItem('isLoggedIn').then((stored) => {
               AsyncStorage.getItem('@unnathi_is_guest').then((isGuest) => {
                 if (stored !== 'true' || isGuest === 'true') {
                   if (navigationRef?.isReady?.()) {
-                    navigationRef.navigate('Login', {
-                      returnTo: route.name,
-                      returnParams: route.params,
-                    });
+                    try {
+                      navigationRef.navigate('MainApp', {
+                        screen: 'Login',
+                        params: {
+                          returnTo: route.name,
+                          returnParams: route.params,
+                        },
+                      });
+                    } catch (e) {
+                      try {
+                        navigationRef.navigate('Auth', {
+                          screen: 'Login',
+                          params: {
+                            returnTo: route.name,
+                            returnParams: route.params,
+                          },
+                        });
+                      } catch (e2) {}
+                    }
                   }
                 }
               });

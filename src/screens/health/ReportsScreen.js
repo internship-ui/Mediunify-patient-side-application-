@@ -18,7 +18,7 @@ import WebFooter from '../../components/web/WebFooter';
 import { useTheme } from '../../context/ThemeContext';
 import { useThemedStyles } from '../../utils/themeStyles';
 
-const SAMPLE_REPORTS = [
+export const SAMPLE_REPORTS = [
   {
     id: 'rep-1',
     testName: 'Complete Blood Count (CBC) with ESR',
@@ -87,7 +87,13 @@ const SAMPLE_REPORTS = [
   },
 ];
 
-const ReportsScreen = ({ navigation }) => {
+import ReportsScreenWeb from './ReportsScreen.web';
+
+const ReportsScreen = (props) => {
+  if (Platform.OS === 'web') {
+    return <ReportsScreenWeb {...props} />;
+  }
+  const { navigation } = props;
   const { isDarkMode, theme, t, isIndic } = useTheme();
   const styles = useThemedStyles(baseStyles);
   const [reports, setReports] = useState(SAMPLE_REPORTS);
@@ -125,7 +131,13 @@ const ReportsScreen = ({ navigation }) => {
         <View style={[{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', width: '100%' }, Platform.OS === 'web' && styles.webInnerContainer]}>
           <TouchableOpacity
             style={styles.backBtn}
-            onPress={() => navigation.goBack()}
+            onPress={() => {
+              if (navigation?.canGoBack?.()) {
+                navigation.goBack();
+              } else if (navigation?.navigate) {
+                navigation.navigate('Home');
+              }
+            }}
             activeOpacity={0.8}
           >
             <Ionicons name="arrow-back" size={22} color={isDarkMode ? theme.text : colors.secondary} />

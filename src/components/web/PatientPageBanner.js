@@ -2,23 +2,8 @@ import React from 'react';
 import { View, Text, StyleSheet, TouchableOpacity, useWindowDimensions } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import WebBackButton from './WebBackButton';
-
-/**
- * PatientPageBanner - Consistent, modern healthcare header banner
- * Designed for MediUnify patient portal web pages.
- *
- * Color Theme:
- * - Navy Blue: #1E3A8A (Headings)
- * - Teal: #008B94 (Accents / Icons)
- * - Aqua: #00C2CB (Highlights)
- * - Fresh Green: #7BC96F (Success / Status)
- * - Coral: #FF7F50 (Warnings / Alerts)
- * - Slate: #64748B / #475569 (Secondary Text)
- */
-
-import { BANNER_THEMES } from '../../theme/colors';
-
-const THEME_STYLES = BANNER_THEMES;
+import { BANNER_THEMES, getBannerTheme } from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
 
 const PatientPageBanner = ({
   title,
@@ -33,9 +18,122 @@ const PatientPageBanner = ({
   onBack,
 }) => {
   const { width } = useWindowDimensions();
+  const { isDarkMode } = useTheme();
   const isDesktop = width >= 900;
-  const currentTheme = THEME_STYLES[theme] || THEME_STYLES.teal;
+  const currentTheme = getBannerTheme(theme, isDarkMode);
 
+  // On Mobile & Tablet (< 900px), render dedicated mobile layout with full-width title to avoid cramped text wrapping
+  if (!isDesktop) {
+    return (
+      <View
+        style={[
+          styles.bannerCard,
+          styles.bannerCardMobile,
+          {
+            backgroundColor: currentTheme.bg,
+            backgroundImage: currentTheme.gradient,
+            borderColor: currentTheme.borderColor,
+          },
+          style,
+        ]}
+      >
+        {/* Top Header Row: Back Button + Icon + Category Badge */}
+        <View style={styles.mobileTopRow}>
+          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8 }}>
+            {onBack ? (
+              <WebBackButton
+                onPress={onBack}
+                style={{ alignSelf: 'center' }}
+              />
+            ) : null}
+
+            {iconName ? (
+              <View
+                style={[
+                  styles.iconCircleMobile,
+                  {
+                    backgroundColor: currentTheme.iconCircleBg,
+                    borderColor: currentTheme.iconBorder || currentTheme.badgeBorder || '#E2E8F0',
+                  },
+                ]}
+              >
+                <Ionicons name={iconName} size={20} color={currentTheme.iconColor} />
+              </View>
+            ) : null}
+          </View>
+
+          {badgeText ? (
+            <View
+              style={[
+                styles.categoryBadge,
+                styles.categoryBadgeMobile,
+                { backgroundColor: currentTheme.badgeBg, borderColor: currentTheme.badgeBorder },
+              ]}
+            >
+              {badgeIcon ? (
+                <Ionicons name={badgeIcon} size={11} color={currentTheme.badgeText} style={{ marginRight: 4 }} />
+              ) : null}
+              <Text style={[styles.categoryBadgeText, { color: currentTheme.badgeText, fontSize: 10 }]}>
+                {badgeText}
+              </Text>
+            </View>
+          ) : null}
+        </View>
+
+        {/* Full Width Title & Subtitle */}
+        <View style={styles.mobileTitleSection}>
+          <Text style={[styles.titleTextMobile, { color: currentTheme.headingColor }]}>{title}</Text>
+          {subtitle ? (
+            typeof subtitle === 'string' ? (
+              <Text style={[styles.subtitleTextMobile, { color: currentTheme.textColor }]}>{subtitle}</Text>
+            ) : (
+              <View style={{ marginTop: 4 }}>{subtitle}</View>
+            )
+          ) : null}
+        </View>
+
+        {/* Status / Quick Filter Pills */}
+        {Array.isArray(pills) && pills.length > 0 ? (
+          <View style={styles.pillsRowMobile}>
+            {pills.map((pill, idx) => (
+              <View
+                key={idx}
+                style={[
+                  styles.pillBadge,
+                  styles.pillBadgeMobile,
+                  {
+                    backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.06)' : (pill.bgColor || '#DCFCE7'),
+                    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.12)' : (pill.borderColor || '#86EFAC'),
+                  },
+                ]}
+              >
+                {pill.icon ? (
+                  <Ionicons
+                    name={pill.icon}
+                    size={11}
+                    color={isDarkMode ? '#00E5B0' : (pill.textColor || '#166534')}
+                    style={{ marginRight: 4 }}
+                  />
+                ) : null}
+                <Text style={[styles.pillBadgeText, { color: isDarkMode ? '#00E5B0' : (pill.textColor || '#166534'), fontSize: 10.5 }]}>
+                  {pill.label}
+                </Text>
+              </View>
+            ))}
+          </View>
+        ) : null}
+
+        {/* Action Button */}
+        {rightContent ? (
+          <View style={styles.mobileRightContentWrap}>
+            {rightContent}
+          </View>
+        ) : null}
+      </View>
+    );
+  }
+
+  // Desktop Layout
   return (
     <View
       style={[
@@ -48,7 +146,7 @@ const PatientPageBanner = ({
         style,
       ]}
     >
-      <View style={[styles.mainRow, isDesktop ? styles.mainRowDesktop : styles.mainRowMobile]}>
+      <View style={[styles.mainRow, styles.mainRowDesktop]}>
         {/* Left Section: Icon + Text Content */}
         <View style={styles.leftGroup}>
           {onBack ? (
@@ -89,11 +187,11 @@ const PatientPageBanner = ({
               </View>
             ) : null}
 
-            <Text style={styles.titleText}>{title}</Text>
+            <Text style={[styles.titleText, { color: currentTheme.headingColor }]}>{title}</Text>
 
             {subtitle ? (
               typeof subtitle === 'string' ? (
-                <Text style={styles.subtitleText}>{subtitle}</Text>
+                <Text style={[styles.subtitleText, { color: currentTheme.textColor }]}>{subtitle}</Text>
               ) : (
                 <View style={{ marginTop: 4 }}>{subtitle}</View>
               )
@@ -108,8 +206,8 @@ const PatientPageBanner = ({
                     style={[
                       styles.pillBadge,
                       {
-                        backgroundColor: pill.bgColor || '#DCFCE7',
-                        borderColor: pill.borderColor || '#86EFAC',
+                        backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.06)' : (pill.bgColor || '#DCFCE7'),
+                        borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.12)' : (pill.borderColor || '#86EFAC'),
                       },
                     ]}
                   >
@@ -117,11 +215,11 @@ const PatientPageBanner = ({
                       <Ionicons
                         name={pill.icon}
                         size={12}
-                        color={pill.textColor || '#166534'}
-                        style={{ marginRight: 4 }}
+                        color={isDarkMode ? '#00E5B0' : (pill.textColor || '#166534')}
+                        style={{ marginRight: 5 }}
                       />
                     ) : null}
-                    <Text style={[styles.pillBadgeText, { color: pill.textColor || '#166534' }]}>
+                    <Text style={[styles.pillBadgeText, { color: isDarkMode ? '#00E5B0' : (pill.textColor || '#166534') }]}>
                       {pill.label}
                     </Text>
                   </View>
@@ -133,7 +231,7 @@ const PatientPageBanner = ({
 
         {/* Right Section: Action Buttons, Quick Stats, or Custom Node */}
         {rightContent ? (
-          <View style={[styles.rightGroup, !isDesktop && styles.rightGroupMobile]}>
+          <View style={styles.rightGroup}>
             {rightContent}
           </View>
         ) : null}
@@ -154,6 +252,68 @@ const styles = StyleSheet.create({
     marginBottom: 16,
     boxShadow: '0 2px 10px rgba(12, 59, 107, 0.05)',
   },
+  bannerCardMobile: {
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    borderRadius: 14,
+    marginTop: 2,
+    marginBottom: 8,
+  },
+  mobileTopRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    width: '100%',
+    marginBottom: 4,
+  },
+  iconCircleMobile: {
+    width: 32,
+    height: 32,
+    borderRadius: 10,
+    borderWidth: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    boxShadow: '0 2px 4px rgba(15, 23, 42, 0.04)',
+  },
+  categoryBadgeMobile: {
+    marginBottom: 0,
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+  },
+  mobileTitleSection: {
+    width: '100%',
+    marginTop: 2,
+  },
+  titleTextMobile: {
+    fontSize: 18,
+    fontWeight: '900',
+    color: '#1E3A8A',
+    letterSpacing: -0.3,
+    lineHeight: 23,
+  },
+  subtitleTextMobile: {
+    fontSize: 11.5,
+    color: '#475569',
+    marginTop: 2,
+    lineHeight: 16,
+    fontWeight: '400',
+  },
+  pillsRowMobile: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    alignItems: 'center',
+    gap: 5,
+    marginTop: 6,
+    width: '100%',
+  },
+  pillBadgeMobile: {
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+  },
+  mobileRightContentWrap: {
+    width: '100%',
+    marginTop: 8,
+  },
   mainRow: {
     justifyContent: 'space-between',
     alignItems: 'center',
@@ -161,10 +321,6 @@ const styles = StyleSheet.create({
   },
   mainRowDesktop: {
     flexDirection: 'row',
-  },
-  mainRowMobile: {
-    flexDirection: 'column',
-    alignItems: 'flex-start',
   },
   leftGroup: {
     flexDirection: 'row',
@@ -240,10 +396,5 @@ const styles = StyleSheet.create({
   rightGroup: {
     flexShrink: 0,
     alignItems: 'center',
-  },
-  rightGroupMobile: {
-    alignSelf: 'stretch',
-    alignItems: 'flex-start',
-    marginTop: 4,
   },
 });

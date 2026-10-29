@@ -15,6 +15,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import WebFooter from '../../components/web/WebFooter';
 
 // All currently active & available MediUnify Mobile services
@@ -183,6 +184,7 @@ const DARK_SERVICE_STYLES = {
 
 const AllServicesScreen = ({ navigation, route }) => {
   const { t, language, isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const [searchQuery, setSearchQuery] = useState('');
   const [storedCity, setStoredCity] = useState('');
@@ -414,7 +416,7 @@ const AllServicesScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F8FAFC',

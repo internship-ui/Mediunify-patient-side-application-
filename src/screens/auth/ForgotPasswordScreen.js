@@ -19,9 +19,12 @@ import { Ionicons } from '@expo/vector-icons';
 import { showAlert } from '../../utils/alert';
 import colors from '../../theme/colors';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import { useKeyboardVisibility } from '../../utils/keyboardUtils';
 
 const ForgotPasswordScreen = ({ navigation }) => {
+  const { isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { t, isIndic } = useTheme();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -116,7 +119,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
 
   return (
     <SafeAreaView style={styles.safeArea} edges={['top', 'left', 'right']}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? '#080E1A' : '#FFFFFF'} />
 
       {/* TOP HEADER */}
       <View style={styles.topHeader}>
@@ -319,7 +322,7 @@ const ForgotPasswordScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',

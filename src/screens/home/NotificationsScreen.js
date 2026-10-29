@@ -13,6 +13,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import WebFooter from '../../components/web/WebFooter';
 import { useTheme } from '../../context/ThemeContext';
 import { useThemedStyles } from '../../utils/themeStyles';
+import { navigationRef } from '../../navigation/navigationRef';
 
 const NOTIFICATIONS_DATA = [
   {
@@ -26,7 +27,8 @@ const NOTIFICATIONS_DATA = [
     iconColor: '#00B894',
     iconBg: '#E6F9F4',
     route: 'MyAppointments',
-    ctaText: 'View Appointment →',
+    params: { initialTab: 'Today' },
+    ctaText: 'View Appointment',
   },
   {
     id: 'notif-2',
@@ -38,8 +40,9 @@ const NOTIFICATIONS_DATA = [
     icon: 'cart-outline',
     iconColor: '#3B82F6',
     iconBg: '#EFF6FF',
-    route: 'Pharmacy',
-    ctaText: 'Track Order →',
+    route: 'MyMedicineOrders',
+    params: { orderId: 'MU-8842', filter: 'Active' },
+    ctaText: 'Track Order',
   },
   {
     id: 'notif-3',
@@ -51,8 +54,9 @@ const NOTIFICATIONS_DATA = [
     icon: 'document-text-outline',
     iconColor: '#0EA5E9',
     iconBg: '#F0F9FF',
-    route: 'LabTests',
-    ctaText: 'View Report →',
+    route: 'Reports',
+    params: {},
+    ctaText: 'View Report',
   },
   {
     id: 'notif-4',
@@ -65,7 +69,8 @@ const NOTIFICATIONS_DATA = [
     iconColor: '#00B894',
     iconBg: '#E6F8F5',
     route: 'Wallet',
-    ctaText: 'View Wallet →',
+    params: {},
+    ctaText: 'View Wallet',
   },
   {
     id: 'notif-5',
@@ -77,8 +82,9 @@ const NOTIFICATIONS_DATA = [
     icon: 'videocam-outline',
     iconColor: '#7BC96F',
     iconBg: '#F2FAF0',
-    route: 'MyAppointments',
-    ctaText: 'View Details →',
+    route: 'MyOnlineConsultations',
+    params: {},
+    ctaText: 'View Details',
   },
 ];
 
@@ -104,11 +110,28 @@ const NotificationsScreen = ({ navigation }) => {
         if (Array.isArray(parsed) && parsed.length > 0) {
           const merged = [...parsed];
           NOTIFICATIONS_DATA.forEach((def) => {
-            if (!merged.some((m) => m.id === def.id)) {
+            const idx = merged.findIndex((m) => m.id === def.id);
+            if (idx >= 0) {
+              merged[idx] = { ...def, unread: merged[idx].unread ?? def.unread };
+            } else {
               merged.push(def);
             }
           });
-          setNotifications(merged);
+          // Sanitize any existing notifications that point to reports
+          const sanitized = merged.map((item) => {
+            if (
+              item.id === 'notif-3' ||
+              item.ctaText === 'View Report' ||
+              (item.route === 'MyTests' &&
+                (item.params?.initialTab === 'REPORTS' ||
+                  item.params?.initialTab === 'reports' ||
+                  item.category === 'Lab Reports'))
+            ) {
+              return { ...item, route: 'Reports', params: {} };
+            }
+            return item;
+          });
+          setNotifications(sanitized);
         }
       }
     } catch (e) {
@@ -128,12 +151,90 @@ const NotificationsScreen = ({ navigation }) => {
     setNotifications((prev) => prev.map((n) => ({ ...n, unread: false })));
   };
 
-  const markAsRead = (id, route) => {
+  const handleNavigate = (route, params = {}) => {
+    if (!route) return;
+
+    // Normalize any report-related routes to the dedicated Reports page
+    let targetRoute = route;
+    if (
+      route === 'MyTests' &&
+      (params?.initialTab === 'REPORTS' ||
+        params?.initialTab === 'reports' ||
+        params?.tab === 'reports')
+    ) {
+      targetRoute = 'Reports';
+    }
+
+    // 1. Try local navigation prop
+    if (navigation?.navigate) {
+      try {
+        navigation.navigate(targetRoute, params);
+        return;
+      } catch (e) {}
+    }
+
+    // 2. Try parent navigation
+    try {
+      const parent = navigation?.getParent?.();
+      if (parent?.navigate) {
+        parent.navigate('MainApp', { screen: targetRoute, params });
+        return;
+      }
+    } catch (e) {}
+
+    // 3. Try global navigationRef
+    if (navigationRef?.isReady?.()) {
+      try {
+        navigationRef.navigate('MainApp', { screen: targetRoute, params });
+        return;
+      } catch (e) {
+        try {
+          navigationRef.navigate(targetRoute, params);
+          return;
+        } catch (e2) {}
+      }
+    }
+
+    // 4. Web fallback if router could not handle state transition
+    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      const routePathMap = {
+        MyAppointments: 'my-appointments',
+        MyMedicineOrders: 'my-medicine-orders',
+        Pharmacy: 'pharmacy',
+        LabTests: 'lab-tests',
+        MyTests: 'my-tests',
+        Reports: 'reports',
+        Wallet: 'wallet',
+        MyOnlineConsultations: 'my-online-consultations',
+        Settings: 'settings',
+      };
+      const path = routePathMap[targetRoute] || targetRoute.toLowerCase();
+      const currentUrl = window.location.href;
+      if (currentUrl.includes('#/')) {
+        window.location.hash = `#/${path}`;
+      } else {
+        const basePath = window.location.pathname.includes('/Mediunify-patient-side-application-')
+          ? '/Mediunify-patient-side-application-/'
+          : '/';
+        window.location.pathname = `${basePath}${path}`;
+      }
+    }
+  };
+
+  const markAsRead = (id, route, params = {}) => {
     setNotifications((prev) =>
       prev.map((n) => (n.id === id ? { ...n, unread: false } : n))
     );
-    if (route && navigation?.navigate) {
-      navigation.navigate(route);
+    let targetRoute = route;
+    if (
+      id === 'notif-3' ||
+      (route === 'MyTests' &&
+        (params?.initialTab === 'REPORTS' || params?.initialTab === 'reports'))
+    ) {
+      targetRoute = 'Reports';
+    }
+    if (targetRoute) {
+      handleNavigate(targetRoute, params);
     }
   };
 
@@ -152,7 +253,13 @@ const NotificationsScreen = ({ navigation }) => {
           <View style={styles.headerTitleRow}>
             <TouchableOpacity
               style={styles.backBtn}
-              onPress={() => navigation?.goBack()}
+              onPress={() => {
+                if (navigation?.canGoBack?.()) {
+                  navigation.goBack();
+                } else {
+                  handleNavigate('Home');
+                }
+              }}
               activeOpacity={0.7}
               accessibilityLabel="Back"
             >
@@ -225,51 +332,68 @@ const NotificationsScreen = ({ navigation }) => {
             </View>
           ) : (
             filteredNotifications.map((notif) => (
-              <TouchableOpacity
+              <View
                 key={notif.id}
                 style={[styles.card, notif.unread && styles.cardUnread]}
-                onPress={() => markAsRead(notif.id, notif.route)}
-                activeOpacity={0.85}
               >
-                {/* Header Row: Category, Icon, Unread Dot & Time */}
-                <View style={styles.cardHeaderRow}>
-                  <View style={styles.categoryWrap}>
-                    <View style={[styles.iconBox, { backgroundColor: notif.iconBg }]}>
-                      <Ionicons name={notif.icon || 'notifications-outline'} size={15} color={notif.iconColor} />
+                {/* Clickable Card Body (Mobile-friendly non-nested responder) */}
+                <TouchableOpacity
+                  style={styles.cardClickableBody}
+                  onPress={() => markAsRead(notif.id, notif.route, notif.params)}
+                  activeOpacity={0.75}
+                  accessibilityRole="button"
+                >
+                  {/* Header Row: Category, Icon, Unread Dot & Time */}
+                  <View style={styles.cardHeaderRow}>
+                    <View style={styles.categoryWrap}>
+                      <View style={[styles.iconBox, { backgroundColor: notif.iconBg }]}>
+                        <Ionicons name={notif.icon || 'notifications-outline'} size={15} color={notif.iconColor} />
+                      </View>
+                      <Text style={styles.categoryText}>{notif.category}</Text>
+                      {notif.unread && <View style={styles.unreadDot} />}
                     </View>
-                    <Text style={styles.categoryText}>{notif.category}</Text>
-                    {notif.unread && <View style={styles.unreadDot} />}
+                    <Text style={styles.timeText}>{notif.time}</Text>
                   </View>
-                  <Text style={styles.timeText}>{notif.time}</Text>
-                </View>
 
-                {/* Title */}
-                <Text style={[styles.cardTitle, notif.unread && styles.cardTitleUnread]}>
-                  {notif.title}
-                </Text>
+                  {/* Title */}
+                  <Text style={[styles.cardTitle, notif.unread && styles.cardTitleUnread]}>
+                    {notif.title}
+                  </Text>
 
-                {/* Supporting Info */}
-                <View style={styles.infoBlock}>
-                  {Array.isArray(notif.infoLines) && notif.infoLines.length > 0 ? (
-                    notif.infoLines.map((line, idx) => (
-                      <Text key={idx} style={styles.infoLine} numberOfLines={1}>
-                        {line}
+                  {/* Supporting Info */}
+                  <View style={styles.infoBlock}>
+                    {Array.isArray(notif.infoLines) && notif.infoLines.length > 0 ? (
+                      notif.infoLines.map((line, idx) => (
+                        <Text key={idx} style={styles.infoLine} numberOfLines={1}>
+                          {line}
+                        </Text>
+                      ))
+                    ) : notif.message ? (
+                      <Text style={styles.infoLine} numberOfLines={2}>
+                        {notif.message}
                       </Text>
-                    ))
-                  ) : notif.message ? (
-                    <Text style={styles.infoLine} numberOfLines={2}>
-                      {notif.message}
-                    </Text>
-                  ) : null}
-                </View>
+                    ) : null}
+                  </View>
+                </TouchableOpacity>
 
-                {/* Action CTA */}
+                {/* Sibling Clickable Action Button */}
                 {notif.ctaText && (
                   <View style={styles.actionRow}>
-                    <Text style={styles.actionText}>{notif.ctaText}</Text>
+                    <TouchableOpacity
+                      style={styles.actionButton}
+                      onPress={() => markAsRead(notif.id, notif.route, notif.params)}
+                      activeOpacity={0.7}
+                      accessibilityRole="button"
+                      accessibilityLabel={notif.ctaText}
+                    >
+                      <Text style={styles.actionText}>
+                        {notif.ctaText.replace(/\s*[→\->]+$/, '')}
+                      </Text>
+                      <Ionicons name="arrow-forward" size={13} color="#00B894" style={styles.actionIcon} />
+                    </TouchableOpacity>
                   </View>
                 )}
-              </TouchableOpacity>
+              </View>
             ))
           )}
         </View>
@@ -416,7 +540,11 @@ const baseStyles = StyleSheet.create({
     padding: 12,
     borderWidth: 1,
     borderColor: '#E2E8F0',
-    ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.15s ease' } : {}),
+    ...(Platform.OS === 'web' ? { transition: 'all 0.15s ease' } : {}),
+  },
+  cardClickableBody: {
+    width: '100%',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer' } : {}),
   },
   cardUnread: {
     backgroundColor: '#FFFFFF',
@@ -485,14 +613,29 @@ const baseStyles = StyleSheet.create({
   },
 
   actionRow: {
-    marginTop: 2,
+    marginTop: 6,
     flexDirection: 'row',
     alignItems: 'center',
   },
+  actionButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 5,
+    paddingHorizontal: 11,
+    borderRadius: 8,
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    alignSelf: 'flex-start',
+    ...(Platform.OS === 'web' ? { cursor: 'pointer', transition: 'all 0.15s ease' } : {}),
+  },
   actionText: {
-    fontSize: 12,
+    fontSize: 12.5,
     fontWeight: '700',
     color: '#00B894',
+  },
+  actionIcon: {
+    marginLeft: 4,
   },
 
   // Empty State

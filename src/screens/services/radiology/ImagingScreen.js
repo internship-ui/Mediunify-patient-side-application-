@@ -23,6 +23,7 @@ import { isGuestUser, promptLoginRequired } from '../../../utils/authHelper';
 // WebFooter omitted for native mobile
 import WebBackButton from '../../../components/web/WebBackButton';
 import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 import { isDesktopLayout, isDesktopSiteRequested } from '../../../utils/responsiveLayoutHelper';
 import {
   RADIOLOGY_CATEGORIES,
@@ -206,8 +207,17 @@ const CATEGORY_DESIGN_MAP = {
   },
 };
 
-const getCategoryDesign = (catId) => {
-  return (
+const DARK_CATEGORY_ACCENTS = {
+  mri: { btnBg: '#38BDF8', btnShadow: 'rgba(56, 189, 248, 0.35)' },
+  ct: { btnBg: '#00E5B0', btnShadow: 'rgba(0, 229, 176, 0.35)' },
+  xray: { btnBg: '#60A5FA', btnShadow: 'rgba(96, 165, 250, 0.35)' },
+  ultrasound: { btnBg: '#FBBF24', btnShadow: 'rgba(251, 191, 36, 0.35)' },
+  petct: { btnBg: '#F87171', btnShadow: 'rgba(248, 113, 113, 0.35)' },
+  nuclear: { btnBg: '#C084FC', btnShadow: 'rgba(192, 132, 252, 0.35)' },
+};
+
+const getCategoryDesign = (catId, isDarkMode = false) => {
+  const base =
     CATEGORY_DESIGN_MAP[catId] || {
       gradient: 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 55%, #BAE6FD 100%)',
       bg: '#F0F9FF',
@@ -218,12 +228,27 @@ const getCategoryDesign = (catId) => {
       btnShadow: 'rgba(2, 132, 199, 0.35)',
       discBg: '#BAE6FD',
       discGradient: 'linear-gradient(135deg, #BAE6FD 0%, #7DD3FC 100%)',
-    }
-  );
+    };
+  if (isDarkMode) {
+    const accent = DARK_CATEGORY_ACCENTS[catId] || { btnBg: '#00E5B0', btnShadow: 'rgba(0, 229, 176, 0.35)' };
+    return {
+      ...base,
+      bg: '#111C35',
+      gradient: 'radial-gradient(ellipse 100% 90% at 50% -10%, rgba(0, 229, 176, 0.12) 0%, rgba(17, 28, 53, 0.95) 55%, #0B132B 100%)',
+      border: 'rgba(255, 255, 255, 0.08)',
+      cardShadow: 'rgba(0, 0, 0, 0.45)',
+      btnBg: accent.btnBg,
+      btnShadow: accent.btnShadow,
+      discBg: '#16223D',
+      discGradient: 'none',
+    };
+  }
+  return base;
 };
 
 function ImagingScreen({ navigation, route }) {
   const { t, isIndic, isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const isDark = isDarkMode;
   const { width } = useWindowDimensions();
   const desktopSiteMode = isDesktopSiteRequested();
@@ -276,8 +301,8 @@ function ImagingScreen({ navigation, route }) {
 
   // Active Category Design Scheme (Dynamic colors for cards, buttons, accents)
   const activeCategoryDesign = selectedCategory
-    ? getCategoryDesign(selectedCategory.id)
-    : (selectedTest?.categoryId ? getCategoryDesign(selectedTest.categoryId) : getCategoryDesign('mri'));
+    ? getCategoryDesign(selectedCategory.id, isDarkMode)
+    : (selectedTest?.categoryId ? getCategoryDesign(selectedTest.categoryId, isDarkMode) : getCategoryDesign('mri', isDarkMode));
 
   // Filters & Sorting in Provider List
   const [sortBy, setSortBy] = useState('price-low'); // 'price-low' | 'price-high' | 'distance' | 'rating' | 'earliest'
@@ -1551,9 +1576,13 @@ function ImagingScreen({ navigation, route }) {
           {/* VIEW 1: CATEGORIES (MAIN PAGE) */}
           {viewMode === 'categories' && (
             <View style={styles.sectionWrap}>
-              {/* Background ambient medical glows so the mint background color & atmosphere flows here also */}
-              <View style={styles.categoriesAmbientGlow} pointerEvents="none" />
-              <View style={styles.categoriesAmbientGlowLeft} pointerEvents="none" />
+              {/* Background ambient medical glows (web light mode only, since RN native does not support CSS filter blur) */}
+              {!isDark && Platform.OS === 'web' && (
+                <>
+                  <View style={styles.categoriesAmbientGlow} pointerEvents="none" />
+                  <View style={styles.categoriesAmbientGlowLeft} pointerEvents="none" />
+                </>
+              )}
 
               {/* Categories Grid or Empty State */}
               {displayedCategories.length === 0 ? (
@@ -1588,7 +1617,7 @@ function ImagingScreen({ navigation, route }) {
               ) : (
                 <View style={styles.categoriesGrid}>
                   {displayedCategories.map((cat) => {
-                    const design = getCategoryDesign(cat.id);
+                    const design = getCategoryDesign(cat.id, isDarkMode);
                     return (
                       <TouchableOpacity
                         key={cat.id}
@@ -1597,8 +1626,8 @@ function ImagingScreen({ navigation, route }) {
                           styles.categoryBannerCard,
                           {
                             width: getCategoryCardWidth(),
-                            borderColor: design.border,
-                            backgroundColor: design.bg,
+                            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : design.border,
+                            backgroundColor: isDark ? '#111C35' : design.bg,
                             ...(Platform.OS === 'web'
                               ? {
                                   
@@ -1612,10 +1641,10 @@ function ImagingScreen({ navigation, route }) {
                       >
                         {/* 1. Left Column: Title, test count & Explore button */}
                         <View style={styles.catBannerLeftCol}>
-                          <Text style={styles.catBannerTitle} numberOfLines={1}>
+                          <Text style={[styles.catBannerTitle, isDark && { color: '#FFFFFF' }]} numberOfLines={1}>
                             {cat.name}
                           </Text>
-                          <Text style={styles.catBannerSubtitle} numberOfLines={1}>
+                          <Text style={[styles.catBannerSubtitle, isDark && { color: '#94A3B8' }]} numberOfLines={1}>
                             {cat.testCount} Tests available
                           </Text>
                           {/* Circular Arrow & Book Now CTA */}
@@ -1657,9 +1686,8 @@ function ImagingScreen({ navigation, route }) {
                 style={[
                   styles.categoryBannerHero,
                   {
-                    backgroundColor: activeCategoryDesign.bg,
-                    
-                    borderColor: activeCategoryDesign.border,
+                    backgroundColor: isDark ? '#111C35' : activeCategoryDesign.bg,
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : activeCategoryDesign.border,
                     boxShadow: `0 8px 24px -4px ${activeCategoryDesign.cardShadow}`,
                   },
                 ]}
@@ -1689,7 +1717,7 @@ function ImagingScreen({ navigation, route }) {
                         {displayedTests.length} Tests Available
                       </Text>
                     </View>
-                    <Text style={styles.catBannerTitle}>{selectedCategory.name}</Text>
+                    <Text style={[styles.catBannerTitle, isDark && { color: '#FFFFFF' }]}>{selectedCategory.name}</Text>
                     <Text style={styles.catBannerDesc}>Select a scan to compare diagnostic centres in {selectedCity}</Text>
                   </View>
                 </View>
@@ -1698,8 +1726,8 @@ function ImagingScreen({ navigation, route }) {
                   style={[
                     styles.changeCategoryBtn,
                     {
-                      borderColor: activeCategoryDesign.border,
-                      backgroundColor: '#FFFFFF',
+                      borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : activeCategoryDesign.border,
+                      backgroundColor: isDark ? '#16223D' : '#FFFFFF',
                       boxShadow: `0 2px 8px ${activeCategoryDesign.cardShadow}`,
                     },
                   ]}
@@ -1756,8 +1784,8 @@ function ImagingScreen({ navigation, route }) {
                         styles.testCard,
                         {
                           width: getTestCardWidth(),
-                          borderColor: activeCategoryDesign.border,
-                          backgroundColor: '#FFFFFF',
+                          borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : activeCategoryDesign.border,
+                          backgroundColor: isDark ? '#111C35' : '#FFFFFF',
                           boxShadow: `0 8px 24px -4px ${activeCategoryDesign.cardShadow}`,
                         },
                       ]}
@@ -1767,8 +1795,7 @@ function ImagingScreen({ navigation, route }) {
                         style={[
                           styles.cardImageContainer,
                           {
-                            backgroundColor: activeCategoryDesign.bg,
-                            
+                            backgroundColor: isDark ? '#16223D' : activeCategoryDesign.bg,
                           },
                         ]}
                       >
@@ -1785,8 +1812,8 @@ function ImagingScreen({ navigation, route }) {
                             style={[
                               styles.testCategoryTag,
                               {
-                                borderColor: activeCategoryDesign.border,
-                                backgroundColor: '#FFFFFF',
+                                borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : activeCategoryDesign.border,
+                                backgroundColor: isDark ? '#16223D' : '#FFFFFF',
                               },
                             ]}
                           >
@@ -1887,9 +1914,8 @@ function ImagingScreen({ navigation, route }) {
                 style={[
                   styles.selectedTestHeroCard,
                   {
-                    backgroundColor: activeCategoryDesign.bg,
-                    
-                    borderColor: activeCategoryDesign.border,
+                    backgroundColor: isDark ? '#111C35' : activeCategoryDesign.bg,
+                    borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : activeCategoryDesign.border,
                     borderLeftWidth: 4,
                     borderLeftColor: activeCategoryDesign.btnBg,
                     boxShadow: `0 8px 24px -4px ${activeCategoryDesign.cardShadow}`,
@@ -1902,8 +1928,8 @@ function ImagingScreen({ navigation, route }) {
                     style={[
                       styles.selectedTestModalityPill,
                       {
-                        backgroundColor: '#FFFFFF',
-                        borderColor: activeCategoryDesign.border,
+                        backgroundColor: isDark ? '#16223D' : '#FFFFFF',
+                        borderColor: isDark ? 'rgba(255, 255, 255, 0.1)' : activeCategoryDesign.border,
                         borderWidth: 1,
                       },
                     ]}
@@ -2076,8 +2102,8 @@ function ImagingScreen({ navigation, route }) {
                           styles.compactCentreCard,
                           {
                             width: getProviderCardWidth(),
-                            borderColor: activeCategoryDesign.border,
-                            backgroundColor: activeCategoryDesign.bg,
+                            borderColor: isDark ? 'rgba(255, 255, 255, 0.08)' : activeCategoryDesign.border,
+                            backgroundColor: isDark ? '#111C35' : activeCategoryDesign.bg,
                             
                             boxShadow: `0 8px 24px -4px ${activeCategoryDesign.cardShadow}`,
                           },
@@ -2108,7 +2134,7 @@ function ImagingScreen({ navigation, route }) {
 
                         {/* Location (km removed as requested) */}
                         <View style={styles.compactLocationRow}>
-                          <Ionicons name="location-outline" size={13} color="#475569" style={styles.compactMetaIcon} />
+                          <Ionicons name="location-outline" size={13} color={isDark ? '#94A3B8' : '#475569'} style={styles.compactMetaIcon} />
                           <Text style={styles.compactMetaText} numberOfLines={1}>
                             {provider.area}
                           </Text>
@@ -2118,7 +2144,7 @@ function ImagingScreen({ navigation, route }) {
                         <View
                           style={[
                             styles.compactPriceRow,
-                            { borderTopColor: 'rgba(0, 0, 0, 0.07)' },
+                            { borderTopColor: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.07)' },
                           ]}
                         >
                           <View style={styles.compactPriceLeft}>
@@ -4098,7 +4124,7 @@ function ImagingScreen({ navigation, route }) {
 // ==================================================
 // STYLES
 // ==================================================
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: '#F0FDF9',

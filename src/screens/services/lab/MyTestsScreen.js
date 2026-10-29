@@ -8,8 +8,8 @@ const MyTestsScreen = (props) => {
       route={{
         ...props.route,
         params: {
-          ...props.route?.params,
           initialTab: 'BOOKINGS',
+          ...props.route?.params,
         },
       }}
     />

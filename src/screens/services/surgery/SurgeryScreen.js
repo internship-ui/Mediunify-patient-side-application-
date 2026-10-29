@@ -21,6 +21,7 @@ import WebFooter from '../../../components/web/WebFooter';
 import { surgerySpecialties, surgeryHospitals } from '../../../data/surgeryHospitalsData';
 import { useAuthGuard } from '../../../context/AuthGuardContext';
 import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 
 const SURGERY_LIST = [
   'General Surgery Consultation',
@@ -62,6 +63,7 @@ const SurgeryScreen = ({ navigation }) => {
   const { requireLogin } = useAuthGuard();
   const { t, isDarkMode, theme } = useTheme();
   const isDark = isDarkMode;
+  const styles = useThemedStyles(baseStyles);
 
   // Form State
   const [selectedSurgery, setSelectedSurgery] = useState('');
@@ -280,7 +282,7 @@ const SurgeryScreen = ({ navigation }) => {
       </View>
 
       <ScrollView
-        style={{ flex: 1, backgroundColor: '#F5FEFB' }}
+        style={[{ flex: 1, backgroundColor: '#F5FEFB' }, isDark && { backgroundColor: theme.background }]}
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
       >
@@ -288,31 +290,31 @@ const SurgeryScreen = ({ navigation }) => {
           {activeTab === 'explore' ? (
             <View>
               {/* Hero Banner Card */}
-              <View style={[styles.heroBannerCard, !isDesktopWeb && styles.heroBannerCardMobile]}>
-                <Text style={styles.heroHeadline}>
+              <View style={[styles.heroBannerCard, !isDesktopWeb && styles.heroBannerCardMobile, isDark && { backgroundColor: 'transparent' }]}>
+                <Text style={[styles.heroHeadline, isDark && { color: '#FFFFFF' }]}>
                   {t('Surgical Care')}, <Text style={styles.heroHeadlineAccent}>{t('Near You')}</Text>
                 </Text>
 
                 {/* Trust Badges */}
                 <View style={styles.heroValuePropsRow}>
-                  <View style={[styles.heroValueItem, !isDesktopWeb && styles.heroValueItemMobile]}>
+                  <View style={[styles.heroValueItem, !isDesktopWeb && styles.heroValueItemMobile, isDark && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
                     <Ionicons name="shield-checkmark" size={12} color="#0D9488" />
                     <Text style={styles.heroValueText}>{t('NABH Accredited')}</Text>
                   </View>
-                  <View style={[styles.heroValueItem, !isDesktopWeb && styles.heroValueItemMobile]}>
+                  <View style={[styles.heroValueItem, !isDesktopWeb && styles.heroValueItemMobile, isDark && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
                     <Ionicons name="pricetag-outline" size={11} color="#0D9488" />
                     <Text style={styles.heroValueText}>{t('Fixed Prices')}</Text>
                   </View>
-                  <View style={[styles.heroValueItem, !isDesktopWeb && styles.heroValueItemMobile]}>
+                  <View style={[styles.heroValueItem, !isDesktopWeb && styles.heroValueItemMobile, isDark && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
                     <Ionicons name="checkmark-circle" size={12} color="#0D9488" />
                     <Text style={styles.heroValueText}>{t('Cashless Insurance')}</Text>
                   </View>
                 </View>
 
                 {/* Quick Consultation Form */}
-                <View style={[styles.quickFormCard, !isDesktopWeb && styles.quickFormCardMobile]}>
-                  <Text style={styles.quickFormTitle}>{t('Book a Free Callback')}</Text>
-                  <Text style={styles.quickFormSubtitle}>
+                <View style={[styles.quickFormCard, !isDesktopWeb && styles.quickFormCardMobile, isDark && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' }]}>
+                  <Text style={[styles.quickFormTitle, isDark && { color: '#FFFFFF' }]}>{t('Book a Free Callback')}</Text>
+                  <Text style={[styles.quickFormSubtitle, isDark && { color: '#94A3B8' }]}>
                     {t('Free hospital guidance & price estimate.')}
                   </Text>
 
@@ -321,7 +323,7 @@ const SurgeryScreen = ({ navigation }) => {
                     {/* Surgery Selector */}
                     <View style={[styles.formFieldItem, isDesktopWeb && styles.formFieldItemHalf]}>
                       <TouchableOpacity
-                        style={styles.dropdownField}
+                        style={[styles.dropdownField, isDark && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' }]}
                         onPress={() => setSurgeryModalVisible(true)}
                         activeOpacity={0.8}
                       >
@@ -344,13 +346,13 @@ const SurgeryScreen = ({ navigation }) => {
                     {/* City Selector */}
                     <View style={[styles.formFieldItem, isDesktopWeb && styles.formFieldItemHalf]}>
                       <TouchableOpacity
-                        style={styles.dropdownField}
+                        style={[styles.dropdownField, isDark && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' }]}
                         onPress={() => setCityModalVisible(true)}
                         activeOpacity={0.8}
                       >
                         <View style={{ flexDirection: 'row', alignItems: 'center', flex: 1, gap: 8 }}>
                           <Ionicons name="location-outline" size={17} color="#00B894" />
-                          <Text style={styles.dropdownFieldText} numberOfLines={1}>
+                          <Text style={[styles.dropdownFieldText, isDark && { color: '#FFFFFF' }]} numberOfLines={1}>
                             {selectedCity ? `${t('City')}: ${selectedCity}` : t('Select City')}
                           </Text>
                         </View>
@@ -360,10 +362,10 @@ const SurgeryScreen = ({ navigation }) => {
 
                     {/* Full Name */}
                     <View style={[styles.formFieldItem, isDesktopWeb && styles.formFieldItemHalf]}>
-                      <View style={styles.quickInputField}>
+                      <View style={[styles.quickInputField, isDark && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
                         <Ionicons name="person-outline" size={16} color="#00B894" style={{ marginRight: 8 }} />
                         <TextInput
-                          style={styles.quickTextInput}
+                          style={[styles.quickTextInput, isDark && { color: '#FFFFFF' }]}
                           placeholder={t('Patient Name')}
                           placeholderTextColor="#94A3B8"
                           value={name}
@@ -374,10 +376,10 @@ const SurgeryScreen = ({ navigation }) => {
 
                     {/* Mobile Number */}
                     <View style={[styles.formFieldItem, isDesktopWeb && styles.formFieldItemHalf]}>
-                      <View style={styles.quickInputField}>
+                      <View style={[styles.quickInputField, isDark && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
                         <Ionicons name="call-outline" size={16} color="#00B894" style={{ marginRight: 8 }} />
                         <TextInput
-                          style={styles.quickTextInput}
+                          style={[styles.quickTextInput, isDark && { color: '#FFFFFF' }]}
                           placeholder={t('Mobile Number')}
                           placeholderTextColor="#94A3B8"
                           value={mobileNumber}
@@ -403,11 +405,11 @@ const SurgeryScreen = ({ navigation }) => {
 
                   {/* Direct Assistance Desk */}
                   <View style={styles.quickContactRow}>
-                    <TouchableOpacity style={styles.quickContactBtn} onPress={handleCall} activeOpacity={0.8}>
+                    <TouchableOpacity style={[styles.quickContactBtn, isDark && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' }]} onPress={handleCall} activeOpacity={0.8}>
                       <Ionicons name="call" size={13} color="#0D9488" />
-                      <Text style={styles.quickContactBtnText}>{t('Call Helpline')}</Text>
+                      <Text style={[styles.quickContactBtnText, isDark && { color: '#00E5B0' }]}>{t('Call Helpline')}</Text>
                     </TouchableOpacity>
-                    <TouchableOpacity style={styles.quickContactBtn} onPress={handleWhatsApp} activeOpacity={0.8}>
+                    <TouchableOpacity style={[styles.quickContactBtn, isDark && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' }]} onPress={handleWhatsApp} activeOpacity={0.8}>
                       <Ionicons name="logo-whatsapp" size={13} color="#16A34A" />
                       <Text style={[styles.quickContactBtnText, { color: '#16A34A' }]}>{t('WhatsApp')}</Text>
                     </TouchableOpacity>
@@ -416,25 +418,25 @@ const SurgeryScreen = ({ navigation }) => {
               </View>
 
               {/* Trust & Stats Strip */}
-              <View style={styles.statsGrid}>
+              <View style={[styles.statsGrid, isDark && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' }]}>
                 <View style={styles.statBox}>
-                  <Text style={styles.statValue}>2L+</Text>
-                  <Text style={styles.statLabel}>{t('Surgeries')}</Text>
+                  <Text style={[styles.statValue, isDark && { color: '#FFFFFF' }]}>2L+</Text>
+                  <Text style={[styles.statLabel, isDark && { color: '#94A3B8' }]}>{t('Surgeries')}</Text>
                 </View>
-                <View style={styles.statDivider} />
+                <View style={[styles.statDivider, isDark && { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]} />
                 <View style={styles.statBox}>
-                  <Text style={styles.statValue}>4.9★</Text>
-                  <Text style={styles.statLabel}>{t('Rating')}</Text>
+                  <Text style={[styles.statValue, isDark && { color: '#FFFFFF' }]}>4.9★</Text>
+                  <Text style={[styles.statLabel, isDark && { color: '#94A3B8' }]}>{t('Rating')}</Text>
                 </View>
-                <View style={styles.statDivider} />
+                <View style={[styles.statDivider, isDark && { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]} />
                 <View style={styles.statBox}>
-                  <Text style={styles.statValue}>1,000+</Text>
-                  <Text style={styles.statLabel}>{t('Hospitals')}</Text>
+                  <Text style={[styles.statValue, isDark && { color: '#FFFFFF' }]}>1,000+</Text>
+                  <Text style={[styles.statLabel, isDark && { color: '#94A3B8' }]}>{t('Hospitals')}</Text>
                 </View>
-                <View style={styles.statDivider} />
+                <View style={[styles.statDivider, isDark && { backgroundColor: 'rgba(255, 255, 255, 0.08)' }]} />
                 <View style={styles.statBox}>
-                  <Text style={styles.statValue}>15 min</Text>
-                  <Text style={styles.statLabel}>{t('Callback')}</Text>
+                  <Text style={[styles.statValue, isDark && { color: '#FFFFFF' }]}>15 min</Text>
+                  <Text style={[styles.statLabel, isDark && { color: '#94A3B8' }]}>{t('Callback')}</Text>
                 </View>
               </View>
             </View>
@@ -644,7 +646,7 @@ const SurgeryScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   topHeaderBar: {
     flexDirection: 'row',
     alignItems: 'center',

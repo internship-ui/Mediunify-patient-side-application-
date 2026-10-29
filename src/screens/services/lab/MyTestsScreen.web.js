@@ -18,6 +18,8 @@ import { Ionicons } from '@expo/vector-icons';
 import WebFooter from '../../../components/web/WebFooter';
 import PaginationBar from '../../../components/web/PaginationBar';
 import PatientPageBanner from '../../../components/web/PatientPageBanner';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 import { isGuestUser, promptLoginRequired } from '../../../utils/authHelper';
 import {
   getActivePatient,
@@ -181,6 +183,8 @@ const RESCHEDULE_SLOTS = [
 import MyTestsScreenMobile from './MyTestsScreen.js';
 
 const MyTestsScreenWeb = ({ navigation, route, ...props }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const desktopSiteMode = isDesktopSiteRequested();
   const isDesktop = desktopSiteMode || width >= 1024;
@@ -194,7 +198,8 @@ const MyTestsScreenWeb = ({ navigation, route, ...props }) => {
   const [isGuestMode, setIsGuestMode] = useState(false);
 
   // Active view switcher (defaults to all appointments so both lab & radiology appear immediately)
-  const initialMode = route?.params?.initialTab || (route?.params?.tab === 'radiology' ? 'radiology' : route?.params?.tab === 'lab' ? 'lab' : route?.params?.tab === 'packages' ? 'packages' : route?.params?.tab === 'reports' ? 'reports' : 'all_appts');
+  const rawInitTab = (route?.params?.initialTab || route?.params?.tab || '').toLowerCase();
+  const initialMode = rawInitTab === 'reports' ? 'reports' : (route?.params?.initialTab || (route?.params?.tab === 'radiology' ? 'radiology' : route?.params?.tab === 'lab' ? 'lab' : route?.params?.tab === 'packages' ? 'packages' : 'all_appts'));
   const [viewMode, setViewMode] = useState(initialMode); // 'all_appts' | 'lab' | 'packages' | 'radiology' | 'reports'
   const [selectedFamilyMember, setSelectedFamilyMember] = useState('all');
   const [selectedModality, setSelectedModality] = useState('All Appointments (Lab & Radiology)');
@@ -275,7 +280,10 @@ const MyTestsScreenWeb = ({ navigation, route, ...props }) => {
   }, [navigation]);
 
   useEffect(() => {
-    if (route?.params?.initialTab) {
+    const rawTab = (route?.params?.initialTab || route?.params?.tab || '').toLowerCase();
+    if (rawTab === 'reports') {
+      setViewMode('reports');
+    } else if (route?.params?.initialTab) {
       setViewMode(route.params.initialTab);
     } else if (route?.params?.tab) {
       setViewMode(route.params.tab);
@@ -561,7 +569,7 @@ const MyTestsScreenWeb = ({ navigation, route, ...props }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, isDarkMode && { backgroundColor: '#080E1A', backgroundImage: 'none' }]}>
       {/* Notification Toast */}
       {toastMessage ? (
         <View style={styles.toastContainer}>
@@ -2140,7 +2148,7 @@ const MyTestsScreenResponsive = (props) => {
 
 export default MyTestsScreenResponsive;
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#E8F1F8',

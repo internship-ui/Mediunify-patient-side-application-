@@ -5,6 +5,7 @@ import { View, Text, StyleSheet, Modal, TouchableOpacity, TextInput, Platform, K
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { Ionicons } from '@expo/vector-icons';
 import { syncLogin, syncRegister } from '../services/dataSyncService';
+import { useTheme } from './ThemeContext';
 
 const AuthGuardContext = createContext(null);
 
@@ -16,6 +17,7 @@ const PRE_SEEDED_CREDENTIALS = {
 };
 
 export const AuthGuardProvider = ({ children }) => {
+  const { isDarkMode, theme } = useTheme();
   const [gateVisible, setGateVisible] = useState(false);
   const [loginVisible, setLoginVisible] = useState(false);
   const [gateTitle, setGateTitle] = useState('Login Required');
@@ -129,8 +131,13 @@ export const AuthGuardProvider = ({ children }) => {
 
   useEffect(() => {
     if (Platform.OS === 'web' && typeof window !== 'undefined') {
-      const handleOpenAuth = () => {
+      const handleOpenAuth = (e) => {
         resetForm();
+        if (e && e.detail && e.detail.tab) {
+          setAuthTab(e.detail.tab);
+        } else {
+          setAuthTab('login');
+        }
         setLoginVisible(true);
       };
       window.addEventListener('open-auth-modal', handleOpenAuth);
@@ -153,9 +160,51 @@ export const AuthGuardProvider = ({ children }) => {
         .ag-tab-btn { transition: all 0.18s ease !important; cursor: pointer !important; }
         .ag-cancel-btn-hover { transition: background-color 0.15s ease !important; cursor: pointer !important; }
         .ag-cancel-btn-hover:hover { background-color: #F1F5F9 !important; }
-        .ag-close-btn-hover { transition: background-color 0.15s ease !important; cursor: pointer !important; }
+        .ag-close-btn-hover { transition: background-color 0.15s ease, border-color 0.15s ease !important; cursor: pointer !important; }
         .ag-close-btn-hover:hover { background-color: #F1F5F9 !important; }
         .ag-otp-box:focus { border-color: #007D69 !important; background-color: #FFFFFF !important; box-shadow: 0 0 0 3px rgba(0, 125, 105, 0.15) !important; }
+
+        /* Dark Mode Overrides for Auth Guard Modal */
+        html[data-theme="dark"] .ag-close-btn-hover:hover {
+          background-color: #1F2D4A !important;
+          border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+        html[data-theme="dark"] .ag-cancel-btn-hover:hover {
+          background-color: #1F2D4A !important;
+          border-color: rgba(255, 255, 255, 0.2) !important;
+        }
+        html[data-theme="dark"] .ag-login-btn-hover:hover {
+          background-color: #00E5B0 !important;
+          color: #080E1A !important;
+          box-shadow: 0 4px 16px rgba(0, 229, 176, 0.4) !important;
+        }
+        html[data-theme="dark"] #ag-auth-login-root .ag-tab-btn {
+          background-color: transparent !important;
+        }
+        html[data-theme="dark"] #ag-auth-login-root .ag-tab-active {
+          background-color: #111C35 !important;
+          border: 1px solid rgba(255, 255, 255, 0.14) !important;
+          box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4) !important;
+        }
+        html[data-theme="dark"] #ag-auth-login-root input {
+          background-color: transparent !important;
+          color: #F8FAFC !important;
+          border: none !important;
+          box-shadow: none !important;
+          outline: none !important;
+        }
+        html[data-theme="dark"] #ag-auth-login-root input::placeholder {
+          color: #64748B !important;
+        }
+        html[data-theme="dark"] #ag-auth-login-root [class*="inputBox"]:focus-within {
+          border-color: #00E5B0 !important;
+          box-shadow: 0 0 0 2px rgba(0, 229, 176, 0.2) !important;
+        }
+        html[data-theme="dark"] .ag-otp-box:focus {
+          border-color: #00E5B0 !important;
+          background-color: #16223D !important;
+          box-shadow: 0 0 0 3px rgba(0, 229, 176, 0.25) !important;
+        }
 
         /* Modal portal stacking rules: AuthGuard modals always stack above background modals without re-rendering DOM */
         div:has(#ag-auth-gate-root),
@@ -490,25 +539,25 @@ export const AuthGuardProvider = ({ children }) => {
       {/* GATE MODAL */}
       <Modal visible={gateVisible} transparent animationType="fade" onRequestClose={handleGateCancel}>
         <View style={styles.overlay} nativeID="ag-auth-gate-root">
-          <View style={styles.gateCard}>
+          <View style={[styles.gateCard, isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' }]}>
             <View style={styles.gateIconCircle}>
               <Ionicons name="lock-closed" size={28} color="#FFFFFF" />
             </View>
-            <Text style={styles.gateTitle}>{gateTitle}</Text>
-            <Text style={styles.gateMessage}>
+            <Text style={[styles.gateTitle, isDarkMode && { color: '#FFFFFF' }]}>{gateTitle}</Text>
+            <Text style={[styles.gateMessage, isDarkMode && { color: '#94A3B8' }]}>
               {gateMessage}
             </Text>
             <View style={styles.gateActions}>
               <TouchableOpacity
-                style={styles.gateCancelBtn}
+                style={[styles.gateCancelBtn, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' }]}
                 className="ag-cancel-btn-hover"
                 onPress={handleGateCancel}
                 activeOpacity={0.8}
               >
-                <Text style={styles.gateCancelText}>Cancel</Text>
+                <Text style={[styles.gateCancelText, isDarkMode && { color: '#94A3B8' }]}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={styles.gateOKBtn}
+                style={[styles.gateOKBtn, isDarkMode && { backgroundColor: '#00B894' }]}
                 className="ag-login-btn-hover"
                 onPress={handleGateOK}
                 activeOpacity={0.85}
@@ -523,59 +572,85 @@ export const AuthGuardProvider = ({ children }) => {
       {/* FULL LOGIN / SIGN UP / OTP MODAL */}
       <Modal visible={loginVisible} transparent animationType="fade" onRequestClose={handleCloseLogin}>
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.overlay} nativeID="ag-auth-login-root">
-          <View style={styles.loginContainer}>
+          <View style={[styles.loginContainer, isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' }]}>
             {/* MODAL HEADER */}
-            <View style={styles.loginHeader}>
+            <View style={[styles.loginHeader, isDarkMode && { backgroundColor: '#111C35', borderBottomColor: 'rgba(255, 255, 255, 0.08)' }]}>
               <View>
                 <View style={styles.brandRow}>
-                  <Text style={styles.brandMedi}>Medi</Text>
-                  <Text style={styles.brandUnify}>Unify</Text>
+                  <Text style={[styles.brandMedi, isDarkMode && { color: '#FFFFFF' }]}>Medi</Text>
+                  <Text style={[styles.brandUnify, isDarkMode && { color: '#00E5B0' }]}>Unify</Text>
                 </View>
-                <Text style={styles.brandTagline}>All your healthcare. One intelligent platform.</Text>
+                <Text style={[styles.brandTagline, isDarkMode && { color: '#94A3B8' }]}>All your healthcare. One intelligent platform.</Text>
               </View>
-              <TouchableOpacity onPress={handleCloseLogin} style={styles.closeBtn} className="ag-close-btn-hover" activeOpacity={0.7} accessibilityLabel="Close">
-                <Ionicons name="close" size={20} color="#64748B" />
+              <TouchableOpacity onPress={handleCloseLogin} style={[styles.closeBtn, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' }]} className="ag-close-btn-hover" activeOpacity={0.7} accessibilityLabel="Close">
+                <Ionicons name="close" size={20} color={isDarkMode ? '#94A3B8' : '#64748B'} />
               </TouchableOpacity>
             </View>
 
             {/* SEGMENTED TAB SWITCHER */}
-            <View style={styles.tabContainer}>
+            <View style={[styles.tabContainer, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.08)', borderWidth: 1 }]}>
               <TouchableOpacity
-                style={[styles.tab, authTab === 'login' && styles.tabActive]}
-                className="ag-tab-btn"
+                style={[
+                  styles.tab,
+                  authTab === 'login' ? styles.tabActive : null,
+                  isDarkMode && {
+                    backgroundColor: authTab === 'login' ? '#111C35' : 'transparent',
+                    borderColor: authTab === 'login' ? 'rgba(255, 255, 255, 0.14)' : 'transparent',
+                    borderWidth: authTab === 'login' ? 1 : 0,
+                    shadowColor: authTab === 'login' ? '#000000' : 'transparent',
+                  },
+                ]}
+                className={authTab === 'login' ? 'ag-tab-btn ag-tab-active' : 'ag-tab-btn'}
                 onPress={() => { setAuthTab('login'); setErrorMessage(''); }}
                 activeOpacity={0.8}
               >
                 <Ionicons
                   name="log-in-outline"
                   size={16}
-                  color={authTab === 'login' ? '#007D69' : '#64748B'}
+                  color={authTab === 'login' ? (isDarkMode ? '#00E5B0' : '#007D69') : (isDarkMode ? '#94A3B8' : '#64748B')}
                   style={{ marginRight: 6 }}
                 />
-                <Text style={[styles.tabText, authTab === 'login' && styles.tabTextActive]}>Sign In</Text>
+                <Text style={[
+                  styles.tabText,
+                  authTab === 'login' && styles.tabTextActive,
+                  isDarkMode && { color: authTab === 'login' ? '#00E5B0' : '#94A3B8' }
+                ]}>Sign In</Text>
               </TouchableOpacity>
               <TouchableOpacity
-                style={[styles.tab, (authTab === 'register' || authTab === 'otp') && styles.tabActive]}
-                className="ag-tab-btn"
+                style={[
+                  styles.tab,
+                  (authTab === 'register' || authTab === 'otp') ? styles.tabActive : null,
+                  isDarkMode && {
+                    backgroundColor: (authTab === 'register' || authTab === 'otp') ? '#111C35' : 'transparent',
+                    borderColor: (authTab === 'register' || authTab === 'otp') ? 'rgba(255, 255, 255, 0.14)' : 'transparent',
+                    borderWidth: (authTab === 'register' || authTab === 'otp') ? 1 : 0,
+                    shadowColor: (authTab === 'register' || authTab === 'otp') ? '#000000' : 'transparent',
+                  },
+                ]}
+                className={(authTab === 'register' || authTab === 'otp') ? 'ag-tab-btn ag-tab-active' : 'ag-tab-btn'}
                 onPress={() => { setAuthTab('register'); setErrorMessage(''); }}
                 activeOpacity={0.8}
               >
                 <Ionicons
                   name="person-add-outline"
                   size={16}
-                  color={(authTab === 'register' || authTab === 'otp') ? '#007D69' : '#64748B'}
+                  color={(authTab === 'register' || authTab === 'otp') ? (isDarkMode ? '#00E5B0' : '#007D69') : (isDarkMode ? '#94A3B8' : '#64748B')}
                   style={{ marginRight: 6 }}
                 />
-                <Text style={[styles.tabText, (authTab === 'register' || authTab === 'otp') && styles.tabTextActive]}>Create Account</Text>
+                <Text style={[
+                  styles.tabText,
+                  (authTab === 'register' || authTab === 'otp') && styles.tabTextActive,
+                  isDarkMode && { color: (authTab === 'register' || authTab === 'otp') ? '#00E5B0' : '#94A3B8' }
+                ]}>Create Account</Text>
               </TouchableOpacity>
             </View>
 
             {/* CARD INTRO HEADER */}
             <View style={styles.formHeaderIntro}>
-              <Text style={styles.formTitle}>
+              <Text style={[styles.formTitle, isDarkMode && { color: '#FFFFFF' }]}>
                 {authTab === 'login' ? 'Sign In' : authTab === 'register' ? 'Create Account' : 'Verify Mobile Number'}
               </Text>
-              <Text style={styles.formSubtitle}>
+              <Text style={[styles.formSubtitle, isDarkMode && { color: '#94A3B8' }]}>
                 {authTab === 'login'
                   ? 'Enter your details to access your healthcare account'
                   : authTab === 'register'
@@ -586,9 +661,9 @@ export const AuthGuardProvider = ({ children }) => {
 
             {/* INLINE ERROR MESSAGE */}
             {!!errorMessage && (
-              <View style={styles.errorBox}>
-                <Ionicons name="alert-circle" size={17} color="#DC2626" />
-                <Text style={styles.errorBoxText}>{errorMessage}</Text>
+              <View style={[styles.errorBox, isDarkMode && { backgroundColor: 'rgba(220, 38, 38, 0.15)', borderColor: 'rgba(220, 38, 38, 0.35)' }]}>
+                <Ionicons name="alert-circle" size={17} color={isDarkMode ? '#F87171' : '#DC2626'} />
+                <Text style={[styles.errorBoxText, isDarkMode && { color: '#F87171' }]}>{errorMessage}</Text>
               </View>
             )}
 
@@ -602,18 +677,22 @@ export const AuthGuardProvider = ({ children }) => {
                 <View style={styles.formBody}>
                   {/* INPUT: EMAIL OR PHONE */}
                   <View style={styles.fieldGroup}>
-                    <Text style={styles.fieldLabel}>Email or Mobile Number</Text>
-                    <View style={[styles.inputBox, email ? styles.inputBoxFilled : null]}>
+                    <Text style={[styles.fieldLabel, isDarkMode && { color: '#E2E8F0' }]}>Email or Mobile Number</Text>
+                    <View style={[
+                      styles.inputBox,
+                      isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' },
+                      email ? (isDarkMode ? { borderColor: '#00E5B0', backgroundColor: '#16223D' } : styles.inputBoxFilled) : null
+                    ]}>
                       <Ionicons
                         name={email.includes('@') ? 'mail-outline' : 'call-outline'}
                         size={19}
-                        color={email ? '#007D69' : '#94A3B8'}
+                        color={email ? (isDarkMode ? '#00E5B0' : '#007D69') : (isDarkMode ? '#64748B' : '#94A3B8')}
                         style={styles.inputPrefixIcon}
                       />
                       <TextInput
-                        style={styles.textInput}
+                        style={[styles.textInput, isDarkMode && { color: '#F8FAFC', backgroundColor: 'transparent' }]}
                         placeholder="Email address or 10-digit number"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={isDarkMode ? '#64748B' : '#94A3B8'}
                         value={email}
                         onChangeText={setEmail}
                         autoCapitalize="none"
@@ -643,27 +722,31 @@ export const AuthGuardProvider = ({ children }) => {
                   {/* INPUT: PASSWORD */}
                   <View style={styles.fieldGroup}>
                     <View style={styles.fieldLabelRow}>
-                      <Text style={styles.fieldLabel}>Password</Text>
+                      <Text style={[styles.fieldLabel, isDarkMode && { color: '#E2E8F0' }]}>Password</Text>
                       <TouchableOpacity
                         onPress={() => {
                           setErrorMessage('Password reset instructions will be sent to your registered email/phone.');
                         }}
                         activeOpacity={0.7}
                       >
-                        <Text style={styles.forgotPassLink}>Forgot password?</Text>
+                        <Text style={[styles.forgotPassLink, isDarkMode && { color: '#00E5B0' }]}>Forgot password?</Text>
                       </TouchableOpacity>
                     </View>
-                    <View style={[styles.inputBox, password ? styles.inputBoxFilled : null]}>
+                    <View style={[
+                      styles.inputBox,
+                      isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' },
+                      password ? (isDarkMode ? { borderColor: '#00E5B0', backgroundColor: '#16223D' } : styles.inputBoxFilled) : null
+                    ]}>
                       <Ionicons
                         name="lock-closed-outline"
                         size={19}
-                        color={password ? '#007D69' : '#94A3B8'}
+                        color={password ? (isDarkMode ? '#00E5B0' : '#007D69') : (isDarkMode ? '#64748B' : '#94A3B8')}
                         style={styles.inputPrefixIcon}
                       />
                       <TextInput
-                        style={styles.textInput}
+                        style={[styles.textInput, isDarkMode && { color: '#F8FAFC', backgroundColor: 'transparent' }]}
                         placeholder="Enter your password"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={isDarkMode ? '#64748B' : '#94A3B8'}
                         value={password}
                         onChangeText={setPassword}
                         secureTextEntry={!showPassword}
@@ -687,7 +770,7 @@ export const AuthGuardProvider = ({ children }) => {
                         <Ionicons
                           name={showPassword ? 'eye-off-outline' : 'eye-outline'}
                           size={20}
-                          color={showPassword ? '#007D69' : '#94A3B8'}
+                          color={showPassword ? (isDarkMode ? '#00E5B0' : '#007D69') : (isDarkMode ? '#64748B' : '#94A3B8')}
                         />
                       </TouchableOpacity>
                     </View>
@@ -695,7 +778,11 @@ export const AuthGuardProvider = ({ children }) => {
 
                   {/* PRIMARY SUBMIT BUTTON */}
                   <TouchableOpacity
-                    style={[styles.primarySubmitBtn, isSubmitting && styles.primarySubmitBtnDisabled]}
+                    style={[
+                      styles.primarySubmitBtn,
+                      isDarkMode && { backgroundColor: '#00B894' },
+                      isSubmitting && styles.primarySubmitBtnDisabled
+                    ]}
                     className="ag-login-btn-hover"
                     onPress={handleLogin}
                     disabled={isSubmitting}
@@ -712,14 +799,14 @@ export const AuthGuardProvider = ({ children }) => {
                   </TouchableOpacity>
 
                   {/* FOOTER SWITCHER */}
-                  <View style={styles.signupFooter}>
-                    <Text style={styles.signupFooterText}>Don't have an account? </Text>
+                  <View style={[styles.signupFooter, isDarkMode && { borderTopColor: 'rgba(255, 255, 255, 0.08)' }]}>
+                    <Text style={[styles.signupFooterText, isDarkMode && { color: '#94A3B8' }]}>Don't have an account? </Text>
                     <TouchableOpacity
                       activeOpacity={0.7}
                       onPress={() => { setAuthTab('register'); setErrorMessage(''); }}
                       hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
                     >
-                      <Text style={styles.signupFooterLink}>Sign Up</Text>
+                      <Text style={[styles.signupFooterLink, isDarkMode && { color: '#00E5B0' }]}>Sign Up</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
@@ -727,20 +814,24 @@ export const AuthGuardProvider = ({ children }) => {
                 <View style={styles.formBody}>
                   {/* FIELD 1: FULL NAME */}
                   <View style={styles.fieldGroup}>
-                    <Text style={styles.fieldLabel}>
+                    <Text style={[styles.fieldLabel, isDarkMode && { color: '#E2E8F0' }]}>
                       Full Name <Text style={styles.requiredMark}>*</Text>
                     </Text>
-                    <View style={[styles.inputBox, regName ? styles.inputBoxFilled : null]}>
+                    <View style={[
+                      styles.inputBox,
+                      isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' },
+                      regName ? (isDarkMode ? { borderColor: '#00E5B0', backgroundColor: '#16223D' } : styles.inputBoxFilled) : null
+                    ]}>
                       <Ionicons
                         name="person-outline"
                         size={19}
-                        color={regName ? '#007D69' : '#94A3B8'}
+                        color={regName ? (isDarkMode ? '#00E5B0' : '#007D69') : (isDarkMode ? '#64748B' : '#94A3B8')}
                         style={styles.inputPrefixIcon}
                       />
                       <TextInput
-                        style={styles.textInput}
+                        style={[styles.textInput, isDarkMode && { color: '#F8FAFC', backgroundColor: 'transparent' }]}
                         placeholder="Enter your full name"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={isDarkMode ? '#64748B' : '#94A3B8'}
                         value={regName}
                         onChangeText={setRegName}
                         autoCapitalize="words"
@@ -766,13 +857,13 @@ export const AuthGuardProvider = ({ children }) => {
                   {/* FIELD 2: MOBILE NUMBER (10 DIGITS) */}
                   <View style={styles.fieldGroup}>
                     <View style={styles.fieldLabelRow}>
-                      <Text style={styles.fieldLabel}>
+                      <Text style={[styles.fieldLabel, isDarkMode && { color: '#E2E8F0' }]}>
                         Mobile Number <Text style={styles.requiredMark}>*</Text>
                       </Text>
                       <Text
                         style={[
                           styles.counterText,
-                          regPhone.length === 10 ? styles.counterTextSuccess : regPhone.length > 0 ? styles.counterTextWarning : null,
+                          regPhone.length === 10 ? (isDarkMode ? { color: '#00E5B0' } : styles.counterTextSuccess) : regPhone.length > 0 ? styles.counterTextWarning : null,
                         ]}
                       >
                         {regPhone.length}/10 digits
@@ -781,22 +872,23 @@ export const AuthGuardProvider = ({ children }) => {
                     <View
                       style={[
                         styles.inputBox,
-                        regPhone.length === 10 ? styles.inputBoxValid : regPhone.length > 0 ? styles.inputBoxFilled : null,
+                        isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' },
+                        regPhone.length === 10 ? (isDarkMode ? { borderColor: '#00E5B0', backgroundColor: '#16223D' } : styles.inputBoxValid) : regPhone.length > 0 ? (isDarkMode ? { borderColor: '#00E5B0', backgroundColor: '#16223D' } : styles.inputBoxFilled) : null,
                       ]}
                     >
-                      <View style={styles.countryCodeBadge}>
-                        <Text style={styles.countryCodeText}>+91</Text>
+                      <View style={[styles.countryCodeBadge, isDarkMode && { backgroundColor: 'rgba(0, 229, 176, 0.12)', borderColor: 'rgba(0, 229, 176, 0.3)' }]}>
+                        <Text style={[styles.countryCodeText, isDarkMode && { color: '#00E5B0' }]}>+91</Text>
                       </View>
                       <Ionicons
                         name="call-outline"
                         size={19}
-                        color={regPhone.length === 10 ? '#007D69' : '#94A3B8'}
+                        color={regPhone.length === 10 ? (isDarkMode ? '#00E5B0' : '#007D69') : (isDarkMode ? '#64748B' : '#94A3B8')}
                         style={styles.inputPrefixIcon}
                       />
                       <TextInput
-                        style={styles.textInput}
+                        style={[styles.textInput, isDarkMode && { color: '#F8FAFC', backgroundColor: 'transparent' }]}
                         placeholder="10-digit mobile number"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={isDarkMode ? '#64748B' : '#94A3B8'}
                         value={regPhone}
                         onChangeText={(val) => setRegPhone(val.replace(/[^0-9]/g, '').slice(0, 10))}
                         keyboardType="phone-pad"
@@ -824,20 +916,24 @@ export const AuthGuardProvider = ({ children }) => {
 
                   {/* FIELD 3: EMAIL ADDRESS */}
                   <View style={styles.fieldGroup}>
-                    <Text style={styles.fieldLabel}>
+                    <Text style={[styles.fieldLabel, isDarkMode && { color: '#E2E8F0' }]}>
                       Email Address <Text style={styles.requiredMark}>*</Text>
                     </Text>
-                    <View style={[styles.inputBox, regEmail ? styles.inputBoxFilled : null]}>
+                    <View style={[
+                      styles.inputBox,
+                      isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' },
+                      regEmail ? (isDarkMode ? { borderColor: '#00E5B0', backgroundColor: '#16223D' } : styles.inputBoxFilled) : null
+                    ]}>
                       <Ionicons
                         name="mail-outline"
                         size={19}
-                        color={regEmail ? '#007D69' : '#94A3B8'}
+                        color={regEmail ? (isDarkMode ? '#00E5B0' : '#007D69') : (isDarkMode ? '#64748B' : '#94A3B8')}
                         style={styles.inputPrefixIcon}
                       />
                       <TextInput
-                        style={styles.textInput}
+                        style={[styles.textInput, isDarkMode && { color: '#F8FAFC', backgroundColor: 'transparent' }]}
                         placeholder="Enter your email address"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={isDarkMode ? '#64748B' : '#94A3B8'}
                         value={regEmail}
                         onChangeText={setRegEmail}
                         keyboardType="email-address"
@@ -865,14 +961,14 @@ export const AuthGuardProvider = ({ children }) => {
                   {/* FIELD 4: CREATE PASSWORD */}
                   <View style={styles.fieldGroup}>
                     <View style={styles.fieldLabelRow}>
-                      <Text style={styles.fieldLabel}>
+                      <Text style={[styles.fieldLabel, isDarkMode && { color: '#E2E8F0' }]}>
                         Create Password <Text style={styles.requiredMark}>*</Text>
                       </Text>
                       {regPassword.length > 0 && (
                         <Text
                           style={[
                             styles.counterText,
-                            regPassword.length >= 6 ? styles.counterTextSuccess : styles.counterTextWarning,
+                            regPassword.length >= 6 ? (isDarkMode ? { color: '#00E5B0' } : styles.counterTextSuccess) : styles.counterTextWarning,
                           ]}
                         >
                           {regPassword.length >= 6 ? 'Strong' : `${regPassword.length}/6 chars`}
@@ -882,19 +978,20 @@ export const AuthGuardProvider = ({ children }) => {
                     <View
                       style={[
                         styles.inputBox,
-                        regPassword.length >= 6 ? styles.inputBoxValid : regPassword.length > 0 ? styles.inputBoxFilled : null,
+                        isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' },
+                        regPassword.length >= 6 ? (isDarkMode ? { borderColor: '#00E5B0', backgroundColor: '#16223D' } : styles.inputBoxValid) : regPassword.length > 0 ? (isDarkMode ? { borderColor: '#00E5B0', backgroundColor: '#16223D' } : styles.inputBoxFilled) : null,
                       ]}
                     >
                       <Ionicons
                         name="lock-closed-outline"
                         size={19}
-                        color={regPassword ? '#007D69' : '#94A3B8'}
+                        color={regPassword ? (isDarkMode ? '#00E5B0' : '#007D69') : (isDarkMode ? '#64748B' : '#94A3B8')}
                         style={styles.inputPrefixIcon}
                       />
                       <TextInput
-                        style={styles.textInput}
+                        style={[styles.textInput, isDarkMode && { color: '#F8FAFC', backgroundColor: 'transparent' }]}
                         placeholder="Minimum 6 characters"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={isDarkMode ? '#64748B' : '#94A3B8'}
                         value={regPassword}
                         onChangeText={setRegPassword}
                         secureTextEntry={!showRegPassword}
@@ -916,7 +1013,7 @@ export const AuthGuardProvider = ({ children }) => {
                         <Ionicons
                           name={showRegPassword ? 'eye-off-outline' : 'eye-outline'}
                           size={20}
-                          color={showRegPassword ? '#007D69' : '#94A3B8'}
+                          color={showRegPassword ? (isDarkMode ? '#00E5B0' : '#007D69') : (isDarkMode ? '#64748B' : '#94A3B8')}
                         />
                       </TouchableOpacity>
                     </View>
@@ -925,13 +1022,13 @@ export const AuthGuardProvider = ({ children }) => {
                   {/* FIELD 5: CONFIRM PASSWORD */}
                   <View style={styles.fieldGroup}>
                     <View style={styles.fieldLabelRow}>
-                      <Text style={styles.fieldLabel}>
+                      <Text style={[styles.fieldLabel, isDarkMode && { color: '#E2E8F0' }]}>
                         Confirm Password <Text style={styles.requiredMark}>*</Text>
                       </Text>
                       {isPasswordMatch && (
-                        <View style={styles.matchedBadge}>
-                          <Ionicons name="checkmark-circle" size={14} color="#007D69" />
-                          <Text style={styles.matchedBadgeText}>Passwords Match</Text>
+                        <View style={[styles.matchedBadge, isDarkMode && { backgroundColor: 'rgba(0, 229, 176, 0.12)' }]}>
+                          <Ionicons name="checkmark-circle" size={14} color={isDarkMode ? '#00E5B0' : '#007D69'} />
+                          <Text style={[styles.matchedBadgeText, isDarkMode && { color: '#00E5B0' }]}>Passwords Match</Text>
                         </View>
                       )}
                       {isPasswordMismatch && (
@@ -941,19 +1038,20 @@ export const AuthGuardProvider = ({ children }) => {
                     <View
                       style={[
                         styles.inputBox,
-                        isPasswordMatch ? styles.inputBoxValid : isPasswordMismatch ? styles.inputBoxWarning : regConfirmPassword ? styles.inputBoxFilled : null,
+                        isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' },
+                        isPasswordMatch ? (isDarkMode ? { borderColor: '#00E5B0', backgroundColor: '#16223D' } : styles.inputBoxValid) : isPasswordMismatch ? styles.inputBoxWarning : regConfirmPassword ? (isDarkMode ? { borderColor: '#00E5B0', backgroundColor: '#16223D' } : styles.inputBoxFilled) : null,
                       ]}
                     >
                       <Ionicons
                         name="shield-checkmark-outline"
                         size={19}
-                        color={regConfirmPassword ? '#007D69' : '#94A3B8'}
+                        color={regConfirmPassword ? (isDarkMode ? '#00E5B0' : '#007D69') : (isDarkMode ? '#64748B' : '#94A3B8')}
                         style={styles.inputPrefixIcon}
                       />
                       <TextInput
-                        style={styles.textInput}
+                        style={[styles.textInput, isDarkMode && { color: '#F8FAFC', backgroundColor: 'transparent' }]}
                         placeholder="Re-enter your password"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={isDarkMode ? '#64748B' : '#94A3B8'}
                         value={regConfirmPassword}
                         onChangeText={setRegConfirmPassword}
                         secureTextEntry={!showConfirmPassword}
@@ -975,7 +1073,7 @@ export const AuthGuardProvider = ({ children }) => {
                         <Ionicons
                           name={showConfirmPassword ? 'eye-off-outline' : 'eye-outline'}
                           size={20}
-                          color={showConfirmPassword ? '#007D69' : '#94A3B8'}
+                          color={showConfirmPassword ? (isDarkMode ? '#00E5B0' : '#007D69') : (isDarkMode ? '#64748B' : '#94A3B8')}
                         />
                       </TouchableOpacity>
                     </View>
@@ -984,25 +1082,29 @@ export const AuthGuardProvider = ({ children }) => {
                   {/* FIELD 6: REFERRAL CODE (OPTIONAL) */}
                   <View style={styles.fieldGroup}>
                     <View style={styles.fieldLabelRow}>
-                      <Text style={styles.fieldLabel}>
+                      <Text style={[styles.fieldLabel, isDarkMode && { color: '#E2E8F0' }]}>
                         Referral Code (Optional)
                       </Text>
-                      <View style={styles.bonusHintBadge}>
-                        <Ionicons name="gift-outline" size={13} color="#007D69" />
-                        <Text style={styles.bonusHintBadgeText}>₹250 Bonus</Text>
+                      <View style={[styles.bonusHintBadge, isDarkMode && { backgroundColor: 'rgba(0, 229, 176, 0.12)', borderColor: 'rgba(0, 229, 176, 0.3)' }]}>
+                        <Ionicons name="gift-outline" size={13} color={isDarkMode ? '#00E5B0' : '#007D69'} />
+                        <Text style={[styles.bonusHintBadgeText, isDarkMode && { color: '#00E5B0' }]}>₹250 Bonus</Text>
                       </View>
                     </View>
-                    <View style={[styles.inputBox, regReferralCode ? styles.inputBoxFilled : null]}>
+                    <View style={[
+                      styles.inputBox,
+                      isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' },
+                      regReferralCode ? (isDarkMode ? { borderColor: '#00E5B0', backgroundColor: '#16223D' } : styles.inputBoxFilled) : null
+                    ]}>
                       <Ionicons
                         name="pricetag-outline"
                         size={19}
-                        color={regReferralCode ? '#007D69' : '#94A3B8'}
+                        color={regReferralCode ? (isDarkMode ? '#00E5B0' : '#007D69') : (isDarkMode ? '#64748B' : '#94A3B8')}
                         style={styles.inputPrefixIcon}
                       />
                       <TextInput
-                        style={styles.textInput}
+                        style={[styles.textInput, isDarkMode && { color: '#F8FAFC', backgroundColor: 'transparent' }]}
                         placeholder="Enter referral code (e.g. FRIEND250)"
-                        placeholderTextColor="#94A3B8"
+                        placeholderTextColor={isDarkMode ? '#64748B' : '#94A3B8'}
                         value={regReferralCode}
                         onChangeText={(val) => setRegReferralCode(val.toUpperCase())}
                         autoCapitalize="characters"
@@ -1012,8 +1114,8 @@ export const AuthGuardProvider = ({ children }) => {
                         id="reg_web_referral"
                       />
                       {regReferralCode.length > 0 && (
-                        <View style={styles.appliedTag}>
-                          <Text style={styles.appliedTagText}>BONUS READY</Text>
+                        <View style={[styles.appliedTag, isDarkMode && { backgroundColor: 'rgba(0, 229, 176, 0.12)', borderColor: 'rgba(0, 229, 176, 0.3)' }]}>
+                          <Text style={[styles.appliedTagText, isDarkMode && { color: '#00E5B0' }]}>BONUS READY</Text>
                         </View>
                       )}
                     </View>
@@ -1025,17 +1127,25 @@ export const AuthGuardProvider = ({ children }) => {
                     onPress={() => setAgreedToTerms(!agreedToTerms)}
                     activeOpacity={0.8}
                   >
-                    <View style={[styles.checkboxBox, agreedToTerms && styles.checkboxBoxChecked]}>
+                    <View style={[
+                      styles.checkboxBox,
+                      isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.18)' },
+                      agreedToTerms && (isDarkMode ? { backgroundColor: '#00B894', borderColor: '#00B894' } : styles.checkboxBoxChecked)
+                    ]}>
                       {agreedToTerms && <Ionicons name="checkmark" size={13} color="#FFFFFF" />}
                     </View>
-                    <Text style={styles.termsText}>
-                      I agree to the <Text style={styles.termsLink}>Terms of Service</Text> and <Text style={styles.termsLink}>Privacy Policy</Text>.
+                    <Text style={[styles.termsText, isDarkMode && { color: '#94A3B8' }]}>
+                      I agree to the <Text style={[styles.termsLink, isDarkMode && { color: '#00E5B0' }]}>Terms of Service</Text> and <Text style={[styles.termsLink, isDarkMode && { color: '#00E5B0' }]}>Privacy Policy</Text>.
                     </Text>
                   </TouchableOpacity>
 
                   {/* PRIMARY PROCEED BUTTON */}
                   <TouchableOpacity
-                    style={[styles.primarySubmitBtn, isSubmitting && styles.primarySubmitBtnDisabled]}
+                    style={[
+                      styles.primarySubmitBtn,
+                      isDarkMode && { backgroundColor: '#00B894' },
+                      isSubmitting && styles.primarySubmitBtnDisabled
+                    ]}
                     className="ag-login-btn-hover"
                     onPress={handleProceedToOtp}
                     disabled={isSubmitting}
@@ -1048,50 +1158,50 @@ export const AuthGuardProvider = ({ children }) => {
                   </TouchableOpacity>
 
                   {/* FOOTER SWITCHER */}
-                  <View style={styles.signupFooter}>
-                    <Text style={styles.signupFooterText}>Already have an account? </Text>
+                  <View style={[styles.signupFooter, isDarkMode && { borderTopColor: 'rgba(255, 255, 255, 0.08)' }]}>
+                    <Text style={[styles.signupFooterText, isDarkMode && { color: '#94A3B8' }]}>Already have an account? </Text>
                     <TouchableOpacity
                       activeOpacity={0.7}
                       onPress={() => { setAuthTab('login'); setErrorMessage(''); }}
                       hitSlop={{ top: 8, bottom: 8, left: 4, right: 8 }}
                     >
-                      <Text style={styles.signupFooterLink}>Sign In</Text>
+                      <Text style={[styles.signupFooterLink, isDarkMode && { color: '#00E5B0' }]}>Sign In</Text>
                     </TouchableOpacity>
                   </View>
                 </View>
               ) : (
                 /* OTP VERIFICATION STEP */
                 <View style={styles.otpCard}>
-                  <View style={styles.otpIconCircle}>
-                    <Ionicons name="shield-checkmark" size={28} color="#007D69" />
+                  <View style={[styles.otpIconCircle, isDarkMode && { backgroundColor: 'rgba(0, 229, 176, 0.12)', borderColor: 'rgba(0, 229, 176, 0.3)' }]}>
+                    <Ionicons name="shield-checkmark" size={28} color={isDarkMode ? '#00E5B0' : '#007D69'} />
                   </View>
 
-                  <Text style={styles.otpTitle}>Verify Your Mobile Number</Text>
-                  <Text style={styles.otpSubtitle}>
+                  <Text style={[styles.otpTitle, isDarkMode && { color: '#FFFFFF' }]}>Verify Your Mobile Number</Text>
+                  <Text style={[styles.otpSubtitle, isDarkMode && { color: '#94A3B8' }]}>
                     Enter the 6-digit OTP code sent to
                   </Text>
 
                   {/* PHONE NUMBER PILL */}
-                  <View style={styles.phonePill}>
-                    <Ionicons name="call-outline" size={14} color="#1E3A8A" />
-                    <Text style={styles.phonePillText}>+91 {regPhone}</Text>
+                  <View style={[styles.phonePill, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)', borderWidth: 1 }]}>
+                    <Ionicons name="call-outline" size={14} color={isDarkMode ? '#00E5B0' : '#1E3A8A'} />
+                    <Text style={[styles.phonePillText, isDarkMode && { color: '#F8FAFC' }]}>+91 {regPhone}</Text>
                     <TouchableOpacity
                       onPress={() => setAuthTab('register')}
                       activeOpacity={0.7}
                       style={styles.changePhonePillBtn}
                     >
-                      <Text style={styles.changePhonePillBtnText}>• Change</Text>
+                      <Text style={[styles.changePhonePillBtnText, isDarkMode && { color: '#00E5B0' }]}>• Change</Text>
                     </TouchableOpacity>
                   </View>
 
                   {/* DEMO AUTOFILL CHIP */}
                   <TouchableOpacity
-                    style={styles.demoChip}
+                    style={[styles.demoChip, isDarkMode && { backgroundColor: 'rgba(0, 229, 176, 0.12)', borderColor: 'rgba(0, 229, 176, 0.3)' }]}
                     onPress={handleAutofillDemoOtp}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="flash-outline" size={14} color="#007D69" />
-                    <Text style={styles.demoChipText}>
+                    <Ionicons name="flash-outline" size={14} color={isDarkMode ? '#00E5B0' : '#007D69'} />
+                    <Text style={[styles.demoChipText, isDarkMode && { color: '#00E5B0' }]}>
                       Tap to autofill Demo OTP: <Text style={{ fontWeight: '900' }}>123456</Text>
                     </Text>
                   </TouchableOpacity>
@@ -1104,7 +1214,8 @@ export const AuthGuardProvider = ({ children }) => {
                         ref={(ref) => (otpRefs.current[index] = ref)}
                         style={[
                           styles.otpBox,
-                          digit ? styles.otpBoxFilled : null,
+                          isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)', color: '#F8FAFC' },
+                          digit ? (isDarkMode ? { borderColor: '#00E5B0' } : styles.otpBoxFilled) : null,
                         ]}
                         className="ag-otp-box"
                         value={digit}
@@ -1119,7 +1230,7 @@ export const AuthGuardProvider = ({ children }) => {
 
                   {/* PRIMARY VERIFY BUTTON */}
                   <TouchableOpacity
-                    style={[styles.primarySubmitBtn, { width: '100%', marginTop: 4 }, isSubmitting && styles.primarySubmitBtnDisabled]}
+                    style={[styles.primarySubmitBtn, { width: '100%', marginTop: 4 }, isDarkMode && { backgroundColor: '#00B894' }, isSubmitting && styles.primarySubmitBtnDisabled]}
                     className="ag-login-btn-hover"
                     onPress={handleVerifyOtp}
                     disabled={isSubmitting}
@@ -1141,24 +1252,24 @@ export const AuthGuardProvider = ({ children }) => {
                   {/* RESEND OTP */}
                   <View style={styles.resendRow}>
                     {otpCountdown > 0 ? (
-                      <Text style={styles.resendText}>
-                        Resend OTP in <Text style={styles.countdownText}>{otpCountdown}s</Text>
+                      <Text style={[styles.resendText, isDarkMode && { color: '#94A3B8' }]}>
+                        Resend OTP in <Text style={[styles.countdownText, isDarkMode && { color: '#00E5B0' }]}>{otpCountdown}s</Text>
                       </Text>
                     ) : (
                       <TouchableOpacity onPress={handleResendOtp} activeOpacity={0.7}>
-                        <Text style={styles.resendLink}>Resend OTP Code</Text>
+                        <Text style={[styles.resendLink, isDarkMode && { color: '#00E5B0' }]}>Resend OTP Code</Text>
                       </TouchableOpacity>
                     )}
                   </View>
 
                   {/* BACK TO REGISTRATION */}
                   <TouchableOpacity
-                    style={styles.otpBackRow}
+                    style={[styles.otpBackRow, isDarkMode && { borderTopColor: 'rgba(255, 255, 255, 0.08)' }]}
                     onPress={() => setAuthTab('register')}
                     activeOpacity={0.7}
                   >
-                    <Ionicons name="arrow-back" size={16} color="#64748B" />
-                    <Text style={styles.otpBackRowText}>Back to registration details</Text>
+                    <Ionicons name="arrow-back" size={16} color={isDarkMode ? '#94A3B8' : '#64748B'} />
+                    <Text style={[styles.otpBackRowText, isDarkMode && { color: '#94A3B8' }]}>Back to registration details</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -1279,6 +1390,9 @@ const styles = StyleSheet.create({
     color: '#FFFFFF',
   },
   loginContainer: {
+    backgroundColor: '#FFFFFF',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
     width: '100%',
     maxWidth: 460,
     maxHeight: '92%',

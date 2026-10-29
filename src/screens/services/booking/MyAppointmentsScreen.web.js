@@ -21,6 +21,8 @@ import PaginationBar from '../../../components/web/PaginationBar';
 import PatientPageBanner from '../../../components/web/PatientPageBanner';
 import { showAlert } from '../../../utils/alert';
 import { isGuestUser } from '../../../utils/authHelper';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 import { isDesktopLayout, isDesktopSiteRequested } from '../../../utils/responsiveLayoutHelper';
 import {
   getActivePatient,
@@ -45,7 +47,6 @@ import {
   getAppointmentDynamicStatus,
   getStatusBadgeConfig,
 } from '../../../utils/appointmentDateUtils';
-import { useTheme } from '../../../context/ThemeContext';
 
 const STATUS_FILTERS = ['All', 'Upcoming', 'Today', 'Completed', 'Cancelled', 'Rescheduled'];
 const ITEMS_PER_PAGE = 4;
@@ -94,12 +95,82 @@ export const renderSafeText = (val, fallback = '') => {
   return String(val);
 };
 
+export const formatCompactTimeSlot = (timeStr) => {
+  if (!timeStr) return '';
+  const parenMatch = timeStr.match(/\(([^)]+)\)/);
+  const raw = parenMatch ? parenMatch[1] : timeStr;
+  const clean = raw
+    .replace(/^(Morning|Afternoon|Evening|Night)\s+Slot\s*[:-]?\s*/i, '')
+    .replace(/\s*Slot\s*/i, '')
+    .trim();
+  // Extract clean start time: "04:30 PM - 05:00 PM" -> "4:30 PM"
+  const startMatch = clean.match(/^0?(\d{1,2}:\d{2}\s*(?:AM|PM))/i);
+  if (startMatch) {
+    return startMatch[1];
+  }
+  return clean.replace(/^0(\d:)/, '$1');
+};
+
+export const getCompactServiceType = (type) => {
+  if (!type) return 'In-Clinic';
+  if (/consult/i.test(type)) return 'Consultation';
+  if (/scan|ultrasound|x-?ray|mri/i.test(type)) return 'Diagnostics';
+  if (/lab|blood|test/i.test(type)) return 'Lab Test';
+  return type.length > 14 ? type.slice(0, 12) + '..' : type;
+};
+
+export const getShortSpecialty = (specialty) => {
+  if (!specialty) return '';
+  return specialty
+    .replace(/Senior\s+|Junior\s+|Lead\s+|Chief\s+|Consultant\s+/gi, '')
+    .split('&')[0]
+    .split(',')[0]
+    .trim();
+};
+
+export const getCompactPaymentStatus = (status) => {
+  if (!status) return 'Paid';
+  if (/paid|complete/i.test(status)) return 'Paid';
+  if (/pending|unpaid/i.test(status)) return 'Pending';
+  if (/clinic|cash|visit/i.test(status)) return 'Pay on Visit';
+  return status;
+};
+
+export const getCleanFacilityName = (name) => {
+  if (!name) return 'Medical Clinic';
+  return name
+    .replace(/\s*&\s*Specialty\s+Clinic/i, ' Clinic')
+    .replace(/\s+OPD$/i, '')
+    .trim();
+};
+
+export const getCompactAddress = (addr) => {
+  if (!addr) return '';
+  const cleanAddr = String(typeof addr === 'object' ? renderSafeAddress(addr) : addr)
+    .replace(/\b\d{6}\b/g, '') // remove 6-digit pin codes
+    .replace(/\s*,\s*$/, '')
+    .trim();
+  const parts = cleanAddr.split(',').map((s) => s.trim()).filter(Boolean);
+  if (parts.length >= 3) {
+    // Filter out road/house numbers like #43/2 and NH 44
+    const nonNum = parts.filter((p) => !/^#?\d+[\/-]?\d*/.test(p) && !/^NH\s*\d+/i.test(p));
+    if (nonNum.length >= 2) {
+      return `${nonNum[nonNum.length - 2]}, ${nonNum[nonNum.length - 1]}`;
+    }
+    return parts.slice(-2).join(', ');
+  }
+  return parts.join(', ');
+};
+
 const MyAppointmentsScreenWeb = ({ navigation, route }) => {
-  const { t, isIndic } = useTheme();
-  const { width } = useWindowDimensions();
-  const desktopSiteMode = isDesktopSiteRequested();
+  const { t, isIndic, isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
+  const dims = typeof useWindowDimensions === 'function' ? useWindowDimensions() : { width: 375, height: 812 };
+  const width = dims?.width || 375;
+  const desktopSiteMode = typeof isDesktopSiteRequested === 'function' ? isDesktopSiteRequested() : false;
   const isDesktop = desktopSiteMode || width >= 1024;
   const isTablet = !desktopSiteMode && (width >= 768 && width < 1024);
+  const isMobile = !desktopSiteMode && width < 768;
 
   const [patient, setPatient] = useState(null);
   const [familyMembers, setFamilyMembers] = useState([]);
@@ -108,7 +179,21 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
   const [loading, setLoading] = useState(true);
   const [isGuestMode, setIsGuestMode] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedStatus, setSelectedStatus] = useState('All');
+  const initialTabParam = route?.params?.initialTab;
+  const resolveInitialTab = (tab) => {
+    if (tab && typeof tab === 'string') {
+      const match = STATUS_FILTERS.find((s) => s.toLowerCase() === tab.toLowerCase());
+      if (match) return match;
+    }
+    return 'All';
+  };
+  const [selectedStatus, setSelectedStatus] = useState(() => resolveInitialTab(initialTabParam));
+
+  useEffect(() => {
+    if (route?.params?.initialTab) {
+      setSelectedStatus(resolveInitialTab(route.params.initialTab));
+    }
+  }, [route?.params?.initialTab]);
   const [currentPage, setCurrentPage] = useState(1);
 
   // Modal States
@@ -143,15 +228,24 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
   // Dynamic reschedule dates (Tomorrow + next 5 days) using user's local timezone
   const rescheduleDatesList = useMemo(() => {
     const list = [];
-    for (let i = 1; i <= 6; i++) {
-      list.push(getLocalDateString(addDaysToDate(currentTime, i)));
+    if (typeof getLocalDateString === 'function' && typeof addDaysToDate === 'function') {
+      try {
+        for (let i = 1; i <= 6; i++) {
+          list.push(getLocalDateString(addDaysToDate(currentTime, i)));
+        }
+      } catch (e) {}
     }
     return list;
   }, [currentTime]);
 
   // Reschedule Form State
   const [newDate, setNewDate] = useState(() => {
-    return getLocalDateString(addDaysToDate(new Date(), 1));
+    if (typeof getLocalDateString === 'function' && typeof addDaysToDate === 'function') {
+      try {
+        return getLocalDateString(addDaysToDate(new Date(), 1));
+      } catch (e) {}
+    }
+    return '';
   });
   const [newTimeSlot, setNewTimeSlot] = useState('11:30 AM (Morning Slot)');
   const [rescheduleReason, setRescheduleReason] = useState('Work schedule conflict');
@@ -159,10 +253,17 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
   // Real-time slot update ticker
   const [, setSlotTick] = useState(0);
   useEffect(() => {
-    const unsub = subscribeToSlotChanges(() => {
-      setSlotTick((t) => t + 1);
-    });
-    return unsub;
+    if (typeof subscribeToSlotChanges !== 'function') return;
+    try {
+      const unsub = subscribeToSlotChanges(() => {
+        setSlotTick((t) => t + 1);
+      });
+      return () => {
+        if (typeof unsub === 'function') {
+          unsub();
+        }
+      };
+    } catch (e) {}
   }, []);
 
   // Cancel Form State
@@ -215,16 +316,22 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
       loadData();
     };
 
-    if (typeof window !== 'undefined') {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
       window.addEventListener('storage', handleStorageChange);
       window.addEventListener('mediunify_appointments_updated', handleApptUpdate);
     }
 
     return () => {
-      if (unsubscribeFocus) unsubscribeFocus();
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('storage', handleStorageChange);
-        window.removeEventListener('mediunify_appointments_updated', handleApptUpdate);
+      if (typeof unsubscribeFocus === 'function') {
+        try { unsubscribeFocus(); } catch (e) {}
+      } else if (unsubscribeFocus && typeof unsubscribeFocus.remove === 'function') {
+        try { unsubscribeFocus.remove(); } catch (e) {}
+      }
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
+        try {
+          window.removeEventListener('storage', handleStorageChange);
+          window.removeEventListener('mediunify_appointments_updated', handleApptUpdate);
+        } catch (e) {}
       }
     };
   }, [navigation]);
@@ -334,7 +441,9 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
     counts.All = physicalOnly.length;
 
     physicalOnly.forEach((appt) => {
-      const dynamicStatus = getAppointmentDynamicStatus(appt, currentTime);
+      const dynamicStatus = typeof getAppointmentDynamicStatus === 'function'
+        ? getAppointmentDynamicStatus(appt, currentTime)
+        : (appt?.status || 'Upcoming');
       if (dynamicStatus === 'Cancelled') {
         counts.Cancelled += 1;
       } else if (dynamicStatus === 'Completed') {
@@ -375,7 +484,9 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
         }
       }
 
-      const dynamicStatus = getAppointmentDynamicStatus(item, currentTime);
+      const dynamicStatus = typeof getAppointmentDynamicStatus === 'function'
+        ? getAppointmentDynamicStatus(item, currentTime)
+        : (item?.status || 'Upcoming');
 
       // Status filter
       if (selectedStatus !== 'All') {
@@ -518,7 +629,7 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, isDarkMode && { backgroundColor: '#080E1A', backgroundImage: 'none' }]}>
       {/* Notification Toast */}
       {toastMessage ? (
         <View style={styles.toastContainer}>
@@ -530,7 +641,7 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
       <ScrollView style={{ flex: 1 }} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={true}>
 
         {/* Page Hero Banner */}
-        <View style={styles.innerContainer}>
+        <View style={[styles.innerContainer, isMobile && { paddingHorizontal: 12 }]}>
           <PatientPageBanner
             onBack={() => navigation?.canGoBack?.() ? navigation.goBack() : navigation?.navigate('Home')}
             title={t('booking.my_appointments', 'My Appointments')}
@@ -563,30 +674,32 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
               },
             ]}
             rightContent={
-              <TouchableOpacity
-                style={styles.organicHeroBtn}
-                onPress={() => navigation?.navigate('DoctorList')}
-                activeOpacity={0.85}
-              >
-                <View style={styles.organicHeroArrowCircle}>
-                  <Ionicons name="arrow-forward" size={13} color="#13BE9C" />
-                </View>
-                <Text style={styles.organicHeroBtnText}>{t('doctors.book_in_clinic', 'Book In-Clinic Visit')}</Text>
-              </TouchableOpacity>
+              !isMobile ? (
+                <TouchableOpacity
+                  style={styles.organicHeroBtn}
+                  onPress={() => navigation?.navigate('DoctorList')}
+                  activeOpacity={0.85}
+                >
+                  <View style={styles.organicHeroArrowCircle}>
+                    <Ionicons name="arrow-forward" size={13} color="#13BE9C" />
+                  </View>
+                  <Text style={styles.organicHeroBtnText}>{t('doctors.book_in_clinic', 'Book In-Clinic Visit')}</Text>
+                </TouchableOpacity>
+              ) : null
             }
           />
         </View>
 
-        <View style={[styles.innerContainer, { paddingTop: 6, paddingBottom: 60 }]}>
+        <View style={[styles.innerContainer, isMobile && { paddingHorizontal: 12 }, { paddingTop: 6, paddingBottom: 60 }]}>
 
           {/* Redesigned Search & Filter Controls */}
-          <View style={styles.controlsCard}>
+          <View style={[styles.controlsCard, isMobile && styles.controlsCardMobile]}>
             {/* 1. Search Bar */}
             <View style={styles.searchBar}>
               <Ionicons name="search-outline" size={18} color="#13BE9C" style={{ marginRight: 10 }} />
               <TextInput
                 style={styles.searchInput}
-                placeholder={t('Search by clinic, hospital, doctor name, department, or appointment ID...')}
+                placeholder={isMobile ? t('Search clinic, doctor, or ID...') : t('Search by clinic, hospital, doctor name, department, or appointment ID...')}
                 placeholderTextColor="#94A3B8"
                 value={searchQuery}
                 onChangeText={setSearchQuery}
@@ -751,7 +864,7 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
               <TouchableOpacity
                 style={[styles.bookDoctorBtn, { marginTop: 18, alignSelf: 'center', paddingHorizontal: 32 }]}
                 onPress={() => {
-                  if (Platform.OS === 'web' && typeof window !== 'undefined') {
+                  if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.dispatchEvent === 'function' && typeof CustomEvent === 'function') {
                     window.dispatchEvent(new CustomEvent('open-auth-modal'));
                   }
                   navigation?.navigate('Login', { openAuthModal: true });
@@ -807,199 +920,259 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
           ) : (
             <View style={styles.appointmentList}>
               {paginatedAppointments.map((appt) => {
-                const dynamicStatus = getAppointmentDynamicStatus(appt, currentTime);
-                const badge = getStatusBadgeConfig(dynamicStatus);
+                const dynamicStatus = typeof getAppointmentDynamicStatus === 'function'
+                  ? getAppointmentDynamicStatus(appt, currentTime)
+                  : (appt?.status || 'Upcoming');
+                const badge = typeof getStatusBadgeConfig === 'function'
+                  ? getStatusBadgeConfig(dynamicStatus)
+                  : { bg: '#E6F8F4', text: '#00B894', border: '#A7F3D0', icon: 'checkmark-circle', label: dynamicStatus };
                 const isUpcomingVisit = dynamicStatus === 'Upcoming' || dynamicStatus === 'Today' || dynamicStatus === 'Rescheduled';
-                const dynamicDateLabel = formatAppointmentDateLabel(appt.date, currentTime);
-                const bookingDateLabel = formatBookingDateLabel(appt.bookingDate);
+                const dynamicDateLabel = typeof formatAppointmentDateLabel === 'function'
+                  ? formatAppointmentDateLabel(appt?.date, currentTime)
+                  : (appt?.date || 'Upcoming');
+                const bookingDateLabel = typeof formatBookingDateLabel === 'function'
+                  ? formatBookingDateLabel(appt?.bookingDate)
+                  : (appt?.bookingDate || 'Recently');
 
                 return (
-                  <View key={appt.id} style={[styles.apptCard, isUpcomingVisit && styles.apptCardHighlight]}>
-                    {/* Top Status Header */}
-                    <View style={styles.cardTopRow}>
-                      <View style={styles.idBadgeGroup}>
-                        <Text style={styles.apptIdText}>{appt.id}</Text>
-                        <View style={styles.typeBadge}>
-                          <Ionicons name="business-outline" size={12} color="#13BE9C" style={{ marginRight: 4 }} />
-                          <Text style={styles.typeBadgeText}>{appt.serviceType}</Text>
-                        </View>
-                      </View>
-
-                      <View style={[styles.statusBadge, { backgroundColor: badge.bg, borderColor: badge.border }]}>
-                        <Ionicons name={badge.icon} size={14} color={badge.text} style={{ marginRight: 4 }} />
-                        <Text style={[styles.statusBadgeText, { color: badge.text }]}>{dynamicStatus}</Text>
-                      </View>
-                    </View>
-
-                    {/* Facility & Doctor Info */}
-                    <View style={styles.cardMainRow}>
-                      {appt.doctor?.image ? (
-                        <Image source={{ uri: appt.doctor.image }} style={styles.doctorImg} />
-                      ) : (
-                        <View style={styles.facilityAvatar}>
-                          <Ionicons name="medical" size={24} color="#13BE9C" />
-                        </View>
-                      )}
-
-                      <View style={{ flex: 1, minWidth: 260 }}>
-                        <Text style={styles.facilityName}>{appt.facilityName}</Text>
-                        {appt.doctor?.name && (
-                          <Text style={styles.doctorName}>
-                            {appt.doctor.name}
-                            {appt.doctor.specialty ? (
-                              <Text style={styles.doctorSpecialty}> • {appt.doctor.specialty}</Text>
-                            ) : null}
-                          </Text>
-                        )}
-                        {/* Only show department if distinct from doctor specialty */}
-                        {appt.department && (!appt.doctor?.specialty || appt.department.trim().toLowerCase() !== appt.doctor.specialty.trim().toLowerCase()) ? (
-                          <Text style={styles.departmentName}>{appt.department}</Text>
-                        ) : null}
-
-                        {/* Location / Address (clean 1-line) */}
-                        <View style={styles.addressRow}>
-                          <Ionicons name="location-outline" size={13} color="#94A3B8" style={{ marginRight: 4, marginTop: 1 }} />
-                          <Text style={styles.addressText} numberOfLines={1}>
-                            {renderSafeAddress(appt.address)}
+                  <View key={appt.id} style={[styles.apptCard, !isMobile && isUpcomingVisit && styles.apptCardHighlight, isMobile && styles.apptCardMobile]}>
+                    {/* 1. Header: Category Pill & Status Badge */}
+                    <View style={[styles.cardTopRow, isMobile && styles.cardTopRowMobile]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
+                        <View style={[styles.typeBadge, isMobile && styles.typeBadgeMobile]}>
+                          <Ionicons name="medical-outline" size={isMobile ? 11 : 12} color="#0D9488" style={{ marginRight: 3 }} />
+                          <Text style={[styles.typeBadgeText, isMobile && styles.typeBadgeTextMobile]}>
+                            {isMobile ? getCompactServiceType(appt.serviceType) : appt.serviceType}
                           </Text>
                         </View>
-                      </View>
-
-                      {/* Prominent Date & Time Pillar (No duplicate time) */}
-                      <View style={[styles.dateTimePillar, isUpcomingVisit && styles.dateTimePillarUpcoming]}>
-                        <View style={styles.dateRow}>
-                          <Ionicons name="calendar" size={15} color={isUpcomingVisit ? '#13BE9C' : '#0F172A'} style={{ marginRight: 6 }} />
-                          <Text style={[styles.dateText, isUpcomingVisit && { color: '#13BE9C' }]}>{dynamicDateLabel}</Text>
-                        </View>
-                        <View style={styles.timeRow}>
-                          <Ionicons name="time-outline" size={14} color="#64748B" style={{ marginRight: 6 }} />
-                          <Text style={styles.timeText}>{appt.timeSlot || appt.time}</Text>
-                        </View>
-                        <View style={styles.paymentPill}>
-                          <Text style={styles.paymentPillText}>{appt.paymentStatus}</Text>
-                        </View>
-                      </View>
-                    </View>
-
-                    {/* Patient & Instructions banner */}
-                    <View style={styles.patientMetaRow}>
-                      <View style={{ flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', gap: 6 }}>
-                        <Ionicons name="person-outline" size={13} color="#64748B" style={{ marginRight: 2 }} />
-                        <Text style={[styles.patientMetaText, isIndic && { lineHeight: 16 }]}>
-                          {t('doctors.patient_details', 'Patient:')}{' '}
-                          <Text style={{ fontWeight: '700', color: '#0F172A' }}>
-                            {typeof appt.patient === 'string'
-                              ? appt.patient
-                              : (appt.patient?.name || appt.patientName || patient?.name || 'Hemanth Gowda')}
-                          </Text>
+                        <Text style={[styles.apptIdText, isMobile && styles.apptIdTextMobile]}>
+                          #{appt.id ? appt.id.replace(/^APT-PHY-?/i, '') : ''}
                         </Text>
-                        {(() => {
-                          const mem = getApptMember(appt);
-                          if (mem && mem.relation) {
-                            const isSelf = mem.relation.toLowerCase() === 'self' || mem.id === 'self';
-                            return (
-                              <View style={[styles.patientRelationBadge, isSelf && styles.patientRelationBadgeSelf]}>
-                                <Text style={[styles.patientRelationBadgeText, isSelf && styles.patientRelationBadgeTextSelf]}>
-                                  {mem.relation}
-                                </Text>
-                              </View>
-                            );
-                          }
-                          return null;
-                        })()}
                       </View>
-                      <Text style={[styles.bookingDateText, isIndic && { lineHeight: 14 }]}>{t('Booked on:')} {bookingDateLabel}</Text>
+
+                      <View style={[styles.statusBadge, { backgroundColor: badge.bg, borderColor: badge.border }, isMobile && styles.statusBadgeMobile]}>
+                        <View style={{ width: 6, height: 6, borderRadius: 3, backgroundColor: badge.text, marginRight: 5 }} />
+                        <Text style={[styles.statusBadgeText, { color: badge.text }, isMobile && styles.statusBadgeTextMobile]}>{dynamicStatus}</Text>
+                      </View>
                     </View>
 
-                    {/* Action Buttons Row matching Image 2 (Circular Outline Arrow + Bold Action Text in #13BE9C) */}
-                    <View style={styles.actionBtnRow}>
-                      <View style={{ flexDirection: 'row', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-                        {/* Image 2 Primary Action: Circular Arrow & Book Again */}
-                        <TouchableOpacity
-                          style={styles.organicBookNowBtn}
-                          onPress={() => navigation?.navigate('DoctorList')}
-                          activeOpacity={0.8}
-                        >
-                          <View style={styles.organicArrowCircle}>
-                            <Ionicons name="arrow-forward" size={12} color="#13BE9C" />
+                    {/* 2. Doctor & Facility Section */}
+                    <View style={[styles.cardMainRow, isMobile && styles.cardMainRowMobile]}>
+                      <View style={{ flexDirection: 'row', alignItems: 'center', gap: isMobile ? 12 : 14, flex: 1, minWidth: isDesktop ? 260 : 0 }}>
+                        {appt.doctor?.image ? (
+                          <Image source={{ uri: appt.doctor.image }} style={isMobile ? styles.doctorImgMobile : styles.doctorImg} />
+                        ) : (
+                          <View style={isMobile ? styles.facilityAvatarMobile : styles.facilityAvatar}>
+                            <Ionicons name="person" size={isMobile ? 20 : 24} color="#13BE9C" />
                           </View>
-                          <Text style={styles.organicBookNowText}>{t('Book Again')}</Text>
-                        </TouchableOpacity>
+                        )}
 
-                        <TouchableOpacity
-                          style={styles.organicActionBtn}
-                          onPress={() => {
-                            setSelectedAppt(appt);
-                            setActiveModal('details');
-                          }}
-                          activeOpacity={0.8}
-                        >
-                          <View style={styles.organicActionIconCircle}>
-                            <Ionicons name="document-text-outline" size={12} color="#13BE9C" />
-                          </View>
-                          <Text style={styles.organicActionText}>{t('common.view_details', 'View Details')}</Text>
-                        </TouchableOpacity>
+                        <View style={{ flex: 1, minWidth: 0 }}>
+                          <Text style={[styles.doctorName, isMobile && styles.doctorNameMobile]} numberOfLines={1}>
+                            {appt.doctor?.name || getCleanFacilityName(appt.facilityName)}
+                          </Text>
+                          <Text style={[styles.facilityName, isMobile && styles.facilityNameMobile]} numberOfLines={1}>
+                            {appt.doctor?.specialty ? `${getShortSpecialty(appt.doctor.specialty)} • ` : ''}
+                            {getCleanFacilityName(appt.facilityName)}
+                          </Text>
 
-                        <TouchableOpacity
-                          style={styles.organicActionBtn}
-                          onPress={() => {
-                            setSelectedAppt(appt);
-                            setActiveModal('directions');
-                          }}
-                          activeOpacity={0.8}
-                        >
-                          <View style={styles.organicActionIconCircle}>
-                            <Ionicons name="navigate-outline" size={12} color="#13BE9C" />
+                          {/* Location / Address (clean 1-line) */}
+                          <View style={[styles.addressRow, isMobile && styles.addressRowMobile]}>
+                            <Ionicons name="location-outline" size={isMobile ? 11 : 13} color="#94A3B8" style={{ marginRight: 3 }} />
+                            <Text style={[styles.addressText, isMobile && styles.addressTextMobile]} numberOfLines={1}>
+                              {isMobile ? getCompactAddress(appt.address) : renderSafeAddress(appt.address)}
+                            </Text>
                           </View>
-                          <Text style={styles.organicActionText}>{t('booking.view_directions', 'View Directions')}</Text>
-                        </TouchableOpacity>
+                        </View>
+                      </View>
+                    </View>
 
-                        <TouchableOpacity
-                          style={styles.organicActionBtn}
-                          onPress={() => {
-                            setSelectedAppt(appt);
-                            setActiveModal('contact');
-                          }}
-                          activeOpacity={0.8}
-                        >
-                          <View style={styles.organicActionIconCircle}>
-                            <Ionicons name="call-outline" size={12} color="#13BE9C" />
-                          </View>
-                          <Text style={styles.organicActionText}>{t('Contact Centre')}</Text>
-                        </TouchableOpacity>
+                    {/* 3. Sleek Schedule & Patient Info Bar (Single unified strip) */}
+                    <View style={[styles.dateTimePillar, isUpcomingVisit && styles.dateTimePillarUpcoming, isMobile && styles.dateTimePillarMobile]}>
+                      <View style={{ flex: 1, minWidth: 0, justifyContent: 'center' }}>
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 5 }}>
+                          <Ionicons name="calendar" size={12} color="#13BE9C" />
+                          <Text style={[styles.dateText, isMobile && styles.dateTextMobile]}>
+                            {dynamicDateLabel}, {formatCompactTimeSlot(appt.timeSlot || appt.time)}
+                          </Text>
+                        </View>
+                        <Text style={[styles.patientMetaText, isMobile && styles.patientMetaTextMobile]} numberOfLines={1}>
+                          👤 {typeof appt.patient === 'string' ? appt.patient : (appt.patient?.name || 'Hemanth Gowda')}
+                          {(() => {
+                            const mem = getApptMember(appt);
+                            if (mem && mem.relation && mem.relation.toLowerCase() !== 'self') {
+                              return ` • ${mem.relation}`;
+                            }
+                            return '';
+                          })()}
+                        </Text>
                       </View>
 
-                      {/* Reschedule & Cancel actions (available for active/upcoming) */}
-                      {isUpcomingVisit && (
-                        <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center' }}>
-                          <TouchableOpacity
-                            style={styles.organicActionBtn}
-                            onPress={() => {
-                              setSelectedAppt(appt);
-                              setActiveModal('reschedule');
-                            }}
-                            activeOpacity={0.8}
-                          >
-                            <View style={[styles.organicActionIconCircle, { borderColor: '#F59E0B' }]}>
-                              <Ionicons name="calendar-outline" size={12} color="#D97706" />
-                            </View>
-                            <Text style={[styles.organicActionText, { color: '#D97706' }]}>{t('booking.reschedule_btn', 'Reschedule')}</Text>
-                          </TouchableOpacity>
+                      <View style={[styles.paymentPill, isMobile && styles.paymentPillMobile]}>
+                        <Ionicons name="checkmark-circle" size={11} color="#059669" style={{ marginRight: 3 }} />
+                        <Text style={[styles.paymentPillText, isMobile && styles.paymentPillTextMobile]} numberOfLines={1}>
+                          {isMobile ? getCompactPaymentStatus(appt.paymentStatus) : appt.paymentStatus}
+                        </Text>
+                      </View>
+                    </View>
 
-                          <TouchableOpacity
-                            style={styles.organicActionBtn}
-                            onPress={() => {
-                              setSelectedAppt(appt);
-                              setActiveModal('cancel');
-                            }}
-                            activeOpacity={0.8}
-                          >
-                            <View style={[styles.organicActionIconCircle, { borderColor: '#EF4444' }]}>
-                              <Ionicons name="close-circle-outline" size={12} color="#DC2626" />
+                    {/* 4. Action Buttons Row (Clean, modern 1-row layout) */}
+                    <View style={[styles.actionBtnRow, isMobile && styles.actionBtnRowMobile]}>
+                      {isMobile ? (
+                        <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' }}>
+                          {isUpcomingVisit ? (
+                            <>
+                              <TouchableOpacity
+                                style={styles.modernPrimaryBtn}
+                                onPress={() => {
+                                  setSelectedAppt(appt);
+                                  setActiveModal('details');
+                                }}
+                                activeOpacity={0.8}
+                              >
+                                <Ionicons name="document-text-outline" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
+                                <Text style={styles.modernPrimaryBtnText}>{t('common.details', 'Details')}</Text>
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                style={styles.modernAmberBtn}
+                                onPress={() => {
+                                  setSelectedAppt(appt);
+                                  setActiveModal('reschedule');
+                                }}
+                                activeOpacity={0.8}
+                              >
+                                <Ionicons name="calendar-outline" size={13} color="#D97706" style={{ marginRight: 4 }} />
+                                <Text style={styles.modernAmberBtnText}>{t('booking.reschedule_btn', 'Reschedule')}</Text>
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                style={styles.modernRedBtn}
+                                onPress={() => {
+                                  setSelectedAppt(appt);
+                                  setActiveModal('cancel');
+                                }}
+                                activeOpacity={0.8}
+                              >
+                                <Ionicons name="close-circle-outline" size={13} color="#DC2626" style={{ marginRight: 3 }} />
+                                <Text style={styles.modernRedBtnText}>{t('common.cancel', 'Cancel')}</Text>
+                              </TouchableOpacity>
+                            </>
+                          ) : (
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, width: '100%' }}>
+                              <TouchableOpacity
+                                style={styles.modernPrimaryBtn}
+                                onPress={() => navigation?.navigate('DoctorList')}
+                                activeOpacity={0.8}
+                              >
+                                <Ionicons name="refresh-outline" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
+                                <Text style={styles.modernPrimaryBtnText}>{t('Book Again')}</Text>
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                style={styles.modernSecondaryBtn}
+                                onPress={() => {
+                                  setSelectedAppt(appt);
+                                  setActiveModal('details');
+                                }}
+                                activeOpacity={0.8}
+                              >
+                                <Ionicons name="document-text-outline" size={13} color="#475569" style={{ marginRight: 4 }} />
+                                <Text style={styles.modernSecondaryBtnText}>{t('common.details', 'Details')}</Text>
+                              </TouchableOpacity>
                             </View>
-                            <Text style={[styles.organicActionText, { color: '#DC2626' }]}>{t('common.cancel', 'Cancel')}</Text>
-                          </TouchableOpacity>
+                          )}
                         </View>
+                      ) : (
+                        /* Desktop Layout (spacious & untouched) */
+                        <>
+                          <View style={{ flexDirection: 'row', gap: 16, flexWrap: 'wrap', alignItems: 'center' }}>
+                            <TouchableOpacity
+                              style={styles.organicBookNowBtn}
+                              onPress={() => navigation?.navigate('DoctorList')}
+                              activeOpacity={0.8}
+                            >
+                              <View style={styles.organicArrowCircle}>
+                                <Ionicons name="arrow-forward" size={12} color="#13BE9C" />
+                              </View>
+                              <Text style={styles.organicBookNowText}>{t('Book Again')}</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={styles.organicActionBtn}
+                              onPress={() => {
+                                setSelectedAppt(appt);
+                                setActiveModal('details');
+                              }}
+                              activeOpacity={0.8}
+                            >
+                              <View style={styles.organicActionIconCircle}>
+                                <Ionicons name="document-text-outline" size={12} color="#13BE9C" />
+                              </View>
+                              <Text style={styles.organicActionText}>{t('common.view_details', 'View Details')}</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={styles.organicActionBtn}
+                              onPress={() => {
+                                setSelectedAppt(appt);
+                                setActiveModal('directions');
+                              }}
+                              activeOpacity={0.8}
+                            >
+                              <View style={styles.organicActionIconCircle}>
+                                <Ionicons name="navigate-outline" size={12} color="#13BE9C" />
+                              </View>
+                              <Text style={styles.organicActionText}>{t('booking.view_directions', 'View Directions')}</Text>
+                            </TouchableOpacity>
+
+                            <TouchableOpacity
+                              style={styles.organicActionBtn}
+                              onPress={() => {
+                                setSelectedAppt(appt);
+                                setActiveModal('contact');
+                              }}
+                              activeOpacity={0.8}
+                            >
+                              <View style={styles.organicActionIconCircle}>
+                                <Ionicons name="call-outline" size={12} color="#13BE9C" />
+                              </View>
+                              <Text style={styles.organicActionText}>{t('Contact Centre')}</Text>
+                            </TouchableOpacity>
+                          </View>
+
+                          {isUpcomingVisit && (
+                            <View style={{ flexDirection: 'row', gap: 14, alignItems: 'center', flexWrap: 'wrap' }}>
+                              <TouchableOpacity
+                                style={styles.organicActionBtn}
+                                onPress={() => {
+                                  setSelectedAppt(appt);
+                                  setActiveModal('reschedule');
+                                }}
+                                activeOpacity={0.8}
+                              >
+                                <View style={[styles.organicActionIconCircle, { borderColor: '#F59E0B' }]}>
+                                  <Ionicons name="calendar-outline" size={12} color="#D97706" />
+                                </View>
+                                <Text style={[styles.organicActionText, { color: '#D97706' }]}>{t('booking.reschedule_btn', 'Reschedule')}</Text>
+                              </TouchableOpacity>
+
+                              <TouchableOpacity
+                                style={styles.organicActionBtn}
+                                onPress={() => {
+                                  setSelectedAppt(appt);
+                                  setActiveModal('cancel');
+                                }}
+                                activeOpacity={0.8}
+                              >
+                                <View style={[styles.organicActionIconCircle, { borderColor: '#EF4444' }]}>
+                                  <Ionicons name="close-circle-outline" size={12} color="#DC2626" />
+                                </View>
+                                <Text style={[styles.organicActionText, { color: '#DC2626' }]}>{t('common.cancel', 'Cancel')}</Text>
+                              </TouchableOpacity>
+                            </View>
+                          )}
+                        </>
                       )}
                     </View>
                   </View>
@@ -1025,415 +1198,443 @@ const MyAppointmentsScreenWeb = ({ navigation, route }) => {
       ========================================================= */}
 
       {/* 1. VIEW DETAILS MODAL */}
-      <Modal visible={activeModal === 'details'} transparent animationType="fade" onRequestClose={() => setActiveModal(null)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalBox}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>Appointment Slip</Text>
-                <Text style={styles.modalSubtitle}>ID: {selectedAppt?.id}</Text>
+      {activeModal === 'details' && selectedAppt ? (
+        <Modal visible={true} transparent animationType="fade" onRequestClose={() => setActiveModal(null)}>
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalBox}>
+              <View style={styles.modalHeader}>
+                <View>
+                  <Text style={styles.modalTitle}>Appointment Slip</Text>
+                  <Text style={styles.modalSubtitle}>ID: {selectedAppt?.id}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.modalCloseIcon}>
+                  <Ionicons name="close" size={20} color="#64748B" />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.modalCloseIcon}>
-                <Ionicons name="close" size={20} color="#64748B" />
-              </TouchableOpacity>
-            </View>
 
-            <ScrollView style={{ maxHeight: 480 }} showsVerticalScrollIndicator={false}>
-              <View style={styles.modalContent}>
-                {/* Status Callout */}
-                <View style={[styles.modalStatusBanner, { backgroundColor: getStatusBadgeConfig(getAppointmentDynamicStatus(selectedAppt, currentTime)).bg }]}>
-                  <Ionicons
-                    name={getStatusBadgeConfig(getAppointmentDynamicStatus(selectedAppt, currentTime)).icon}
-                    size={20}
-                    color={getStatusBadgeConfig(getAppointmentDynamicStatus(selectedAppt, currentTime)).text}
-                  />
-                  <View style={{ marginLeft: 10, flex: 1 }}>
-                    <Text style={{ fontWeight: '700', color: getStatusBadgeConfig(getAppointmentDynamicStatus(selectedAppt, currentTime)).text }}>
-                      Status: {getAppointmentDynamicStatus(selectedAppt, currentTime)}
+              <ScrollView style={{ maxHeight: 480 }} showsVerticalScrollIndicator={false}>
+                <View style={styles.modalContent}>
+                  {/* Status Callout */}
+                  <View style={[styles.modalStatusBanner, { backgroundColor: (typeof getStatusBadgeConfig === 'function' ? getStatusBadgeConfig(typeof getAppointmentDynamicStatus === 'function' ? getAppointmentDynamicStatus(selectedAppt, currentTime) : selectedAppt?.status) : {}).bg || '#E6F8F4' }]}>
+                    <Ionicons
+                      name={(typeof getStatusBadgeConfig === 'function' ? getStatusBadgeConfig(typeof getAppointmentDynamicStatus === 'function' ? getAppointmentDynamicStatus(selectedAppt, currentTime) : selectedAppt?.status) : {}).icon || 'checkmark-circle'}
+                      size={20}
+                      color={(typeof getStatusBadgeConfig === 'function' ? getStatusBadgeConfig(typeof getAppointmentDynamicStatus === 'function' ? getAppointmentDynamicStatus(selectedAppt, currentTime) : selectedAppt?.status) : {}).text || '#00B894'}
+                    />
+                    <View style={{ marginLeft: 10, flex: 1 }}>
+                      <Text style={{ fontWeight: '700', color: (typeof getStatusBadgeConfig === 'function' ? getStatusBadgeConfig(typeof getAppointmentDynamicStatus === 'function' ? getAppointmentDynamicStatus(selectedAppt, currentTime) : selectedAppt?.status) : {}).text || '#00B894' }}>
+                        Status: {typeof getAppointmentDynamicStatus === 'function' ? getAppointmentDynamicStatus(selectedAppt, currentTime) : (selectedAppt?.status || 'Upcoming')}
+                      </Text>
+                      <Text style={{ fontSize: 12, color: '#475569' }}>Payment: {selectedAppt?.paymentStatus}</Text>
+                    </View>
+                  </View>
+
+                  {/* Patient Information */}
+                  <Text style={styles.modalSectionHeading}>Patient Details</Text>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Patient Name:</Text>
+                    <Text style={styles.infoVal}>
+                      {typeof selectedAppt?.patient === 'string'
+                        ? selectedAppt.patient
+                        : (selectedAppt?.patient?.name || selectedAppt?.patientName || patient?.name || 'Hemanth Gowda')}
                     </Text>
-                    <Text style={{ fontSize: 12, color: '#475569' }}>Payment: {selectedAppt?.paymentStatus}</Text>
                   </View>
-                </View>
-
-                {/* Patient Information */}
-                <Text style={styles.modalSectionHeading}>Patient Details</Text>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Patient Name:</Text>
-                  <Text style={styles.infoVal}>
-                    {typeof selectedAppt?.patient === 'string'
-                      ? selectedAppt.patient
-                      : (selectedAppt?.patient?.name || selectedAppt?.patientName || patient?.name || 'Hemanth Gowda')}
-                  </Text>
-                </View>
-                {selectedAppt?.patient?.relation && selectedAppt.patient.relation.toLowerCase() !== 'self' && (
+                  {selectedAppt?.patient?.relation && selectedAppt.patient.relation.toLowerCase() !== 'self' && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Relationship:</Text>
+                      <Text style={styles.infoVal}>{selectedAppt.patient.relation}</Text>
+                    </View>
+                  )}
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Relationship:</Text>
-                    <Text style={styles.infoVal}>{selectedAppt.patient.relation}</Text>
+                    <Text style={styles.infoLabel}>Age & Gender:</Text>
+                    <Text style={styles.infoVal}>{selectedAppt?.patient?.age || selectedAppt?.age || 28} Yrs, {selectedAppt?.patient?.gender || selectedAppt?.gender || 'Male'}</Text>
                   </View>
-                )}
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Age & Gender:</Text>
-                  <Text style={styles.infoVal}>{selectedAppt?.patient?.age || selectedAppt?.age || 28} Yrs, {selectedAppt?.patient?.gender || selectedAppt?.gender || 'Male'}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Visit Reason:</Text>
-                  <Text style={styles.infoVal}>{renderSafeText(selectedAppt?.patient?.reason || selectedAppt?.reason, 'Routine Health Consultation')}</Text>
-                </View>
-
-                {/* Facility Details */}
-                <Text style={[styles.modalSectionHeading, { marginTop: 14 }]}>Clinic / Hospital Details</Text>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Facility:</Text>
-                  <Text style={styles.infoVal}>{renderSafeText(selectedAppt?.facilityName, 'MediUnify Partner Clinic')}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Department:</Text>
-                  <Text style={styles.infoVal}>{renderSafeText(selectedAppt?.department, 'Specialist Care')}</Text>
-                </View>
-                {selectedAppt?.doctor?.name && (
                   <View style={styles.infoRow}>
-                    <Text style={styles.infoLabel}>Doctor:</Text>
-                    <Text style={styles.infoVal}>{selectedAppt.doctor.name} ({selectedAppt.doctor.specialty})</Text>
+                    <Text style={styles.infoLabel}>Visit Reason:</Text>
+                    <Text style={styles.infoVal}>{renderSafeText(selectedAppt?.patient?.reason || selectedAppt?.reason, 'Routine Health Consultation')}</Text>
                   </View>
-                )}
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Address:</Text>
-                  <Text style={styles.infoVal}>{renderSafeAddress(selectedAppt?.address)}</Text>
+
+                  {/* Facility Details */}
+                  <Text style={[styles.modalSectionHeading, { marginTop: 14 }]}>Clinic / Hospital Details</Text>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Facility:</Text>
+                    <Text style={styles.infoVal}>{renderSafeText(selectedAppt?.facilityName, 'MediUnify Partner Clinic')}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Department:</Text>
+                    <Text style={styles.infoVal}>{renderSafeText(selectedAppt?.department, 'Specialist Care')}</Text>
+                  </View>
+                  {selectedAppt?.doctor?.name && (
+                    <View style={styles.infoRow}>
+                      <Text style={styles.infoLabel}>Doctor:</Text>
+                      <Text style={styles.infoVal}>{selectedAppt.doctor.name} ({selectedAppt.doctor.specialty})</Text>
+                    </View>
+                  )}
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Address:</Text>
+                    <Text style={styles.infoVal}>{renderSafeAddress(selectedAppt?.address)}</Text>
+                  </View>
+
+                  {/* Date & Time */}
+                  <Text style={[styles.modalSectionHeading, { marginTop: 14 }]}>Appointment Slot</Text>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Scheduled Date:</Text>
+                    <Text style={[styles.infoVal, { fontWeight: '700', color: '#00B894' }]}>
+                      {typeof formatAppointmentDateTimeLabel === 'function' ? formatAppointmentDateTimeLabel(selectedAppt?.date, selectedAppt?.time, currentTime) : (selectedAppt?.date || 'Upcoming')}
+                    </Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Time Slot:</Text>
+                    <Text style={styles.infoVal}>{selectedAppt?.timeSlot || selectedAppt?.time}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Booked on:</Text>
+                    <Text style={styles.infoVal}>{typeof formatBookingDateLabel === 'function' ? formatBookingDateLabel(selectedAppt?.bookingDate) : (selectedAppt?.bookingDate || 'Recently')}</Text>
+                  </View>
+                  <View style={styles.infoRow}>
+                    <Text style={styles.infoLabel}>Timezone:</Text>
+                    <Text style={styles.infoVal}>{selectedAppt?.timezone || (typeof getUserTimezone === 'function' ? getUserTimezone() : 'Asia/Kolkata')}</Text>
+                  </View>
+
+                  {/* Preparation Instructions */}
+                  {selectedAppt?.instructions && (
+                    <View style={styles.instructionsBox}>
+                      <Ionicons name="information-circle" size={18} color="#0369A1" style={{ marginRight: 6 }} />
+                      <Text style={styles.instructionsText}>{selectedAppt.instructions}</Text>
+                    </View>
+                  )}
+                </View>
+              </ScrollView>
+
+              <View style={styles.modalFooter}>
+                <View style={{ flexDirection: 'row', gap: 8, width: '100%', marginBottom: 10 }}>
+                  <TouchableOpacity
+                    style={[styles.modalSecondaryBtn, { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#A7F3D0', backgroundColor: '#ECFDF5' }]}
+                    onPress={() => setActiveModal('directions')}
+                  >
+                    <Ionicons name="navigate-outline" size={15} color="#13BE9C" style={{ marginRight: 5 }} />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#13BE9C' }}>{t('Directions')}</Text>
+                  </TouchableOpacity>
+
+                  <TouchableOpacity
+                    style={[styles.modalSecondaryBtn, { flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', paddingVertical: 10, borderRadius: 8, borderWidth: 1, borderColor: '#A7F3D0', backgroundColor: '#ECFDF5' }]}
+                    onPress={() => setActiveModal('contact')}
+                  >
+                    <Ionicons name="call-outline" size={15} color="#13BE9C" style={{ marginRight: 5 }} />
+                    <Text style={{ fontSize: 13, fontWeight: '700', color: '#13BE9C' }}>{t('Call Clinic')}</Text>
+                  </TouchableOpacity>
                 </View>
 
-                {/* Date & Time */}
-                <Text style={[styles.modalSectionHeading, { marginTop: 14 }]}>Appointment Slot</Text>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Scheduled Date:</Text>
-                  <Text style={[styles.infoVal, { fontWeight: '700', color: '#00B894' }]}>
-                    {formatAppointmentDateTimeLabel(selectedAppt?.date, selectedAppt?.time, currentTime)}
-                  </Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Time Slot:</Text>
-                  <Text style={styles.infoVal}>{selectedAppt?.timeSlot || selectedAppt?.time}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Booked on:</Text>
-                  <Text style={styles.infoVal}>{formatBookingDateLabel(selectedAppt?.bookingDate)}</Text>
-                </View>
-                <View style={styles.infoRow}>
-                  <Text style={styles.infoLabel}>Timezone:</Text>
-                  <Text style={styles.infoVal}>{selectedAppt?.timezone || getUserTimezone()}</Text>
-                </View>
-
-                {/* Preparation Instructions */}
-                {selectedAppt?.instructions && (
-                  <View style={styles.instructionsBox}>
-                    <Ionicons name="information-circle" size={18} color="#0369A1" style={{ marginRight: 6 }} />
-                    <Text style={styles.instructionsText}>{selectedAppt.instructions}</Text>
-                  </View>
-                )}
+                <TouchableOpacity
+                  style={styles.modalPrimaryBtn}
+                  onPress={() => {
+                    setActiveModal(null);
+                    showToast('Appointment slip ready for print.');
+                  }}
+                >
+                  <Ionicons name="print-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.modalPrimaryBtnText}>Print / Download Slip</Text>
+                </TouchableOpacity>
               </View>
-            </ScrollView>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.modalPrimaryBtn}
-                onPress={() => {
-                  setActiveModal(null);
-                  showToast('Appointment slip ready for print.');
-                }}
-              >
-                <Ionicons name="print-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.modalPrimaryBtnText}>Print / Download Slip</Text>
-              </TouchableOpacity>
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      ) : null}
 
       {/* 2. RESCHEDULE MODAL */}
-      <Modal visible={activeModal === 'reschedule'} transparent animationType="fade" onRequestClose={() => setActiveModal(null)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalBox}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>Reschedule Appointment</Text>
-                <Text style={styles.modalSubtitle}>
-                  Current: {formatAppointmentDateTimeLabel(selectedAppt?.date, selectedAppt?.time, currentTime)}
-                </Text>
+      {activeModal === 'reschedule' && selectedAppt ? (
+        <Modal visible={true} transparent animationType="fade" onRequestClose={() => setActiveModal(null)}>
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalBox}>
+              <View style={styles.modalHeader}>
+                <View>
+                  <Text style={styles.modalTitle}>Reschedule Appointment</Text>
+                  <Text style={styles.modalSubtitle}>
+                    Current: {typeof formatAppointmentDateTimeLabel === 'function' ? formatAppointmentDateTimeLabel(selectedAppt?.date, selectedAppt?.time, currentTime) : (selectedAppt?.date || 'Upcoming')}
+                  </Text>
+                </View>
+                <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.modalCloseIcon}>
+                  <Ionicons name="close" size={20} color="#64748B" />
+                </TouchableOpacity>
               </View>
-              <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.modalCloseIcon}>
-                <Ionicons name="close" size={20} color="#64748B" />
-              </TouchableOpacity>
-            </View>
 
-            <View style={styles.modalContent}>
-              <Text style={styles.inputLabel}>Select New Date</Text>
-              <View style={styles.datePickerRow}>
-                {rescheduleDatesList.map((d) => (
+              <View style={styles.modalContent}>
+                <Text style={styles.inputLabel}>Select New Date</Text>
+                <View style={styles.datePickerRow}>
+                  {rescheduleDatesList.map((d) => (
+                    <TouchableOpacity
+                      key={d}
+                      style={[styles.dateChoiceBtn, newDate === d && styles.dateChoiceBtnActive]}
+                      onPress={() => setNewDate(d)}
+                    >
+                      <Text style={[styles.dateChoiceText, newDate === d && styles.dateChoiceTextActive]}>
+                        {typeof formatAppointmentDateLabel === 'function' ? formatAppointmentDateLabel(d, currentTime) : d}
+                      </Text>
+                    </TouchableOpacity>
+                  ))}
+                </View>
+
+                <Text style={[styles.inputLabel, { marginTop: 14 }]}>Select Available Slot</Text>
+                <View style={{ gap: 8 }}>
+                  {[
+                    '10:00 AM (Morning Slot)',
+                    '11:30 AM (Morning Slot)',
+                    '02:30 PM (Afternoon Slot)',
+                    '04:45 PM (Evening Slot)',
+                  ].map((s) => {
+                    const sTime = s.split(' ')[0] + ' ' + s.split(' ')[1];
+                    const slotStatus = typeof getSlotStatus === 'function' ? getSlotStatus({
+                      date: newDate,
+                      time: sTime,
+                      serviceType: selectedAppt?.type || 'doctor',
+                      providerId: selectedAppt?.doctor?.id || selectedAppt?.doctor?.name || selectedAppt?.facilityName || selectedAppt?.clinicName,
+                    }) : { available: true, status: 'AVAILABLE' };
+                    const isAvailable = slotStatus?.available ?? true;
+                    const isSelected = newTimeSlot === s;
+                    return (
+                      <TouchableOpacity
+                        key={s}
+                        style={[
+                          styles.slotChoiceBtn,
+                          isSelected && styles.slotChoiceBtnActive,
+                          !isAvailable && { opacity: 0.55, backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' },
+                        ]}
+                        disabled={!isAvailable}
+                        onPress={() => setNewTimeSlot(s)}
+                      >
+                        <Ionicons
+                          name={isSelected ? 'radio-button-on' : 'radio-button-off'}
+                          size={16}
+                          color={isSelected ? '#00B894' : isAvailable ? '#94A3B8' : '#CBD5E1'}
+                          style={{ marginRight: 8 }}
+                        />
+                        <Text
+                          style={[
+                            styles.slotChoiceText,
+                            isSelected && { color: '#00B894', fontWeight: '700' },
+                            !isAvailable && { color: '#94A3B8', textDecorationLine: 'line-through' },
+                          ]}
+                        >
+                          {s}
+                        </Text>
+                        {!isAvailable && (
+                          <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 'auto' }}>
+                            <Text style={{ fontSize: 9, fontWeight: '700', color: '#DC2626', textTransform: 'uppercase' }}>
+                              {slotStatus?.status === 'PASSED' ? 'Passed' : 'Booked'}
+                            </Text>
+                          </View>
+                        )}
+                      </TouchableOpacity>
+                    );
+                  })}
+                </View>
+
+                <Text style={[styles.inputLabel, { marginTop: 14 }]}>Reason for Rescheduling</Text>
+                <TextInput
+                  style={styles.modalInput}
+                  value={rescheduleReason}
+                  onChangeText={setRescheduleReason}
+                  placeholder="e.g. Schedule clash, unwell, doctor advice..."
+                  placeholderTextColor="#94A3B8"
+                />
+              </View>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setActiveModal(null)}>
+                  <Text style={styles.modalCancelBtnText}>Cancel</Text>
+                </TouchableOpacity>
+                <TouchableOpacity style={styles.modalPrimaryBtn} onPress={handleConfirmReschedule}>
+                  <Text style={styles.modalPrimaryBtnText}>Confirm Reschedule</Text>
+                </TouchableOpacity>
+              </View>
+            </View>
+          </View>
+        </Modal>
+      ) : null}
+
+      {/* 3. CANCEL APPOINTMENT MODAL */}
+      {activeModal === 'cancel' && selectedAppt ? (
+        <Modal visible={true} transparent animationType="fade" onRequestClose={() => setActiveModal(null)}>
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalBox}>
+              <View style={styles.modalHeader}>
+                <View>
+                  <Text style={[styles.modalTitle, { color: '#EF4444' }]}>Cancel In-Person Visit</Text>
+                  <Text style={styles.modalSubtitle}>ID: {selectedAppt?.id}</Text>
+                </View>
+                <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.modalCloseIcon}>
+                  <Ionicons name="close" size={20} color="#64748B" />
+                </TouchableOpacity>
+              </View>
+
+              <View style={styles.modalContent}>
+                <View style={styles.alertWarning}>
+                  <Ionicons name="alert-circle" size={18} color="#D97706" style={{ marginRight: 8 }} />
+                  <Text style={styles.alertWarningText}>
+                    Any online consultation fee paid will be automatically refunded to your original payment method within 2-4 business days.
+                  </Text>
+                </View>
+
+                <Text style={styles.inputLabel}>Reason for Cancellation</Text>
+                {[
+                  'Personal reasons / schedule clash',
+                  'Patient recovered / symptoms resolved',
+                  'Doctor recommended different test/visit',
+                  'Booked another date or facility',
+                ].map((r) => (
                   <TouchableOpacity
-                    key={d}
-                    style={[styles.dateChoiceBtn, newDate === d && styles.dateChoiceBtnActive]}
-                    onPress={() => setNewDate(d)}
+                    key={r}
+                    style={[styles.slotChoiceBtn, cancelReason === r && styles.slotChoiceBtnActive]}
+                    onPress={() => setCancelReason(r)}
                   >
-                    <Text style={[styles.dateChoiceText, newDate === d && styles.dateChoiceTextActive]}>
-                      {formatAppointmentDateLabel(d, currentTime)}
+                    <Ionicons
+                      name={cancelReason === r ? 'radio-button-on' : 'radio-button-off'}
+                      size={16}
+                      color={cancelReason === r ? '#EF4444' : '#94A3B8'}
+                      style={{ marginRight: 8 }}
+                    />
+                    <Text style={[styles.slotChoiceText, cancelReason === r && { color: '#EF4444', fontWeight: '700' }]}>
+                      {r}
                     </Text>
                   </TouchableOpacity>
                 ))}
+
+                <Text style={[styles.inputLabel, { marginTop: 12 }]}>Additional Remarks (Optional)</Text>
+                <TextInput
+                  style={[styles.modalInput, { height: 60 }]}
+                  value={cancelRemarks}
+                  onChangeText={setCancelRemarks}
+                  placeholder="Optional notes for hospital administration..."
+                  placeholderTextColor="#94A3B8"
+                  multiline
+                />
               </View>
 
-              <Text style={[styles.inputLabel, { marginTop: 14 }]}>Select Available Slot</Text>
-              <View style={{ gap: 8 }}>
-                {[
-                  '10:00 AM (Morning Slot)',
-                  '11:30 AM (Morning Slot)',
-                  '02:30 PM (Afternoon Slot)',
-                  '04:45 PM (Evening Slot)',
-                ].map((s) => {
-                  const sTime = s.split(' ')[0] + ' ' + s.split(' ')[1];
-                  const slotStatus = getSlotStatus({
-                    date: newDate,
-                    time: sTime,
-                    serviceType: selectedAppt?.type || 'doctor',
-                    providerId: selectedAppt?.doctor?.id || selectedAppt?.doctor?.name || selectedAppt?.facilityName || selectedAppt?.clinicName,
-                  });
-                  const isAvailable = slotStatus.available;
-                  const isSelected = newTimeSlot === s;
-                  return (
-                    <TouchableOpacity
-                      key={s}
-                      style={[
-                        styles.slotChoiceBtn,
-                        isSelected && styles.slotChoiceBtnActive,
-                        !isAvailable && { opacity: 0.55, backgroundColor: '#F8FAFC', borderColor: '#E2E8F0' },
-                      ]}
-                      disabled={!isAvailable}
-                      onPress={() => setNewTimeSlot(s)}
-                    >
-                      <Ionicons
-                        name={isSelected ? 'radio-button-on' : 'radio-button-off'}
-                        size={16}
-                        color={isSelected ? '#00B894' : isAvailable ? '#94A3B8' : '#CBD5E1'}
-                        style={{ marginRight: 8 }}
-                      />
-                      <Text
-                        style={[
-                          styles.slotChoiceText,
-                          isSelected && { color: '#00B894', fontWeight: '700' },
-                          !isAvailable && { color: '#94A3B8', textDecorationLine: 'line-through' },
-                        ]}
-                      >
-                        {s}
-                      </Text>
-                      {!isAvailable && (
-                        <View style={{ backgroundColor: '#FEE2E2', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 4, marginLeft: 'auto' }}>
-                          <Text style={{ fontSize: 9, fontWeight: '700', color: '#DC2626', textTransform: 'uppercase' }}>
-                            {slotStatus.status === 'PASSED' ? 'Passed' : 'Booked'}
-                          </Text>
-                        </View>
-                      )}
-                    </TouchableOpacity>
-                  );
-                })}
-              </View>
-
-              <Text style={[styles.inputLabel, { marginTop: 14 }]}>Reason for Rescheduling</Text>
-              <TextInput
-                style={styles.modalInput}
-                value={rescheduleReason}
-                onChangeText={setRescheduleReason}
-                placeholder="e.g. Schedule clash, unwell, doctor advice..."
-                placeholderTextColor="#94A3B8"
-              />
-            </View>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setActiveModal(null)}>
-                <Text style={styles.modalCancelBtnText}>Cancel</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={styles.modalPrimaryBtn} onPress={handleConfirmReschedule}>
-                <Text style={styles.modalPrimaryBtnText}>Confirm Reschedule</Text>
-              </TouchableOpacity>
-            </View>
-          </View>
-        </View>
-      </Modal>
-
-      {/* 3. CANCEL APPOINTMENT MODAL */}
-      <Modal visible={activeModal === 'cancel'} transparent animationType="fade" onRequestClose={() => setActiveModal(null)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalBox}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={[styles.modalTitle, { color: '#EF4444' }]}>Cancel In-Person Visit</Text>
-                <Text style={styles.modalSubtitle}>ID: {selectedAppt?.id}</Text>
-              </View>
-              <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.modalCloseIcon}>
-                <Ionicons name="close" size={20} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalContent}>
-              <View style={styles.alertWarning}>
-                <Ionicons name="alert-circle" size={18} color="#D97706" style={{ marginRight: 8 }} />
-                <Text style={styles.alertWarningText}>
-                  Any online consultation fee paid will be automatically refunded to your original payment method within 2-4 business days.
-                </Text>
-              </View>
-
-              <Text style={styles.inputLabel}>Reason for Cancellation</Text>
-              {[
-                'Personal reasons / schedule clash',
-                'Patient recovered / symptoms resolved',
-                'Doctor recommended different test/visit',
-                'Booked another date or facility',
-              ].map((r) => (
-                <TouchableOpacity
-                  key={r}
-                  style={[styles.slotChoiceBtn, cancelReason === r && styles.slotChoiceBtnActive]}
-                  onPress={() => setCancelReason(r)}
-                >
-                  <Ionicons
-                    name={cancelReason === r ? 'radio-button-on' : 'radio-button-off'}
-                    size={16}
-                    color={cancelReason === r ? '#EF4444' : '#94A3B8'}
-                    style={{ marginRight: 8 }}
-                  />
-                  <Text style={[styles.slotChoiceText, cancelReason === r && { color: '#EF4444', fontWeight: '700' }]}>
-                    {r}
-                  </Text>
+              <View style={styles.modalFooter}>
+                <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setActiveModal(null)}>
+                  <Text style={styles.modalCancelBtnText}>Keep Appointment</Text>
                 </TouchableOpacity>
-              ))}
-
-              <Text style={[styles.inputLabel, { marginTop: 12 }]}>Additional Remarks (Optional)</Text>
-              <TextInput
-                style={[styles.modalInput, { height: 60 }]}
-                value={cancelRemarks}
-                onChangeText={setCancelRemarks}
-                placeholder="Optional notes for hospital administration..."
-                placeholderTextColor="#94A3B8"
-                multiline
-              />
-            </View>
-
-            <View style={styles.modalFooter}>
-              <TouchableOpacity style={styles.modalCancelBtn} onPress={() => setActiveModal(null)}>
-                <Text style={styles.modalCancelBtnText}>Keep Appointment</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.modalPrimaryBtn, { backgroundColor: '#EF4444' }]} onPress={handleConfirmCancel}>
-                <Text style={styles.modalPrimaryBtnText}>Yes, Cancel Appointment</Text>
-              </TouchableOpacity>
+                <TouchableOpacity style={[styles.modalPrimaryBtn, { backgroundColor: '#EF4444' }]} onPress={handleConfirmCancel}>
+                  <Text style={styles.modalPrimaryBtnText}>Yes, Cancel Appointment</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      ) : null}
 
       {/* 4. DIRECTIONS MODAL */}
-      <Modal visible={activeModal === 'directions'} transparent animationType="fade" onRequestClose={() => setActiveModal(null)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalBox}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>Facility Location & Navigation</Text>
-                <Text style={styles.modalSubtitle}>{selectedAppt?.facilityName}</Text>
-              </View>
-              <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.modalCloseIcon}>
-                <Ionicons name="close" size={20} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalContent}>
-              <View style={styles.mapPreviewBox}>
-                <Ionicons name="map" size={40} color="#00B894" />
-                <Text style={{ fontWeight: '700', color: '#1E3A8A', marginTop: 8 }}>
-                  {renderSafeText(selectedAppt?.facilityName, 'Medical Centre')}
-                </Text>
-                <Text style={{ fontSize: 12, color: '#64748B', textAlign: 'center', marginTop: 4, paddingHorizontal: 20 }}>
-                  {renderSafeAddress(selectedAppt?.address)}
-                </Text>
-                <View style={styles.distanceBadge}>
-                  <Ionicons name="navigate" size={12} color="#00B894" style={{ marginRight: 4 }} />
-                  <Text style={{ fontSize: 11, fontWeight: '700', color: '#00B894' }}>Approx 4.8 km from your saved address</Text>
+      {activeModal === 'directions' && selectedAppt ? (
+        <Modal visible={true} transparent animationType="fade" onRequestClose={() => setActiveModal(null)}>
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalBox}>
+              <View style={styles.modalHeader}>
+                <View>
+                  <Text style={styles.modalTitle}>Facility Location & Navigation</Text>
+                  <Text style={styles.modalSubtitle}>{selectedAppt?.facilityName}</Text>
                 </View>
+                <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.modalCloseIcon}>
+                  <Ionicons name="close" size={20} color="#64748B" />
+                </TouchableOpacity>
               </View>
 
-              <Text style={{ fontSize: 12, color: '#64748B', marginTop: 12 }}>
-                Parking: On-site multi-level parking available for patients. Show your appointment token for priority barrier access.
-              </Text>
-            </View>
+              <View style={styles.modalContent}>
+                <View style={styles.mapPreviewBox}>
+                  <Ionicons name="map" size={40} color="#00B894" />
+                  <Text style={{ fontWeight: '700', color: '#1E3A8A', marginTop: 8 }}>
+                    {renderSafeText(selectedAppt?.facilityName, 'Medical Centre')}
+                  </Text>
+                  <Text style={{ fontSize: 12, color: '#64748B', textAlign: 'center', marginTop: 4, paddingHorizontal: 20 }}>
+                    {renderSafeAddress(selectedAppt?.address)}
+                  </Text>
+                  <View style={styles.distanceBadge}>
+                    <Ionicons name="navigate" size={12} color="#00B894" style={{ marginRight: 4 }} />
+                    <Text style={{ fontSize: 11, fontWeight: '700', color: '#00B894' }}>Approx 4.8 km from your saved address</Text>
+                  </View>
+                </View>
 
-            <View style={styles.modalFooter}>
-              <TouchableOpacity
-                style={styles.modalPrimaryBtn}
-                onPress={() => {
-                  handleOpenDirections(selectedAppt);
-                }}
-              >
-                <Ionicons name="open-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
-                <Text style={styles.modalPrimaryBtnText}>Open in Google Maps</Text>
-              </TouchableOpacity>
+                <Text style={{ fontSize: 12, color: '#64748B', marginTop: 12 }}>
+                  Parking: On-site multi-level parking available for patients. Show your appointment token for priority barrier access.
+                </Text>
+              </View>
+
+              <View style={styles.modalFooter}>
+                <TouchableOpacity
+                  style={styles.modalPrimaryBtn}
+                  onPress={() => {
+                    handleOpenDirections(selectedAppt);
+                  }}
+                >
+                  <Ionicons name="open-outline" size={16} color="#FFFFFF" style={{ marginRight: 6 }} />
+                  <Text style={styles.modalPrimaryBtnText}>Open in Google Maps</Text>
+                </TouchableOpacity>
+              </View>
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      ) : null}
 
       {/* 5. CONTACT CENTRE MODAL */}
-      <Modal visible={activeModal === 'contact'} transparent animationType="fade" onRequestClose={() => setActiveModal(null)}>
-        <View style={styles.modalBackdrop}>
-          <View style={styles.modalBox}>
-            <View style={styles.modalHeader}>
-              <View>
-                <Text style={styles.modalTitle}>Contact Centre</Text>
-                <Text style={styles.modalSubtitle}>{selectedAppt?.facilityName}</Text>
-              </View>
-              <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.modalCloseIcon}>
-                <Ionicons name="close" size={20} color="#64748B" />
-              </TouchableOpacity>
-            </View>
-
-            <View style={styles.modalContent}>
-              <View style={styles.contactItem}>
-                <View style={styles.contactIconWrap}>
-                  <Ionicons name="call" size={20} color="#00B894" />
+      {activeModal === 'contact' ? (
+        <Modal visible={true} transparent animationType="fade" onRequestClose={() => setActiveModal(null)}>
+          <View style={styles.modalBackdrop}>
+            <View style={styles.modalBox}>
+              <View style={styles.modalHeader}>
+                <View>
+                  <Text style={styles.modalTitle}>Contact Centre</Text>
+                  <Text style={styles.modalSubtitle}>{selectedAppt?.facilityName || 'MediUnify'}</Text>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.contactTitle}>Front Desk & Appointments Desk</Text>
-                  <Text style={styles.contactSubtitle}>{selectedAppt?.phone || '+91 80 4342 0100'}</Text>
-                  <Text style={{ fontSize: 11, color: '#94A3B8' }}>Available 7:00 AM - 9:00 PM</Text>
-                </View>
-                <TouchableOpacity
-                  style={styles.callNowBtn}
-                  onPress={() => Linking.openURL(`tel:${selectedAppt?.phone || '+918043420100'}`)}
-                >
-                  <Text style={styles.callNowBtnText}>Call Now</Text>
+                <TouchableOpacity onPress={() => setActiveModal(null)} style={styles.modalCloseIcon}>
+                  <Ionicons name="close" size={20} color="#64748B" />
                 </TouchableOpacity>
               </View>
 
-              <View style={styles.contactItem}>
-                <View style={[styles.contactIconWrap, { backgroundColor: '#DCFCE7' }]}>
-                  <Ionicons name="logo-whatsapp" size={20} color="#16A34A" />
+              <View style={styles.modalContent}>
+                <View style={styles.contactItem}>
+                  <View style={styles.contactIconWrap}>
+                    <Ionicons name="call" size={20} color="#00B894" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.contactTitle}>Front Desk & Appointments Desk</Text>
+                    <Text style={styles.contactSubtitle}>{selectedAppt?.phone || '+91 80 4342 0100'}</Text>
+                    <Text style={{ fontSize: 11, color: '#94A3B8' }}>Available 7:00 AM - 9:00 PM</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={styles.callNowBtn}
+                    onPress={() => Linking.openURL(`tel:${selectedAppt?.phone || '+918043420100'}`)}
+                  >
+                    <Text style={styles.callNowBtnText}>Call Now</Text>
+                  </TouchableOpacity>
                 </View>
-                <View style={{ flex: 1 }}>
-                  <Text style={styles.contactTitle}>WhatsApp Care Concierge</Text>
-                  <Text style={styles.contactSubtitle}>Instant route directions & parking assistance</Text>
-                  <Text style={{ fontSize: 11, color: '#94A3B8' }}>Automated AI & Human Support</Text>
+
+                <View style={styles.contactItem}>
+                  <View style={[styles.contactIconWrap, { backgroundColor: '#DCFCE7' }]}>
+                    <Ionicons name="logo-whatsapp" size={20} color="#16A34A" />
+                  </View>
+                  <View style={{ flex: 1 }}>
+                    <Text style={styles.contactTitle}>WhatsApp Care Concierge</Text>
+                    <Text style={styles.contactSubtitle}>Instant route directions & parking assistance</Text>
+                    <Text style={{ fontSize: 11, color: '#94A3B8' }}>Automated AI & Human Support</Text>
+                  </View>
+                  <TouchableOpacity
+                    style={[styles.callNowBtn, { backgroundColor: '#16A34A' }]}
+                    onPress={() => Linking.openURL('https://wa.me/918043420100')}
+                  >
+                    <Text style={styles.callNowBtnText}>Chat</Text>
+                  </TouchableOpacity>
                 </View>
-                <TouchableOpacity
-                  style={[styles.callNowBtn, { backgroundColor: '#16A34A' }]}
-                  onPress={() => Linking.openURL('https://wa.me/918043420100')}
-                >
-                  <Text style={styles.callNowBtnText}>Chat</Text>
-                </TouchableOpacity>
               </View>
             </View>
           </View>
-        </View>
-      </Modal>
+        </Modal>
+      ) : null}
     </SafeAreaView>
   );
 };
 
 export default MyAppointmentsScreenWeb;
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#E8F1F8',
@@ -2076,6 +2277,242 @@ const styles = StyleSheet.create({
     fontWeight: '800',
     color: '#13BE9C',
     letterSpacing: 0.1,
+  },
+  organicHeroBtnMobile: {
+    width: '100%',
+    justifyContent: 'center',
+    paddingVertical: 10,
+  },
+  controlsCardMobile: {
+    padding: 9,
+    borderRadius: 12,
+    marginBottom: 8,
+    gap: 7,
+  },
+  apptCardMobile: {
+    backgroundColor: '#FFFFFF',
+    padding: 14,
+    borderRadius: 16,
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    marginBottom: 12,
+    shadowColor: '#0F172A',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.04,
+    shadowRadius: 8,
+    elevation: 2,
+  },
+  cardTopRowMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingBottom: 8,
+    marginBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F8FAFC',
+  },
+  apptIdTextMobile: {
+    fontSize: 11.5,
+    fontWeight: '600',
+    color: '#94A3B8',
+    fontFamily: 'monospace',
+    marginLeft: 6,
+  },
+  typeBadgeMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F0FDF4',
+    borderWidth: 1,
+    borderColor: '#DCFCE7',
+    paddingHorizontal: 8,
+    paddingVertical: 3,
+    borderRadius: 6,
+  },
+  typeBadgeTextMobile: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  statusBadgeMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 8,
+    paddingVertical: 3.5,
+    borderRadius: 12,
+    borderWidth: 1,
+  },
+  statusBadgeTextMobile: {
+    fontSize: 10.5,
+    fontWeight: '700',
+  },
+  cardMainRowMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    marginBottom: 10,
+  },
+  doctorImgMobile: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    borderWidth: 1.5,
+    borderColor: '#F1F5F9',
+    backgroundColor: '#F1F5F9',
+  },
+  facilityAvatarMobile: {
+    width: 46,
+    height: 46,
+    borderRadius: 23,
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1.5,
+    borderColor: '#A7F3D0',
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  doctorNameMobile: {
+    fontSize: 15,
+    fontWeight: '700',
+    color: '#0F172A',
+    letterSpacing: -0.2,
+    lineHeight: 19,
+  },
+  facilityNameMobile: {
+    fontSize: 12,
+    fontWeight: '500',
+    color: '#64748B',
+    marginTop: 2,
+    lineHeight: 16,
+  },
+  addressRowMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 3,
+  },
+  addressTextMobile: {
+    fontSize: 11.5,
+    color: '#94A3B8',
+    lineHeight: 15,
+  },
+  dateTimePillarMobile: {
+    width: '100%',
+    minWidth: 0,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#F1F5F9',
+    borderRadius: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    marginTop: 2,
+    marginBottom: 8,
+  },
+  dateTextMobile: {
+    fontSize: 12.5,
+    fontWeight: '700',
+    color: '#0F172A',
+  },
+  patientMetaTextMobile: {
+    fontSize: 11,
+    color: '#64748B',
+    marginTop: 2,
+  },
+  paymentPillMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderWidth: 1,
+    borderColor: '#A7F3D0',
+    paddingHorizontal: 7,
+    paddingVertical: 2.5,
+    borderRadius: 6,
+    flexShrink: 0,
+  },
+  paymentPillTextMobile: {
+    fontSize: 10,
+    fontWeight: '700',
+    color: '#059669',
+  },
+  actionBtnRowMobile: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 6,
+    paddingTop: 10,
+    borderTopWidth: 1,
+    borderTopColor: '#F1F5F9',
+    gap: 8,
+  },
+  modernPrimaryBtn: {
+    flex: 1,
+    height: 35,
+    backgroundColor: '#13BE9C',
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+    shadowColor: '#13BE9C',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.15,
+    shadowRadius: 3,
+    elevation: 1,
+  },
+  modernPrimaryBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#FFFFFF',
+  },
+  modernAmberBtn: {
+    flex: 1.1,
+    height: 35,
+    backgroundColor: '#FFFBEB',
+    borderWidth: 1,
+    borderColor: '#FDE68A',
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  modernAmberBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#D97706',
+  },
+  modernRedBtn: {
+    flex: 0.9,
+    height: 35,
+    backgroundColor: '#FEF2F2',
+    borderWidth: 1,
+    borderColor: '#FECACA',
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 6,
+  },
+  modernRedBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#DC2626',
+  },
+  modernSecondaryBtn: {
+    flex: 1,
+    height: 35,
+    backgroundColor: '#F8FAFC',
+    borderWidth: 1,
+    borderColor: '#E2E8F0',
+    borderRadius: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: 8,
+  },
+  modernSecondaryBtnText: {
+    fontSize: 12,
+    fontWeight: '700',
+    color: '#475569',
   },
 
   // Primary Action in Image 2 Style (no bulky outer container box)

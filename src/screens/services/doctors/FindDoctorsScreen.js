@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons } from '@expo/vector-icons';
 import WebFooter from '../../../components/web/WebFooter';
 import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 
 const service3dClinic = require('../../../../assets/icons/service_3d_clinic.jpg');
 const service3dVideo = require('../../../../assets/icons/service_3d_video.jpg');
@@ -89,6 +90,7 @@ const FindDoctorsScreen = ({ navigation }) => {
   const isDesktop = width >= 980;
   const isTablet = width >= 640 && width < 980;
   const { t, isIndic, isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
 
   useEffect(() => {
     if (Platform.OS === 'web' && typeof document !== 'undefined') {
@@ -266,7 +268,7 @@ const FindDoctorsScreen = ({ navigation }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',

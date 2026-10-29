@@ -204,16 +204,22 @@ const MyMedicineOrdersScreenWeb = ({ navigation, route }) => {
       loadData();
     };
 
-    if (typeof window !== 'undefined') {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
       window.addEventListener('storage', handleStorageChange);
       window.addEventListener('mediunify_orders_updated', handleOrdersUpdated);
     }
 
     return () => {
-      if (unsubscribeFocus) unsubscribeFocus();
-      if (typeof window !== 'undefined') {
-        window.removeEventListener('storage', handleStorageChange);
-        window.removeEventListener('mediunify_orders_updated', handleOrdersUpdated);
+      if (typeof unsubscribeFocus === 'function') {
+        try { unsubscribeFocus(); } catch (e) {}
+      } else if (unsubscribeFocus && typeof unsubscribeFocus.remove === 'function') {
+        try { unsubscribeFocus.remove(); } catch (e) {}
+      }
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
+        try {
+          window.removeEventListener('storage', handleStorageChange);
+          window.removeEventListener('mediunify_orders_updated', handleOrdersUpdated);
+        } catch (e) {}
       }
     };
   }, [navigation, loadData]);
@@ -536,7 +542,7 @@ const MyMedicineOrdersScreenWeb = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, isDarkMode && { backgroundColor: '#080E1A', backgroundImage: 'none' }]}>
       {/* Toast Notification */}
       {toastMessage ? (
         <View style={styles.toastContainer}>

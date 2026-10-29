@@ -18,6 +18,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import { showAlert } from '../../utils/alert';
 import colors from '../../theme/colors';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 
 const SettingsScreen = ({ navigation }) => {
   const {
@@ -33,6 +34,7 @@ const SettingsScreen = ({ navigation }) => {
     theme,
     LANGUAGES,
   } = useTheme();
+  const styles = useThemedStyles(baseStyles);
 
   // Modals state
   const [showLangModal, setShowLangModal] = useState(false);
@@ -296,7 +298,7 @@ const SettingsScreen = ({ navigation }) => {
         ]}
       >
         <TouchableOpacity
-          style={[styles.backBtn, { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' }]}
+          style={[styles.backBtn, { backgroundColor: isDarkMode ? '#16223D' : '#F1F5F9' }]}
           onPress={() => navigation.goBack()}
           activeOpacity={0.7}
           hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
@@ -1129,7 +1131,7 @@ const SettingsScreen = ({ navigation }) => {
 
 export default SettingsScreen;
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
   },

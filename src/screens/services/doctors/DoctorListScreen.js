@@ -38,6 +38,7 @@ import Pagination from '../../../components/common/Pagination';
 import GuestLeadModal from '../../../components/common/GuestLeadModal';
 import { shouldShowGuestLeadPopup } from '../../../services/guestLeadService';
 import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 
 export const POPULAR_LOCALITIES = [
   { id: '1', name: 'Kuvempunagar', city: 'Mysore', full: 'Kuvempunagar, Mysore', latitude: 12.2858, longitude: 76.6341 },
@@ -79,6 +80,7 @@ export const TOP_QUICK_SPECIALTIES = [
 ];
 
 const DoctorAvatar = ({ image, name }) => {
+  const styles = useThemedStyles(baseStyles);
   const [imageFailed, setImageFailed] = useState(false);
   const initials = name
     ? name
@@ -139,6 +141,7 @@ const DoctorCardItem = ({
   onDirections,
   onBook,
 }) => {
+  const styles = useThemedStyles(baseStyles);
   const [isHovered, setIsHovered] = useState(false);
 
   return (
@@ -268,6 +271,7 @@ const calculateDistance = (lat1, lon1, lat2, lon2) => {
 
 const DoctorListScreen = ({ navigation, route }) => {
   const { isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const isDark = isDarkMode;
   const { width } = useWindowDimensions();
   const isDesktopWeb = Platform.OS === 'web' && (isDesktopLayout(width) || width >= 600);
@@ -2029,7 +2033,7 @@ const DoctorListScreen = ({ navigation, route }) => {
 // STYLES
 // ==================================================
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F1F2F4', // Matches HomeScreen Flipkart-style background

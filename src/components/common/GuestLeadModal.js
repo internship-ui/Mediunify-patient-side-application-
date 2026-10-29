@@ -14,6 +14,8 @@ import {
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import colors from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import {
   saveGuestLead,
   validateLeadInput,
@@ -34,6 +36,8 @@ const GuestLeadModal = ({
 }) => {
   const { width } = useWindowDimensions();
   const isMobile = width < 600;
+  const { isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
 
   const [name, setName] = useState('');
   const [phone, setPhone] = useState('');
@@ -287,7 +291,7 @@ const GuestLeadModal = ({
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   backdrop: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.65)',

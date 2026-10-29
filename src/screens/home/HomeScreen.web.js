@@ -27,6 +27,7 @@ import { RADIOLOGY_TESTS } from '../../data/radiologyCatalogData';
 import { showAlert } from '../../utils/alert';
 import PromotionalAdsSection from '../../components/web/PromotionalAdsSection';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import { isDesktopLayout, isDesktopSiteRequested } from '../../utils/responsiveLayoutHelper';
 import GuestLeadModal from '../../components/common/GuestLeadModal';
 import { shouldShowGuestLeadPopup } from '../../services/guestLeadService';
@@ -167,6 +168,7 @@ const TRUST_PILLARS = [
 
 const HomeScreenWeb = ({ navigation }) => {
   const { t = (k, fb) => fb || k, isDarkMode, language, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const scrollViewRef = useRef(null);
 
@@ -883,23 +885,24 @@ const HomeScreenWeb = ({ navigation }) => {
   }, [showCityPicker]);
 
   return (
-    <SafeAreaView style={[styles.container, desktopSiteMode && { minWidth: 1200, width: '100%' }]}>
+    <SafeAreaView style={[styles.container, desktopSiteMode && { minWidth: 1200, width: '100%' }, isDarkMode && { backgroundColor: '#090E1A' }]}>
       <ScrollView
         ref={scrollViewRef}
-        contentContainerStyle={[styles.scrollContent, desktopSiteMode && { minWidth: 1200, width: '100%' }]}
+        contentContainerStyle={[styles.scrollContent, desktopSiteMode && { minWidth: 1200, width: '100%' }, isDarkMode && { backgroundColor: '#090E1A' }]}
         showsVerticalScrollIndicator={false}
       >
         {/* ============================================================
-            1. HERO SEARCH HUB (SAME POLISHED DESIGN AS LOGIN SCREEN)
+            1. HERO SEARCH HUB (PRESERVE BRAND MINT GREEN BANNER)
         ============================================================ */}
         <View
           style={[
             styles.heroSearchSection,
+            styles.heroSearchSectionBg,
             Platform.OS === 'web' ? (
               isDarkMode ? {
-                backgroundColor: '#0F172A',
-                backgroundImage: 'linear-gradient(135deg, #0F172A 0%, #1E293B 100%)',
-                borderBottomColor: '#334155',
+                backgroundColor: '#0B1728',
+                backgroundImage: 'radial-gradient(ellipse 100% 90% at 50% -10%, rgba(0, 229, 176, 0.16) 0%, rgba(11, 23, 40, 0.95) 55%, #080E1A 100%)',
+                borderBottomColor: 'rgba(255, 255, 255, 0.08)',
               } : {
                 backgroundColor: '#D8EEF6',
                 backgroundImage: 'linear-gradient(135deg, #CCE8F5 0%, #D4F3EB 45%, #DFFAF3 100%)',
@@ -926,35 +929,35 @@ const HomeScreenWeb = ({ navigation }) => {
             <View style={[styles.heroLeftCol, isDesktop ? { flex: 1, minWidth: 340, maxWidth: width < 1280 ? 560 : 660 } : { width: '100%' }]}>
               {/* 1. Badge & Refer Earn Row */}
               <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
-                <View style={styles.trustedBadge}>
-                  <Ionicons name="shield-checkmark" size={13} color="#059669" style={{ marginRight: 6 }} />
-                  <Text style={styles.trustedBadgeText}>{t('hero_badge', 'Trusted Healthcare')}</Text>
+                <View style={[styles.trustedBadge, isDarkMode && { backgroundColor: 'rgba(0, 229, 176, 0.12)', borderColor: 'rgba(0, 229, 176, 0.25)' }]}>
+                  <Ionicons name="shield-checkmark" size={13} color={isDarkMode ? '#00E5B0' : '#00B894'} style={{ marginRight: 6 }} />
+                  <Text style={[styles.trustedBadgeText, isDarkMode && { color: '#00E5B0' }]}>{t('hero_badge', 'Trusted Healthcare')}</Text>
                 </View>
                 {isLoggedIn && (
                   <TouchableOpacity
-                    style={styles.referEarnPill}
+                    style={[styles.referEarnPill, isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.06)', borderColor: 'rgba(255, 255, 255, 0.12)' }]}
                     onPress={() => handleNavigateToService('ReferEarn')}
                     activeOpacity={0.85}
                   >
-                    <Ionicons name="gift" size={13} color="#00B894" style={{ marginRight: 5 }} />
-                    <Text style={styles.referEarnPillText}>{t('refer_earn', 'Refer & Earn ₹250')}</Text>
+                    <Ionicons name="gift" size={13} color={isDarkMode ? '#00E5B0' : '#00B894'} style={{ marginRight: 5 }} />
+                    <Text style={[styles.referEarnPillText, isDarkMode && { color: '#E2E8F0' }]}>{t('refer_earn', 'Refer & Earn ₹250')}</Text>
                   </TouchableOpacity>
                 )}
               </View>
 
               {/* 2. Main Title */}
               <View style={styles.heroTitleWrap}>
-                <Text style={styles.heroTitleNavy}>{t('hero_title_navy', 'Your Healthcare,')}</Text>
-                <Text style={styles.heroTitleTeal}>{t('hero_title_teal', 'Simplified.')}</Text>
+                <Text style={[styles.heroTitleNavy, isDarkMode && { color: '#FFFFFF' }]}>{t('hero_title_navy', 'Your Healthcare,')}</Text>
+                <Text style={[styles.heroTitleTeal, isDarkMode && { color: '#00E5B0' }]}>{t('hero_title_teal', 'Simplified.')}</Text>
               </View>
 
               {/* 3. Subtitle */}
-              <Text style={[styles.heroSubtitle, isIndic && { lineHeight: 22 }]}>
+              <Text style={[styles.heroSubtitle, isDarkMode && { color: '#94A3B8' }, isIndic && { lineHeight: 22 }]}>
                 {t('hero_subtitle', 'Doctors, tests, medicines and scans in one place.')}
               </Text>
 
               {/* 4. Unified Search Bar */}
-              <View style={styles.unifiedSearchBar} nativeID="home-unified-search-box">
+              <View style={[styles.unifiedSearchBar, isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.12)', boxShadow: '0 8px 32px rgba(0, 0, 0, 0.5)' }]} nativeID="home-unified-search-box">
                 {/* Location selector wrapper */}
                 <View style={styles.citySelectorWrap} nativeID="home-city-picker-box">
                   {/* City selector button */}
@@ -968,45 +971,45 @@ const HomeScreenWeb = ({ navigation }) => {
                     accessibilityRole="button"
                     accessibilityLabel={`Selected location: ${selectedCity}`}
                   >
-                    <Ionicons name="location-sharp" size={18} color="#1E3A8A" />
-                    <Text style={styles.cityText} numberOfLines={1}>{selectedCity}</Text>
-                    <Ionicons name="chevron-down" size={13} color="#64748B" />
+                    <Ionicons name="location-sharp" size={18} color={isDarkMode ? '#00E5B0' : '#1E3A8A'} />
+                    <Text style={[styles.cityText, isDarkMode && { color: '#FFFFFF' }]} numberOfLines={1}>{selectedCity}</Text>
+                    <Ionicons name="chevron-down" size={13} color={isDarkMode ? '#94A3B8' : '#64748B'} />
                   </TouchableOpacity>
 
                   {/* City / Locality Search Dropdown Menu */}
                   {showCityPicker && (
-                    <View style={styles.cityDropdown}>
+                    <View style={[styles.cityDropdown, isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.12)', boxShadow: '0 16px 40px rgba(0, 0, 0, 0.7)' }]}>
                       {/* Search Bar inside Location Picker */}
-                      <View style={styles.locationSearchInputWrap}>
-                        <Ionicons name="search" size={15} color="#00B894" />
+                      <View style={[styles.locationSearchInputWrap, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
+                        <Ionicons name="search" size={15} color={isDarkMode ? '#00E5B0' : '#00B894'} />
                         <TextInput
-                          style={styles.locationSearchInput}
+                          style={[styles.locationSearchInput, isDarkMode && { color: '#FFFFFF' }]}
                           placeholder={t('location_search_placeholder', 'Search city, area, locality...')}
-                          placeholderTextColor="#94A3B8"
+                          placeholderTextColor={isDarkMode ? '#64748B' : '#94A3B8'}
                           value={locationSearchText}
                           onChangeText={setLocationSearchText}
                           autoFocus
                         />
                         {locationSearchText ? (
                           <TouchableOpacity onPress={() => setLocationSearchText('')} style={{ padding: 2 }}>
-                            <Ionicons name="close-circle" size={15} color="#94A3B8" />
+                            <Ionicons name="close-circle" size={15} color={isDarkMode ? '#64748B' : '#94A3B8'} />
                           </TouchableOpacity>
                         ) : null}
                       </View>
 
                       {/* Detect GPS Location Button */}
                       <TouchableOpacity
-                        style={[styles.detectLocationBtn, isDetectingLocation && { opacity: 0.7 }]}
+                        style={[styles.detectLocationBtn, isDarkMode && { backgroundColor: 'rgba(0, 229, 176, 0.08)', borderColor: 'rgba(0, 229, 176, 0.25)' }, isDetectingLocation && { opacity: 0.7 }]}
                         onPress={handleDetectLocation}
                         disabled={isDetectingLocation}
                         activeOpacity={0.8}
                       >
                         {isDetectingLocation ? (
-                          <ActivityIndicator size="small" color="#00B894" style={{ marginRight: 6 }} />
+                          <ActivityIndicator size="small" color={isDarkMode ? '#00E5B0' : '#00B894'} style={{ marginRight: 6 }} />
                         ) : (
-                          <Ionicons name="locate" size={15} color="#00B894" />
+                          <Ionicons name="locate" size={15} color={isDarkMode ? '#00E5B0' : '#00B894'} />
                         )}
-                        <Text style={styles.detectLocationText}>
+                        <Text style={[styles.detectLocationText, isDarkMode && { color: '#00E5B0' }]}>
                           {isDetectingLocation ? t('detecting_gps', 'Detecting your GPS location...') : t('use_gps_location', 'Use Current Location (GPS)')}
                         </Text>
                       </TouchableOpacity>
@@ -1015,11 +1018,11 @@ const HomeScreenWeb = ({ navigation }) => {
                       <ScrollView style={styles.locationListScroll} nestedScrollEnabled showsVerticalScrollIndicator>
                         {locationSearchText.trim() && !filteredLocations.some(l => l.name.toLowerCase() === locationSearchText.trim().toLowerCase()) && (
                           <TouchableOpacity
-                            style={styles.customLocationItem}
+                            style={[styles.customLocationItem, isDarkMode && { borderBottomColor: 'rgba(255, 255, 255, 0.06)' }]}
                             onPress={() => handleSelectLocation(locationSearchText.trim())}
                           >
-                            <Ionicons name="pin" size={14} color="#00B894" style={{ marginRight: 8 }} />
-                            <Text style={styles.customLocationText}>
+                            <Ionicons name="pin" size={14} color={isDarkMode ? '#00E5B0' : '#00B894'} style={{ marginRight: 8 }} />
+                            <Text style={[styles.customLocationText, isDarkMode && { color: '#E2E8F0' }]}>
                               {t('use_custom_location', 'Use')} <Text style={{ fontWeight: '800' }}>"{locationSearchText.trim()}"</Text>
                             </Text>
                           </TouchableOpacity>
@@ -1030,28 +1033,30 @@ const HomeScreenWeb = ({ navigation }) => {
                             key={loc.id}
                             style={[
                               styles.cityOption,
-                              selectedCity === loc.name && styles.cityOptionActive,
+                              isDarkMode && { borderBottomColor: 'rgba(255, 255, 255, 0.06)' },
+                              selectedCity === loc.name && (isDarkMode ? { backgroundColor: 'rgba(0, 229, 176, 0.12)' } : styles.cityOptionActive),
                             ]}
                             onPress={() => handleSelectLocation(loc.name)}
                           >
                             <Ionicons
                               name={loc.type === 'city' ? 'business-outline' : 'navigate-outline'}
                               size={14}
-                              color={selectedCity === loc.name ? '#00B894' : '#64748B'}
+                              color={selectedCity === loc.name ? (isDarkMode ? '#00E5B0' : '#00B894') : (isDarkMode ? '#94A3B8' : '#64748B')}
                               style={{ marginRight: 8 }}
                             />
                             <View style={{ flex: 1 }}>
                               <Text
                                 style={[
                                   styles.cityOptionText,
-                                  selectedCity === loc.name && styles.cityOptionTextActive,
+                                  isDarkMode && { color: '#E2E8F0' },
+                                  selectedCity === loc.name && (isDarkMode ? { color: '#00E5B0', fontWeight: '800' } : styles.cityOptionTextActive),
                                 ]}
                               >
                                 {loc.full}
                               </Text>
                             </View>
                             {selectedCity === loc.name && (
-                              <Ionicons name="checkmark-circle" size={15} color="#00B894" />
+                              <Ionicons name="checkmark-circle" size={15} color={isDarkMode ? '#00E5B0' : '#00B894'} />
                             )}
                           </TouchableOpacity>
                         ))}
@@ -1060,16 +1065,16 @@ const HomeScreenWeb = ({ navigation }) => {
                   )}
                 </View>
 
-                <View style={styles.searchDivider} />
+                <View style={[styles.searchDivider, isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.1)' }]} />
 
                 {/* Keyword Search Input */}
                 <View style={styles.searchInputContainer}>
-                  <Ionicons name="search-outline" size={18} color="#64748B" style={styles.searchIcon} />
+                  <Ionicons name="search-outline" size={18} color={isDarkMode ? '#94A3B8' : '#64748B'} style={styles.searchIcon} />
                   <TextInput
                     ref={searchInputRef}
-                    style={styles.searchInput}
+                    style={[styles.searchInput, isDarkMode && { color: '#FFFFFF' }]}
                     placeholder={t('search_placeholder', 'Search doctors, clinics, tests, medicines...')}
-                    placeholderTextColor="#94A3B8"
+                    placeholderTextColor={isDarkMode ? '#64748B' : '#94A3B8'}
                     value={searchQuery}
                     onChangeText={(text) => {
                       setSearchQuery(text);
@@ -1097,14 +1102,14 @@ const HomeScreenWeb = ({ navigation }) => {
                       style={{ padding: 4 }}
                       accessibilityLabel="Clear Search"
                     >
-                      <Ionicons name="close-circle" size={17} color="#94A3B8" />
+                      <Ionicons name="close-circle" size={17} color={isDarkMode ? '#64748B' : '#94A3B8'} />
                     </TouchableOpacity>
                   ) : null}
                 </View>
 
                 {/* Dedicated Primary Search Submit Button */}
                 <TouchableOpacity
-                  style={styles.searchSubmitBtn}
+                  style={[styles.searchSubmitBtn, isDarkMode && { backgroundColor: '#00E5B0' }]}
                   // @ts-ignore
                   className="search-btn-hover"
                   onPress={handleSearchSubmit}
@@ -1112,29 +1117,37 @@ const HomeScreenWeb = ({ navigation }) => {
                   accessibilityRole="button"
                   accessibilityLabel="Search"
                 >
-                  <Ionicons name="search" size={15} color="#FFFFFF" style={{ marginRight: 6 }} />
-                  <Text style={styles.searchSubmitBtnText}>{t('search_btn', 'Search')}</Text>
+                  <Ionicons name="search" size={15} color={isDarkMode ? '#080E1A' : '#FFFFFF'} style={{ marginRight: 6 }} />
+                  <Text style={[styles.searchSubmitBtnText, isDarkMode && { color: '#080E1A', fontWeight: '800' }]}>{t('search_btn', 'Search')}</Text>
                 </TouchableOpacity>
 
                 {/* Floating Search Results Dropdown Panel */}
                 {searchQuery.trim().length > 0 && isSearchFocused && (
-                  <View style={styles.searchResultsDropdown} nativeID="home-search-results-overlay">
+                  <View style={[styles.searchResultsDropdown, isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.12)' }]} nativeID="home-search-results-overlay">
                     {allSearchResults.length > 0 ? (
                       <>
                         {/* Results summary & category filter chips */}
-                        <View style={styles.searchResultsHeaderRow}>
-                          <Text style={styles.searchResultsHeaderText}>
-                            {allSearchResults.length} services found in <Text style={{ fontWeight: '800', color: '#1E3A8A' }}>{selectedCity}</Text>
+                        <View style={[styles.searchResultsHeaderRow, isDarkMode && { borderBottomColor: 'rgba(255, 255, 255, 0.08)' }]}>
+                          <Text style={[styles.searchResultsHeaderText, isDarkMode && { color: '#94A3B8' }]}>
+                            {allSearchResults.length} services found in <Text style={{ fontWeight: '800', color: isDarkMode ? '#00E5B0' : '#1E3A8A' }}>{selectedCity}</Text>
                           </Text>
                           {matchingCategories.length > 2 && (
                             <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.searchCatChipsRow}>
                               {matchingCategories.map((cat) => (
                                 <TouchableOpacity
                                   key={cat.name}
-                                  style={[styles.searchCatChip, selectedSearchCategory === cat.name && styles.searchCatChipActive]}
+                                  style={[
+                                    styles.searchCatChip,
+                                    isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.1)' },
+                                    selectedSearchCategory === cat.name && (isDarkMode ? { backgroundColor: 'rgba(0, 229, 176, 0.15)', borderColor: '#00E5B0' } : styles.searchCatChipActive),
+                                  ]}
                                   onPress={() => setSelectedSearchCategory(cat.name)}
                                 >
-                                  <Text style={[styles.searchCatChipText, selectedSearchCategory === cat.name && styles.searchCatChipTextActive]}>
+                                  <Text style={[
+                                    styles.searchCatChipText,
+                                    isDarkMode && { color: '#CBD5E1' },
+                                    selectedSearchCategory === cat.name && (isDarkMode ? { color: '#00E5B0', fontWeight: '800' } : styles.searchCatChipTextActive),
+                                  ]}>
                                     {cat.name} ({cat.count})
                                   </Text>
                                 </TouchableOpacity>
@@ -1148,7 +1161,7 @@ const HomeScreenWeb = ({ navigation }) => {
                           {displayedSearchResults.map((item) => (
                             <TouchableOpacity
                               key={item.id}
-                              style={styles.searchResultItemRow}
+                              style={[styles.searchResultItemRow, isDarkMode && { borderBottomColor: 'rgba(255, 255, 255, 0.06)' }]}
                               onPress={async () => {
                                 const shouldShow = await shouldShowGuestLeadPopup();
                                 if (shouldShow) {
@@ -1161,23 +1174,23 @@ const HomeScreenWeb = ({ navigation }) => {
                               }}
                               activeOpacity={0.7}
                             >
-                              <View style={[styles.searchResultIconBox, { backgroundColor: item.iconBg || '#F0FDFA' }]}>
+                              <View style={[styles.searchResultIconBox, { backgroundColor: isDarkMode ? 'rgba(0, 229, 176, 0.12)' : (item.iconBg || '#F0FDFA') }]}>
                                 {item.iconType === 'material' ? (
-                                  <MaterialCommunityIcons name={item.icon} size={18} color={item.iconColor || '#00B894'} />
+                                  <MaterialCommunityIcons name={item.icon} size={18} color={isDarkMode ? '#00E5B0' : (item.iconColor || '#00B894')} />
                                 ) : (
-                                  <Ionicons name={item.icon} size={18} color={item.iconColor || '#00B894'} />
+                                  <Ionicons name={item.icon} size={18} color={isDarkMode ? '#00E5B0' : (item.iconColor || '#00B894')} />
                                 )}
                               </View>
                               <View style={{ flex: 1, minWidth: 0, paddingRight: 8 }}>
                                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6 }}>
-                                  <Text style={styles.searchResultItemTitle} numberOfLines={1}>
+                                  <Text style={[styles.searchResultItemTitle, isDarkMode && { color: '#FFFFFF' }]} numberOfLines={1}>
                                     {item.name}
                                   </Text>
-                                  <View style={styles.searchResultCategoryBadge}>
-                                    <Text style={styles.searchResultCategoryBadgeText}>{item.category}</Text>
+                                  <View style={[styles.searchResultCategoryBadge, isDarkMode && { backgroundColor: '#16223D' }]}>
+                                    <Text style={[styles.searchResultCategoryBadgeText, isDarkMode && { color: '#00E5B0' }]}>{item.category}</Text>
                                   </View>
                                 </View>
-                                <Text style={styles.searchResultItemSubtitle} numberOfLines={1}>
+                                <Text style={[styles.searchResultItemSubtitle, isDarkMode && { color: '#94A3B8' }]} numberOfLines={1}>
                                   {item.subtitle}
                                 </Text>
                               </View>
@@ -1186,53 +1199,53 @@ const HomeScreenWeb = ({ navigation }) => {
                                   <Text style={styles.searchResultPriceBadgeText}>{item.badge}</Text>
                                 </View>
                               ) : null}
-                              <Ionicons name="chevron-forward" size={16} color="#94A3B8" />
+                              <Ionicons name="chevron-forward" size={16} color={isDarkMode ? '#64748B' : '#94A3B8'} />
                             </TouchableOpacity>
                           ))}
                         </ScrollView>
 
                         {/* Bottom CTA to view in GlobalSearch */}
                         <TouchableOpacity
-                          style={styles.searchDropdownFooter}
+                          style={[styles.searchDropdownFooter, isDarkMode && { borderTopColor: 'rgba(255, 255, 255, 0.08)' }]}
                           onPress={handleSearchSubmit}
                         >
-                          <Text style={styles.searchDropdownFooterText}>
+                          <Text style={[styles.searchDropdownFooterText, isDarkMode && { color: '#00E5B0' }]}>
                             Press Enter or click here to view all results in Global Search
                           </Text>
-                          <Ionicons name="arrow-forward" size={14} color="#00B894" />
+                          <Ionicons name="arrow-forward" size={14} color={isDarkMode ? '#00E5B0' : '#00B894'} />
                         </TouchableOpacity>
                       </>
                     ) : (
                       <View style={styles.searchNoResultsBox}>
-                        <View style={styles.searchNoResultsIconCircle}>
-                          <Ionicons name="search-outline" size={26} color="#94A3B8" />
+                        <View style={[styles.searchNoResultsIconCircle, isDarkMode && { backgroundColor: '#16223D' }]}>
+                          <Ionicons name="search-outline" size={26} color={isDarkMode ? '#64748B' : '#94A3B8'} />
                         </View>
-                        <Text style={styles.searchNoResultsTitle}>No results found for "{searchQuery}"</Text>
-                        <Text style={styles.searchNoResultsSubtitle}>
+                        <Text style={[styles.searchNoResultsTitle, isDarkMode && { color: '#FFFFFF' }]}>No results found for "{searchQuery}"</Text>
+                        <Text style={[styles.searchNoResultsSubtitle, isDarkMode && { color: '#94A3B8' }]}>
                           No doctors, lab tests, medicines, clinics, or scans match in {selectedCity}. Try checking your spelling or searching for another term.
                         </Text>
                         <View style={styles.searchNoResultsSuggestions}>
-                          <Text style={styles.searchNoResultsSuggestionsLabel}>Popular searches:</Text>
+                          <Text style={[styles.searchNoResultsSuggestionsLabel, isDarkMode && { color: '#CBD5E1' }]}>Popular searches:</Text>
                           <View style={{ flexDirection: 'row', flexWrap: 'wrap', gap: 6, marginTop: 4 }}>
                             {POPULAR_SEARCH_TAGS.map((tag, idx) => (
                               <TouchableOpacity
                                 key={idx}
-                                style={styles.searchSuggestionPill}
+                                style={[styles.searchSuggestionPill, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.1)' }]}
                                 onPress={() => setSearchQuery(tag.label || tag.query)}
                               >
-                                <Text style={styles.searchSuggestionPillText}>{tag.label}</Text>
+                                <Text style={[styles.searchSuggestionPillText, isDarkMode && { color: '#E2E8F0' }]}>{tag.label}</Text>
                               </TouchableOpacity>
                             ))}
                           </View>
                         </View>
                         <TouchableOpacity
-                          style={styles.searchClearBtn}
+                          style={[styles.searchClearBtn, isDarkMode && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.12)' }]}
                           onPress={() => {
                             setSearchQuery('');
                             setIsSearchFocused(false);
                           }}
                         >
-                          <Text style={styles.searchClearBtnText}>Clear Search</Text>
+                          <Text style={[styles.searchClearBtnText, isDarkMode && { color: '#E2E8F0' }]}>Clear Search</Text>
                         </TouchableOpacity>
                       </View>
                     )}
@@ -1242,18 +1255,21 @@ const HomeScreenWeb = ({ navigation }) => {
 
               {/* Popular Searches Row */}
               <View style={styles.popularSearchesRow}>
-                <Text style={styles.popularSearchesLabel}>{t('popular_searches', 'Popular searches:')}</Text>
+                <Text style={[styles.popularSearchesLabel, isDarkMode && { color: '#94A3B8' }]}>{t('popular_searches', 'Popular searches:')}</Text>
                 <View style={styles.popularChipsContainer}>
                   {POPULAR_SEARCH_TAGS.map((tag, idx) => (
                     <TouchableOpacity
                       key={idx}
-                      style={styles.popularChip}
+                      style={[
+                        styles.popularChip,
+                        isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.06)', borderColor: 'rgba(255, 255, 255, 0.12)' },
+                      ]}
                       // @ts-ignore
                       className="popular-chip-hover"
                       onPress={() => handlePopularTagClick(tag)}
                       activeOpacity={0.75}
                     >
-                      <Text style={[styles.popularChipText, isIndic && { lineHeight: 18 }]}>
+                      <Text style={[styles.popularChipText, isDarkMode && { color: '#E2E8F0' }, isIndic && { lineHeight: 18 }]}>
                         {t(tag.key, tag.label)}
                       </Text>
                     </TouchableOpacity>
@@ -1266,7 +1282,11 @@ const HomeScreenWeb = ({ navigation }) => {
             {isDesktop ? (
               <View style={[styles.heroRightVisualCluster, { gap: width < 1280 ? 12 : 16 }]}>
                 {/* Smiling Indian Family Photo */}
-                <View style={[styles.heroFamilyPhotoWrap, { width: width < 1280 ? 210 : 260, height: width < 1280 ? 245 : 275 }]}>
+                <View style={[
+                  styles.heroFamilyPhotoWrap,
+                  isDarkMode && { borderColor: 'rgba(255, 255, 255, 0.12)' },
+                  { width: width < 1280 ? 210 : 260, height: width < 1280 ? 245 : 275 }
+                ]}>
                   <Image
                     source={require('../../../assets/images/hero_family.jpg')}
                     style={styles.heroFamilyPhoto}
@@ -1275,7 +1295,11 @@ const HomeScreenWeb = ({ navigation }) => {
                 </View>
 
                 {/* MediUnify AI Guide Card */}
-                <View style={[styles.mediAiCard, { width: width < 1280 ? 255 : 285 }]}>
+                <View style={[
+                  styles.mediAiCard,
+                  isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.12)' },
+                  { width: width < 1280 ? 255 : 285 }
+                ]}>
                   <View style={styles.mediAiCardHeader}>
                     <View style={styles.mediAiHeaderLeft}>
                       <Image
@@ -1283,24 +1307,24 @@ const HomeScreenWeb = ({ navigation }) => {
                         style={styles.mediAiAvatar}
                         resizeMode="contain"
                       />
-                      <Text style={styles.mediAiTitle} numberOfLines={2}>
+                      <Text style={[styles.mediAiTitle, isDarkMode && { color: '#FFFFFF' }]} numberOfLines={2}>
                         {t('ai_guide_title', 'MediUnify AI Assistant')}
                       </Text>
                     </View>
-                    <View style={styles.mediAiBadge}>
-                      <Text style={styles.mediAiBadgeText}>{t('ai_guide_badge', '24/7 AI Guide')}</Text>
+                    <View style={[styles.mediAiBadge, isDarkMode && { backgroundColor: 'rgba(0, 229, 176, 0.15)', borderColor: 'rgba(0, 229, 176, 0.3)' }]}>
+                      <Text style={[styles.mediAiBadgeText, isDarkMode && { color: '#00E5B0' }]}>{t('ai_guide_badge', '24/7 AI Guide')}</Text>
                     </View>
                   </View>
 
-                  <Text style={[styles.mediAiQuestion, isIndic && { lineHeight: 20 }]}>
+                  <Text style={[styles.mediAiQuestion, isDarkMode && { color: '#FFFFFF' }, isIndic && { lineHeight: 20 }]}>
                     {t('ai_guide_question', 'Need help finding a service?')}
                   </Text>
-                  <Text style={[styles.mediAiPrompt, isIndic && { lineHeight: 18 }]}>
+                  <Text style={[styles.mediAiPrompt, isDarkMode && { color: '#94A3B8' }, isIndic && { lineHeight: 18 }]}>
                     {t('ai_guide_prompt', 'Ask about symptoms, doctors, or tests.')}
                   </Text>
 
                   <TouchableOpacity
-                    style={styles.mediAiBtn}
+                    style={[styles.mediAiBtn, isDarkMode && { backgroundColor: '#00E5B0' }]}
                     // @ts-ignore
                     className="medi-ai-btn-hover"
                     onPress={() => handleNavigateToService('Chatbot')}
@@ -1308,7 +1332,7 @@ const HomeScreenWeb = ({ navigation }) => {
                     accessibilityRole="button"
                     accessibilityLabel="Chat with MediUnify AI"
                   >
-                    <Text style={[styles.mediAiBtnText, isIndic && { lineHeight: 18 }]}>
+                    <Text style={[styles.mediAiBtnText, isDarkMode && { color: '#080E1A', fontWeight: '800' }, isIndic && { lineHeight: 18 }]}>
                       {t('chat_with_ai_btn', 'Chat with AI')}
                     </Text>
                   </TouchableOpacity>
@@ -1316,7 +1340,7 @@ const HomeScreenWeb = ({ navigation }) => {
               </View>
             ) : (
               <View style={styles.heroMobileCardsWrap}>
-                <View style={styles.mediAiCard}>
+                <View style={[styles.mediAiCard, isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
                   <View style={styles.mediAiCardHeader}>
                     <View style={styles.mediAiHeaderLeft}>
                       <Image
@@ -1324,28 +1348,28 @@ const HomeScreenWeb = ({ navigation }) => {
                         style={styles.mediAiAvatar}
                         resizeMode="contain"
                       />
-                      <Text style={styles.mediAiTitle} numberOfLines={2}>
+                      <Text style={[styles.mediAiTitle, isDarkMode && { color: '#FFFFFF' }]} numberOfLines={2}>
                         {t('ai_guide_title', 'MediUnify AI Assistant')}
                       </Text>
                     </View>
-                    <View style={styles.mediAiBadge}>
-                      <Text style={styles.mediAiBadgeText}>{t('ai_guide_badge', '24/7 AI Guide')}</Text>
+                    <View style={[styles.mediAiBadge, isDarkMode && { backgroundColor: 'rgba(0, 229, 176, 0.15)', borderColor: 'rgba(0, 229, 176, 0.3)' }]}>
+                      <Text style={[styles.mediAiBadgeText, isDarkMode && { color: '#00E5B0' }]}>{t('ai_guide_badge', '24/7 AI Guide')}</Text>
                     </View>
                   </View>
 
-                  <Text style={[styles.mediAiQuestion, isIndic && { lineHeight: 20 }]}>
+                  <Text style={[styles.mediAiQuestion, isDarkMode && { color: '#FFFFFF' }, isIndic && { lineHeight: 20 }]}>
                     {t('ai_guide_question', 'Need help finding a service?')}
                   </Text>
-                  <Text style={[styles.mediAiPrompt, isIndic && { lineHeight: 18 }]}>
+                  <Text style={[styles.mediAiPrompt, isDarkMode && { color: '#94A3B8' }, isIndic && { lineHeight: 18 }]}>
                     {t('ai_guide_prompt', 'Ask about symptoms, doctors, or tests.')}
                   </Text>
 
                   <TouchableOpacity
-                    style={styles.mediAiBtn}
+                    style={[styles.mediAiBtn, isDarkMode && { backgroundColor: '#00E5B0' }]}
                     onPress={() => handleNavigateToService('Chatbot')}
                     activeOpacity={0.88}
                   >
-                    <Text style={[styles.mediAiBtnText, isIndic && { lineHeight: 18 }]}>
+                    <Text style={[styles.mediAiBtnText, isDarkMode && { color: '#080E1A', fontWeight: '800' }, isIndic && { lineHeight: 18 }]}>
                       {t('chat_with_ai_btn', 'Chat with AI')}
                     </Text>
                   </TouchableOpacity>
@@ -1364,22 +1388,22 @@ const HomeScreenWeb = ({ navigation }) => {
             <View style={styles.servicesSectionDesktopLayout}>
               {/* Left Column: Heading, Subtitle & Tagline */}
               <View style={styles.servicesLeftColumn}>
-                <View style={styles.servicesHeaderBadgeRow}>
-                  <Text style={styles.servicesHeaderBadgeText}>{t('our_services_badge', 'OUR SERVICES')}</Text>
-                  <View style={styles.servicesHeaderBadgeLine} />
+                <View style={[styles.servicesHeaderBadgeRow, isDarkMode && { backgroundColor: 'rgba(0, 184, 148, 0.15)', borderColor: 'rgba(0, 184, 148, 0.35)' }]}>
+                  <Text style={[styles.servicesHeaderBadgeText, isDarkMode && { color: '#00E5B0' }]}>{t('our_services_badge', 'OUR SERVICES')}</Text>
+                  <View style={[styles.servicesHeaderBadgeLine, isDarkMode && { backgroundColor: '#00E5B0' }]} />
                 </View>
-                <Text style={[styles.servicesSectionMainTitle, isIndic && { lineHeight: 36 }]}>
+                <Text style={[styles.servicesSectionMainTitle, isDarkMode && { color: '#FFFFFF' }, isIndic && { lineHeight: 36 }]}>
                   {'Healthcare\nServices'}
                 </Text>
-                <Text style={[styles.servicesSectionMainSubtitle, isIndic && { lineHeight: 20 }]}>
+                <Text style={[styles.servicesSectionMainSubtitle, isDarkMode && { color: '#94A3B8' }, isIndic && { lineHeight: 20 }]}>
                   {t('our_services_subtitle_modern', 'Simple. Trusted. All in one place.')}
                 </Text>
 
                 <View style={styles.betterCareRow}>
                   <Ionicons name="apps" size={14} color="#00B894" style={{ marginRight: 6 }} />
                   <View>
-                    <Text style={styles.betterCareText}>Better care.</Text>
-                    <Text style={styles.togetherText}>Together. ────────</Text>
+                    <Text style={[styles.betterCareText, isDarkMode && { color: '#F8FAFC' }]}>Better care.</Text>
+                    <Text style={[styles.togetherText, isDarkMode && { color: '#94A3B8' }]}>Together.</Text>
                   </View>
                 </View>
               </View>
@@ -1406,7 +1430,7 @@ const HomeScreenWeb = ({ navigation }) => {
                     >
                       <path
                         d="M 10 24 Q 160 6 320 26 T 620 20 T 900 26 T 995 24"
-                        stroke="rgba(0, 184, 148, 0.22)"
+                        stroke={isDarkMode ? 'rgba(0, 229, 176, 0.35)' : 'rgba(0, 184, 148, 0.22)'}
                         strokeWidth="2"
                         strokeDasharray="4 4"
                         fill="none"
@@ -1421,11 +1445,16 @@ const HomeScreenWeb = ({ navigation }) => {
                       key={card.id}
                       style={[
                         styles.organicServiceCard,
+                        isDarkMode && {
+                          backgroundColor: '#121D32',
+                          backgroundImage: 'linear-gradient(180deg, #131E35 0%, #0D1627 100%)',
+                          boxShadow: '0 14px 34px -4px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+                        },
                         {
                           borderBottomColor: card.accentColor,
-                          borderLeftColor: card.accentColor,
-                          borderTopColor: 'transparent',
-                          borderRightColor: 'transparent',
+                          borderLeftColor: isDarkMode ? 'rgba(255, 255, 255, 0.09)' : card.accentColor,
+                          borderTopColor: isDarkMode ? 'rgba(255, 255, 255, 0.09)' : 'transparent',
+                          borderRightColor: isDarkMode ? 'rgba(255, 255, 255, 0.09)' : 'transparent',
                         },
                       ]}
                       // @ts-ignore
@@ -1434,7 +1463,7 @@ const HomeScreenWeb = ({ navigation }) => {
                       onPress={() => handleNavigateToService(card.route, card.route === 'Imaging' ? { city: selectedCity } : undefined)}
                     >
                       {/* Organic Fluid 3D Card Illustration (Matching Reference Design) */}
-                      <View style={styles.organicIllustrationWrap}>
+                      <View style={[styles.organicIllustrationWrap, isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.03)' }]}>
                         <View style={[styles.stepNumberBadge, { backgroundColor: card.accentColor }]}>
                           <Text style={styles.stepNumberText}>{card.stepNumber}</Text>
                         </View>
@@ -1447,16 +1476,16 @@ const HomeScreenWeb = ({ navigation }) => {
 
                       {/* Card Content */}
                       <View style={styles.organicCardContent}>
-                        <Text style={[styles.organicCardTitle, isIndic && { lineHeight: 20 }]} numberOfLines={1}>
+                        <Text style={[styles.organicCardTitle, isDarkMode && { color: '#FFFFFF' }, isIndic && { lineHeight: 20 }]} numberOfLines={1}>
                           {card.titleKey ? t(card.titleKey, card.title) : card.title}
                         </Text>
-                        <Text style={[styles.organicCardSubtitle, isIndic && { lineHeight: 16 }]} numberOfLines={2}>
+                        <Text style={[styles.organicCardSubtitle, isDarkMode && { color: '#94A3B8' }, isIndic && { lineHeight: 16 }]} numberOfLines={2}>
                           {card.subtitleKey ? t(card.subtitleKey, card.subtitle) : card.subtitle}
                         </Text>
 
                         {/* Circular Arrow & Book Now CTA */}
                         <View style={styles.organicCtaRow}>
-                          <View style={[styles.organicArrowCircle, { borderColor: card.accentColor }]}>
+                          <View style={[styles.organicArrowCircle, { borderColor: card.accentColor }, isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.06)' }]}>
                             <Ionicons name="arrow-forward" size={11} color={card.accentColor} />
                           </View>
                           <Text style={[styles.organicCtaText, { color: card.accentColor }]}>
@@ -1472,17 +1501,12 @@ const HomeScreenWeb = ({ navigation }) => {
               {/* Far Right Indicator */}
               {isWideDesktop && (
                 <View style={styles.onePlatformBadgeWrap}>
-                  <View style={styles.onePlatformPill}>
-                    <Ionicons name="sparkles-outline" size={13} color="#00B894" style={{ marginRight: 6 }} />
+                  <View style={[styles.onePlatformPill, isDarkMode && { backgroundColor: '#131E35', borderColor: 'rgba(0, 184, 148, 0.35)', boxShadow: '0 8px 24px rgba(0, 0, 0, 0.5)' }]}>
+                    <Ionicons name="sparkles-outline" size={13} color="#00E5B0" style={{ marginRight: 6 }} />
                     <View>
-                      <Text style={styles.onePlatformTitle}>One platform.</Text>
-                      <Text style={styles.onePlatformSubtitle}>Complete care.</Text>
+                      <Text style={[styles.onePlatformTitle, isDarkMode && { color: '#FFFFFF' }]}>One platform.</Text>
+                      <Text style={[styles.onePlatformSubtitle, isDarkMode && { color: '#00E5B0' }]}>Complete care.</Text>
                     </View>
-                  </View>
-                  <View style={styles.onePlatformDotsCol}>
-                    <View style={styles.dotActive} />
-                    <View style={styles.dotInactive} />
-                    <View style={styles.dotInactive} />
                   </View>
                 </View>
               )}
@@ -1495,10 +1519,10 @@ const HomeScreenWeb = ({ navigation }) => {
                   <Text style={styles.servicesHeaderBadgeText}>{t('our_services_badge', 'OUR SERVICES')}</Text>
                   <View style={styles.servicesHeaderBadgeLine} />
                 </View>
-                <Text style={[styles.servicesSectionMainTitle, isIndic && { lineHeight: 32 }]}>
+                <Text style={[styles.servicesSectionMainTitle, isDarkMode && { color: '#FFFFFF' }, isIndic && { lineHeight: 32 }]}>
                   {t('services_section_title', 'Healthcare Services')}
                 </Text>
-                <Text style={[styles.servicesSectionMainSubtitle, isIndic && { lineHeight: 22 }]}>
+                <Text style={[styles.servicesSectionMainSubtitle, isDarkMode && { color: '#94A3B8' }, isIndic && { lineHeight: 22 }]}>
                   {t('our_services_subtitle_modern', 'Simple. Trusted. All in one place.')}
                 </Text>
               </View>
@@ -1515,11 +1539,16 @@ const HomeScreenWeb = ({ navigation }) => {
                     style={[
                       styles.organicServiceCard,
                       isTablet ? { width: '48%' } : { width: '100%' },
+                      isDarkMode && {
+                        backgroundColor: '#121D32',
+                        backgroundImage: 'linear-gradient(180deg, #131E35 0%, #0D1627 100%)',
+                        boxShadow: '0 14px 34px -4px rgba(0, 0, 0, 0.6), inset 0 1px 0 rgba(255, 255, 255, 0.08)',
+                      },
                       {
                         borderBottomColor: card.accentColor,
-                        borderLeftColor: card.accentColor,
-                        borderTopColor: 'transparent',
-                        borderRightColor: 'transparent',
+                        borderLeftColor: isDarkMode ? 'rgba(255, 255, 255, 0.09)' : card.accentColor,
+                        borderTopColor: isDarkMode ? 'rgba(255, 255, 255, 0.09)' : 'transparent',
+                        borderRightColor: isDarkMode ? 'rgba(255, 255, 255, 0.09)' : 'transparent',
                       },
                     ]}
                     // @ts-ignore
@@ -1528,7 +1557,7 @@ const HomeScreenWeb = ({ navigation }) => {
                     onPress={() => handleNavigateToService(card.route, card.route === 'Imaging' ? { city: selectedCity } : undefined)}
                   >
                     {/* Organic Fluid 3D Card Illustration (Matching Reference Design) */}
-                    <View style={styles.organicIllustrationWrap}>
+                    <View style={[styles.organicIllustrationWrap, isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.03)' }]}>
                       <View style={[styles.stepNumberBadge, { backgroundColor: card.accentColor }]}>
                         <Text style={styles.stepNumberText}>{card.stepNumber}</Text>
                       </View>
@@ -1540,15 +1569,15 @@ const HomeScreenWeb = ({ navigation }) => {
                     </View>
 
                     <View style={styles.organicCardContent}>
-                      <Text style={[styles.organicCardTitle, isIndic && { lineHeight: 20 }]} numberOfLines={1}>
+                      <Text style={[styles.organicCardTitle, isDarkMode && { color: '#FFFFFF' }, isIndic && { lineHeight: 20 }]} numberOfLines={1}>
                         {card.titleKey ? t(card.titleKey, card.title) : card.title}
                       </Text>
-                      <Text style={[styles.organicCardSubtitle, isIndic && { lineHeight: 16 }]} numberOfLines={2}>
+                      <Text style={[styles.organicCardSubtitle, isDarkMode && { color: '#94A3B8' }, isIndic && { lineHeight: 16 }]} numberOfLines={2}>
                         {card.subtitleKey ? t(card.subtitleKey, card.subtitle) : card.subtitle}
                       </Text>
 
                       <View style={styles.organicCtaRow}>
-                        <View style={[styles.organicArrowCircle, { borderColor: card.accentColor }]}>
+                        <View style={[styles.organicArrowCircle, { borderColor: card.accentColor }, isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.06)' }]}>
                           <Ionicons name="arrow-forward" size={11} color={card.accentColor} />
                         </View>
                         <Text style={[styles.organicCtaText, { color: card.accentColor }]}>
@@ -1575,21 +1604,21 @@ const HomeScreenWeb = ({ navigation }) => {
           {/* Header Row */}
           <View style={styles.specialtiesHeaderRow}>
             <View style={{ flex: 1 }}>
-              <View style={styles.sectionBadgeWrap}>
-                <Text style={styles.sectionBadge}>{t('specialties_badge', 'SPECIALIZATIONS')}</Text>
+              <View style={[styles.sectionBadgeWrap, isDarkMode && { backgroundColor: 'rgba(0, 184, 148, 0.15)', borderColor: 'rgba(0, 184, 148, 0.35)' }]}>
+                <Text style={[styles.sectionBadge, isDarkMode && { color: '#00E5B0' }]}>{t('specialties_badge', 'SPECIALIZATIONS')}</Text>
               </View>
-              <Text style={[styles.specialtiesTitle, isIndic && { lineHeight: 32 }]}>
+              <Text style={[styles.specialtiesTitle, isIndic && { lineHeight: 32 }, isDarkMode && { color: '#FFFFFF' }]}>
                 {t('specialties_title', 'Top Doctor Specializations')}
               </Text>
             </View>
 
             <TouchableOpacity
-              style={styles.viewAllBtn}
+              style={[styles.viewAllBtn, isDarkMode && { backgroundColor: 'rgba(0, 184, 148, 0.12)', borderColor: '#00B894' }]}
               onPress={() => handleNavigateToService('DoctorList')}
               activeOpacity={0.8}
             >
-              <Text style={styles.viewAllBtnText}>{t('view_all_specialties', 'View All')}</Text>
-              <Ionicons name="arrow-forward" size={14} color={PALETTE.teal} style={{ marginLeft: 6 }} />
+              <Text style={[styles.viewAllBtnText, isDarkMode && { color: '#00E5B0' }]}>{t('view_all_specialties', 'View All')}</Text>
+              <Ionicons name="arrow-forward" size={14} color={isDarkMode ? '#00E5B0' : PALETTE.teal} style={{ marginLeft: 6 }} />
             </TouchableOpacity>
           </View>
 
@@ -1600,6 +1629,7 @@ const HomeScreenWeb = ({ navigation }) => {
               style={[
                 styles.carouselArrowBtn,
                 styles.carouselArrowLeft,
+                isDarkMode && { backgroundColor: '#18253D', borderColor: 'rgba(255, 255, 255, 0.15)', boxShadow: '0 4px 14px rgba(0,0,0,0.5)' },
                 !canScrollLeft && styles.carouselArrowDisabled,
                 !isDesktop && !isTablet && { display: 'none' },
               ]}
@@ -1613,7 +1643,7 @@ const HomeScreenWeb = ({ navigation }) => {
               <Ionicons
                 name="chevron-back"
                 size={22}
-                color={canScrollLeft ? PALETTE.slateDark : '#94A3B8'}
+                color={canScrollLeft ? (isDarkMode ? '#FFFFFF' : PALETTE.slateDark) : (isDarkMode ? '#475569' : '#94A3B8')}
               />
             </TouchableOpacity>
 
@@ -1637,6 +1667,13 @@ const HomeScreenWeb = ({ navigation }) => {
                       : isTablet
                       ? styles.specialtyItemTablet
                       : styles.specialtyItemMobile,
+                    isDarkMode && {
+                      backgroundColor: '#121D32',
+                      borderColor: 'rgba(255, 255, 255, 0.08)',
+                      borderWidth: 1.5,
+                      boxShadow: '0 12px 28px -4px rgba(0, 0, 0, 0.5)',
+                      ...(Platform.OS === 'web' ? { backgroundImage: 'linear-gradient(180deg, #131E35 0%, #0D1627 100%)' } : {}),
+                    },
                   ]}
                   // @ts-ignore
                   className="practo-spec-card"
@@ -1644,7 +1681,7 @@ const HomeScreenWeb = ({ navigation }) => {
                   activeOpacity={0.88}
                 >
                   {/* Unified Medical Specialty Icon / Illustration */}
-                  <View style={styles.specialtyIconWrap}>
+                  <View style={[styles.specialtyIconWrap, isDarkMode && { backgroundColor: 'rgba(255, 255, 255, 0.04)', borderRadius: 20 }]}>
                     {spec.image ? (
                       <Image
                         source={spec.image}
@@ -1652,17 +1689,17 @@ const HomeScreenWeb = ({ navigation }) => {
                         resizeMode="contain"
                       />
                     ) : (
-                      <SpecialtyIcon id={spec.id} size={46} color={spec.accentColor || PALETTE.teal} />
+                      <SpecialtyIcon id={spec.id} size={46} color={spec.accentColor || (isDarkMode ? '#00E5B0' : PALETTE.teal)} />
                     )}
                   </View>
 
                   {/* Specialty Title */}
-                  <Text style={[styles.specialtyItemTitle, { color: '#1E3A8A' }, isIndic && { lineHeight: 20 }]} numberOfLines={1}>
+                  <Text style={[styles.specialtyItemTitle, { color: isDarkMode ? '#FFFFFF' : '#1E3A8A' }, isIndic && { lineHeight: 20 }]} numberOfLines={1}>
                     {(SPECIALTY_TRANSLATIONS[spec.id] || SPECIALTY_TRANSLATIONS[spec.specialtyId]) ? t((SPECIALTY_TRANSLATIONS[spec.id] || SPECIALTY_TRANSLATIONS[spec.specialtyId]).title, spec.title) : spec.title}
                   </Text>
 
                   {/* Subtitle / Common Symptoms */}
-                  <Text style={[styles.specialtyItemSubtitle, isIndic && { lineHeight: 16 }]} numberOfLines={2}>
+                  <Text style={[styles.specialtyItemSubtitle, isDarkMode && { color: '#94A3B8' }, isIndic && { lineHeight: 16 }]} numberOfLines={2}>
                     {(SPECIALTY_TRANSLATIONS[spec.id] || SPECIALTY_TRANSLATIONS[spec.specialtyId]) ? t((SPECIALTY_TRANSLATIONS[spec.id] || SPECIALTY_TRANSLATIONS[spec.specialtyId]).sub, spec.subtitle) : spec.subtitle}
                   </Text>
 
@@ -1671,15 +1708,16 @@ const HomeScreenWeb = ({ navigation }) => {
                     style={[
                       styles.consultNowTouch,
                       spec.btnBg ? { backgroundColor: spec.btnBg, borderColor: spec.btnBorder || spec.cardBorder } : null,
+                      isDarkMode && { backgroundColor: 'rgba(0, 184, 148, 0.12)', borderColor: 'rgba(0, 184, 148, 0.35)' },
                       isIndic && { paddingHorizontal: 10, minWidth: 84 },
                     ]}
                     // @ts-ignore
                     className="consult-btn-hover"
                   >
-                    <Text style={[styles.consultNowText, spec.btnText ? { color: spec.btnText } : null, isIndic && { fontSize: 10, lineHeight: 14 }]}>
+                    <Text style={[styles.consultNowText, spec.btnText ? { color: spec.btnText } : null, isDarkMode && { color: '#00E5B0' }, isIndic && { fontSize: 10, lineHeight: 14 }]}>
                       {t('consult_now_btn', 'CONSULT NOW')}
                     </Text>
-                    <Ionicons name="arrow-forward" size={10} color={spec.btnText || PALETTE.teal} style={{ marginLeft: 3 }} />
+                    <Ionicons name="arrow-forward" size={10} color={isDarkMode ? '#00E5B0' : (spec.btnText || PALETTE.teal)} style={{ marginLeft: 3 }} />
                   </View>
                 </TouchableOpacity>
               ))}
@@ -1690,6 +1728,7 @@ const HomeScreenWeb = ({ navigation }) => {
               style={[
                 styles.carouselArrowBtn,
                 styles.carouselArrowRight,
+                isDarkMode && { backgroundColor: '#18253D', borderColor: 'rgba(255, 255, 255, 0.15)', boxShadow: '0 4px 14px rgba(0,0,0,0.5)' },
                 !canScrollRight && styles.carouselArrowDisabled,
                 !isDesktop && !isTablet && { display: 'none' },
               ]}
@@ -1703,7 +1742,7 @@ const HomeScreenWeb = ({ navigation }) => {
               <Ionicons
                 name="chevron-forward"
                 size={22}
-                color={canScrollRight ? PALETTE.slateDark : '#94A3B8'}
+                color={canScrollRight ? (isDarkMode ? '#FFFFFF' : PALETTE.slateDark) : (isDarkMode ? '#475569' : '#94A3B8')}
               />
             </TouchableOpacity>
           </View>
@@ -1756,7 +1795,7 @@ const webStyles = {
   },
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
@@ -3335,7 +3374,7 @@ const styles = StyleSheet.create({
   viewAllServicesBtnText: {
     fontSize: 14,
     fontWeight: '800',
-    color: '#007D69',
+    color: '#00B894',
     letterSpacing: -0.2,
   },
 });

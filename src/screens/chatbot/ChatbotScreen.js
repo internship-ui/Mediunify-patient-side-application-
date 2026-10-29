@@ -24,6 +24,7 @@ import doctors from '../../data/doctors';
 import { radiologyLabs } from '../../data/radiologyLabsData';
 import { useCart } from '../../context/CartContext';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 
 // Horizontally scrollable quick prompt chips
 const QUICK_SUGGESTIONS = [
@@ -96,6 +97,7 @@ const ChatbotScreen = ({ navigation }) => {
   const isTablet = width >= 600;
   const { t, isIndic, isDarkMode, theme } = useTheme();
   const isDark = isDarkMode;
+  const styles = useThemedStyles(baseStyles);
 
   const { addToCart } = useCart();
   const [messages, setMessages] = useState(INITIAL_MESSAGES);
@@ -1045,7 +1047,7 @@ const ChatbotScreen = ({ navigation }) => {
   };
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeContainer, isDark && { backgroundColor: theme.background }]}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeContainer, isDark && { backgroundColor: '#080E1A' }]}>
       <KeyboardAvoidingView
         style={styles.keyboardContainer}
         behavior={Platform.OS === 'ios' ? 'padding' : (Platform.OS === 'android' ? 'height' : undefined)}
@@ -1053,10 +1055,10 @@ const ChatbotScreen = ({ navigation }) => {
       >
         <View style={styles.mainLayout}>
           {/* 1. FIXED HEADER (FULL WIDTH) */}
-          <View style={[styles.header, isTablet && styles.tabletHeader, isDark && { backgroundColor: theme.headerBg, borderBottomColor: theme.border }]}>
+          <View style={[styles.header, isTablet && styles.tabletHeader, isDark && { backgroundColor: '#0B132B', borderBottomColor: 'rgba(255, 255, 255, 0.08)' }]}>
             <View style={[styles.headerInner, isTablet && styles.tabletInnerConstraint]}>
               <TouchableOpacity
-                style={[styles.backButton, isDark && { backgroundColor: theme.card, borderColor: theme.border }]}
+                style={[styles.backButton, isDark && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' }]}
                 onPress={() => {
                   if (navigation?.canGoBack()) navigation.goBack();
                   else navigation?.navigate('Home');
@@ -1226,7 +1228,7 @@ const ChatbotScreen = ({ navigation }) => {
 // ============================================================================
 // STYLESHEET (Clean, Simple, Responsive Healthcare Aesthetic)
 // ============================================================================
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: '#F8FAFC',

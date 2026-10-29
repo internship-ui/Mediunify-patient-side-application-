@@ -24,6 +24,7 @@ import { isGuestUser, promptLoginRequired } from '../../../utils/authHelper';
 import WebFooter from '../../../components/web/WebFooter';
 import WebBackButton from '../../../components/web/WebBackButton';
 import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 import { isDesktopLayout, isDesktopSiteRequested } from '../../../utils/responsiveLayoutHelper';
 import {
   RADIOLOGY_CATEGORIES,
@@ -207,7 +208,34 @@ const CATEGORY_DESIGN_MAP = {
   },
 };
 
-const getCategoryDesign = (catId) => {
+const getCategoryDesign = (catId, isDarkMode = false) => {
+  const base =
+    CATEGORY_DESIGN_MAP[catId] || {
+      gradient: 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 55%, #BAE6FD 100%)',
+      bg: '#F0F9FF',
+      border: '#7DD3FC',
+      cardShadow: 'rgba(2, 132, 199, 0.16)',
+      btnGradient: 'linear-gradient(90deg, #0284C7 0%, #0369A1 100%)',
+      btnBg: '#0284C7',
+      btnShadow: 'rgba(2, 132, 199, 0.35)',
+      discBg: '#BAE6FD',
+      discGradient: 'linear-gradient(135deg, #BAE6FD 0%, #7DD3FC 100%)',
+    };
+  if (isDarkMode) {
+    return {
+      ...base,
+      bg: '#111C35',
+      gradient: 'radial-gradient(ellipse 100% 90% at 50% -10%, rgba(0, 229, 176, 0.12) 0%, rgba(17, 28, 53, 0.95) 55%, #0B132B 100%)',
+      border: 'rgba(255, 255, 255, 0.08)',
+      cardShadow: 'rgba(0, 0, 0, 0.45)',
+      discBg: '#16223D',
+      discGradient: 'none',
+    };
+  }
+  return base;
+};
+
+const _unused_old_getCategoryDesign = (catId) => {
   return (
     CATEGORY_DESIGN_MAP[catId] || {
       gradient: 'linear-gradient(135deg, #F0F9FF 0%, #E0F2FE 55%, #BAE6FD 100%)',
@@ -224,7 +252,8 @@ const getCategoryDesign = (catId) => {
 };
 
 function ImagingScreenWeb({ navigation, route }) {
-  const { t, isIndic } = useTheme();
+  const { t, isIndic, isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const desktopSiteMode = isDesktopSiteRequested();
   const isDesktop = desktopSiteMode || width >= 1024;
@@ -276,8 +305,8 @@ function ImagingScreenWeb({ navigation, route }) {
 
   // Active Category Design Scheme (Dynamic colors for cards, buttons, accents)
   const activeCategoryDesign = selectedCategory
-    ? getCategoryDesign(selectedCategory.id)
-    : (selectedTest?.categoryId ? getCategoryDesign(selectedTest.categoryId) : getCategoryDesign('mri'));
+    ? getCategoryDesign(selectedCategory.id, isDarkMode)
+    : (selectedTest?.categoryId ? getCategoryDesign(selectedTest.categoryId, isDarkMode) : getCategoryDesign('mri', isDarkMode));
 
   // Filters & Sorting in Provider List
   const [sortBy, setSortBy] = useState('price-low'); // 'price-low' | 'price-high' | 'distance' | 'rating' | 'earliest'
@@ -1456,7 +1485,7 @@ function ImagingScreenWeb({ navigation, route }) {
   };
 
   return (
-    <SafeAreaView style={styles.safeContainer} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={[styles.safeContainer, isDarkMode && { backgroundColor: '#080E1A', backgroundImage: 'none' }]} edges={['top', 'left', 'right']}>
       {/* ============================================================
           PINNED TOP APP BAR (Back button, Context Title, Location, My Bookings)
           Visible & accessible across iOS, Android, and Tablet
@@ -1542,7 +1571,7 @@ function ImagingScreenWeb({ navigation, route }) {
         {viewMode === 'categories' && (
           <View style={styles.heroBannerWrap}>
             {/* Decorative Translucent Medical Cross Watermark in Top Right */}
-            <View style={styles.heroWatermarkContainer} pointerEvents="none">
+            <View style={[styles.heroWatermarkContainer, isDarkMode && { display: 'none' }]} pointerEvents="none">
               <View style={styles.heroWatermarkGlow} />
               <View style={styles.heroCrossWrap}>
                 <View style={styles.heroCrossH} />
@@ -1557,16 +1586,16 @@ function ImagingScreenWeb({ navigation, route }) {
                   <Text style={styles.cityLocationText}>{selectedCity}</Text>
                 </View>
 
-                <Text style={styles.heroHeading}>Scan & X-Ray</Text>
-                <Text style={styles.heroSubheading}>
+                <Text style={[styles.heroHeading, isDarkMode && { color: '#FFFFFF' }]}>Scan & X-Ray</Text>
+                <Text style={[styles.heroSubheading, isDarkMode && { color: '#94A3B8' }]}>
                   Find and book diagnostic scans near you.
                 </Text>
 
                 {/* Search Bar */}
-                <View style={styles.heroSearchBox}>
+                <View style={[styles.heroSearchBox, isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.12)' }]}>
                   <Ionicons name="search" size={19} color="#00BB95" style={styles.searchIcon} />
                   <TextInput
-                    style={styles.heroSearchInput}
+                    style={[styles.heroSearchInput, isDarkMode && { color: '#FFFFFF' }]}
                     placeholder="Search scans or centres"
                     placeholderTextColor="#94A3B8"
                     value={globalSearch}
@@ -1654,7 +1683,7 @@ function ImagingScreenWeb({ navigation, route }) {
               ) : (
                 <View style={styles.categoriesGrid}>
                   {displayedCategories.map((cat) => {
-                    const design = getCategoryDesign(cat.id);
+                    const design = getCategoryDesign(cat.id, isDarkMode);
                     return (
                       <TouchableOpacity
                         key={cat.id}
@@ -4165,7 +4194,7 @@ function ImagingScreenWeb({ navigation, route }) {
 // ==================================================
 // STYLES
 // ==================================================
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: '#F0FDF9',

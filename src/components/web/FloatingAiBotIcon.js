@@ -14,7 +14,7 @@ import { useTheme } from '../../context/ThemeContext';
 import { isDesktopLayout, isDesktopSiteRequested } from '../../utils/responsiveLayoutHelper';
 
 const FloatingAiBotIcon = () => {
-  const { t } = useTheme();
+  const { t, isDarkMode } = useTheme();
   if (Platform.OS !== 'web') return null;
 
   const { width } = useWindowDimensions();
@@ -26,14 +26,16 @@ const FloatingAiBotIcon = () => {
   const [showPopup, setShowPopup] = useState(false);
 
   useEffect(() => {
-    if (typeof window !== 'undefined') {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
       setCurrentPath(window.location.pathname || '');
       const handleLocationChange = () => {
         setCurrentPath(window.location.pathname || '');
       };
       window.addEventListener('popstate', handleLocationChange);
       return () => {
-        window.removeEventListener('popstate', handleLocationChange);
+        if (typeof window.removeEventListener === 'function') {
+          window.removeEventListener('popstate', handleLocationChange);
+        }
       };
     }
   }, []);
@@ -152,24 +154,41 @@ const FloatingAiBotIcon = () => {
       {/* Speech Bubble Popup */}
       {showPopup && (
         <View
-          style={styles.popupBubble}
+          style={[
+            styles.popupBubble,
+            isDarkMode && {
+              backgroundColor: '#111C35',
+              borderColor: 'rgba(255, 255, 255, 0.1)',
+              shadowColor: '#000000',
+            },
+          ]}
           // @ts-ignore
           className="mediunify-popup-card"
         >
           {/* Header with live dot & dismiss cross */}
           <View style={styles.popupHeader}>
-            <View style={styles.popupBadge}>
-              <View style={styles.popupGreenDot} />
-              <Text style={styles.popupBadgeText}>{t('online_24_7', 'Online · 24/7')}</Text>
+            <View
+              style={[
+                styles.popupBadge,
+                isDarkMode && {
+                  backgroundColor: 'rgba(0, 229, 176, 0.12)',
+                  borderColor: 'rgba(0, 229, 176, 0.25)',
+                },
+              ]}
+            >
+              <View style={[styles.popupGreenDot, isDarkMode && { backgroundColor: '#00E5B0' }]} />
+              <Text style={[styles.popupBadgeText, isDarkMode && { color: '#00E5B0' }]}>
+                {t('online_24_7', 'Online · 24/7')}
+              </Text>
             </View>
             <TouchableOpacity
               onPress={() => setShowPopup(false)}
               hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}
-              style={styles.popupCloseBtn}
+              style={[styles.popupCloseBtn, isDarkMode && { backgroundColor: '#16223D' }]}
               accessibilityLabel="Dismiss message"
               accessibilityRole="button"
             >
-              <Ionicons name="close" size={13} color="#64748B" />
+              <Ionicons name="close" size={13} color={isDarkMode ? '#94A3B8' : '#64748B'} />
             </TouchableOpacity>
           </View>
 
@@ -181,19 +200,39 @@ const FloatingAiBotIcon = () => {
             accessibilityRole="button"
             accessibilityLabel="Chat with MediUnify AI"
           >
-            <Text style={styles.popupTitle}>{t('bot_greeting', "Hi! I'm MediUnify AI")}</Text>
-            <Text style={styles.popupDesc}>
+            <Text style={[styles.popupTitle, isDarkMode && { color: '#FFFFFF' }]}>
+              {t('bot_greeting', "Hi! I'm MediUnify AI")}
+            </Text>
+            <Text style={[styles.popupDesc, isDarkMode && { color: '#94A3B8' }]}>
               {t('bot_help_prompt', 'How can I help you today? Ask about symptoms, medicines or doctors.')}
             </Text>
 
-            <View style={styles.popupCta}>
-              <Text style={styles.popupCtaText}>{t('tap_to_chat', 'Tap to chat')}</Text>
-              <Ionicons name="arrow-forward" size={12} color="#00B894" />
+            <View
+              style={[
+                styles.popupCta,
+                isDarkMode && {
+                  backgroundColor: 'rgba(0, 229, 176, 0.12)',
+                  borderColor: 'rgba(0, 229, 176, 0.25)',
+                },
+              ]}
+            >
+              <Text style={[styles.popupCtaText, isDarkMode && { color: '#00E5B0' }]}>
+                {t('tap_to_chat', 'Tap to chat')}
+              </Text>
+              <Ionicons name="arrow-forward" size={12} color={isDarkMode ? '#00E5B0' : '#00B894'} />
             </View>
           </TouchableOpacity>
 
           {/* Bottom tail pointing down to bot avatar */}
-          <View style={styles.popupTail} />
+          <View
+            style={[
+              styles.popupTail,
+              isDarkMode && {
+                backgroundColor: '#111C35',
+                borderColor: 'rgba(255, 255, 255, 0.1)',
+              },
+            ]}
+          />
         </View>
       )}
 

@@ -21,11 +21,13 @@ import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import colors from '../../theme/colors';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import { syncActiveUser } from '../../services/dataSyncService';
 import { promptLoginRequired } from '../../utils/authHelper';
 
 const ProfileScreen = ({ navigation, route }) => {
-  const { isDarkMode, language, changeLanguage, LANGUAGES, t, isIndic } = useTheme();
+  const { isDarkMode, theme, language, changeLanguage, LANGUAGES, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const currentLang = LANGUAGES.find((l) => l.code === language) || LANGUAGES[0];
   const { width } = useWindowDimensions();
   const isTablet = width >= 600;
@@ -413,15 +415,15 @@ const ProfileScreen = ({ navigation, route }) => {
   return (
     <SafeAreaView
       edges={['top', 'left', 'right']}
-      style={[styles.container, { backgroundColor: isDarkMode ? '#0B0F19' : '#F8FAFC' }]}
+      style={[styles.container, { backgroundColor: isDarkMode ? '#080E1A' : '#F8FAFC' }]}
     >
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={isDarkMode ? '#0B0F19' : '#FFFFFF'}
+        backgroundColor={isDarkMode ? '#0B132B' : '#FFFFFF'}
       />
 
       {/* TOP HEADER BAR */}
-      <View style={[styles.headerBar, { backgroundColor: isDarkMode ? '#111827' : '#FFFFFF' }]}>
+      <View style={[styles.headerBar, { backgroundColor: isDarkMode ? '#0B132B' : '#FFFFFF', borderBottomColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9' }]}>
         {navigation.canGoBack() ? (
           <TouchableOpacity
             style={styles.headerBtn}
@@ -456,7 +458,7 @@ const ProfileScreen = ({ navigation, route }) => {
               - Location
               - [ Edit Profile ]
           ============================================================ */}
-          <View style={[styles.profileHeaderCard, { backgroundColor: isDarkMode ? '#111827' : '#FFFFFF' }]}>
+          <View style={[styles.profileHeaderCard, { backgroundColor: isDarkMode ? '#111C35' : '#FFFFFF' }]}>
             {/* AVATAR HERO WITH MATCHING MEMBERSHIP RING */}
             <View style={styles.photoContainer}>
               <View
@@ -646,7 +648,7 @@ const ProfileScreen = ({ navigation, route }) => {
               style={[
                 styles.quickAccessCard,
                 isTablet && styles.quickAccessCardTablet,
-                { backgroundColor: isDarkMode ? '#111827' : '#FFFFFF' },
+                { backgroundColor: isDarkMode ? '#111C35' : '#FFFFFF' },
               ]}
               onPress={() => {
                 if (isGuest) {
@@ -673,7 +675,7 @@ const ProfileScreen = ({ navigation, route }) => {
               style={[
                 styles.quickAccessCard,
                 isTablet && styles.quickAccessCardTablet,
-                { backgroundColor: isDarkMode ? '#111827' : '#FFFFFF' },
+                { backgroundColor: isDarkMode ? '#111C35' : '#FFFFFF' },
               ]}
               onPress={() => {
                 if (isGuest) {
@@ -700,7 +702,7 @@ const ProfileScreen = ({ navigation, route }) => {
               style={[
                 styles.quickAccessCard,
                 isTablet && styles.quickAccessCardTablet,
-                { backgroundColor: isDarkMode ? '#111827' : '#FFFFFF' },
+                { backgroundColor: isDarkMode ? '#111C35' : '#FFFFFF' },
               ]}
               onPress={() => {
                 if (isGuest) {
@@ -727,7 +729,7 @@ const ProfileScreen = ({ navigation, route }) => {
               style={[
                 styles.quickAccessCard,
                 isTablet && styles.quickAccessCardTablet,
-                { backgroundColor: isDarkMode ? '#111827' : '#FFFFFF' },
+                { backgroundColor: isDarkMode ? '#111C35' : '#FFFFFF' },
               ]}
               onPress={() => navigation.navigate('Settings')}
               activeOpacity={0.78}
@@ -753,7 +755,7 @@ const ProfileScreen = ({ navigation, route }) => {
               Help & Support →
               About MediUnify →
           ============================================================ */}
-          <View style={[styles.menuListCard, { backgroundColor: isDarkMode ? '#111827' : '#FFFFFF' }]}>
+          <View style={[styles.menuListCard, { backgroundColor: isDarkMode ? '#111C35' : '#FFFFFF' }]}>
             {/* 1. PERSONAL INFORMATION */}
             <TouchableOpacity
               style={styles.menuRow}
@@ -777,7 +779,7 @@ const ProfileScreen = ({ navigation, route }) => {
               <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
 
-            <View style={[styles.divider, { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' }]} />
+            <View style={[styles.divider, { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9' }]} />
 
             {/* 2. ADDRESS */}
             <TouchableOpacity
@@ -802,7 +804,7 @@ const ProfileScreen = ({ navigation, route }) => {
               <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
 
-            <View style={[styles.divider, { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' }]} />
+            <View style={[styles.divider, { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9' }]} />
 
             {/* MEMBERSHIP */}
             <TouchableOpacity
@@ -830,7 +832,7 @@ const ProfileScreen = ({ navigation, route }) => {
               <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
 
-            <View style={[styles.divider, { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' }]} />
+            <View style={[styles.divider, { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9' }]} />
 
             {/* 3. NOTIFICATIONS */}
             <TouchableOpacity
@@ -849,7 +851,7 @@ const ProfileScreen = ({ navigation, route }) => {
               <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
 
-            <View style={[styles.divider, { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' }]} />
+            <View style={[styles.divider, { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9' }]} />
 
             {/* 4. LANGUAGE */}
             <TouchableOpacity
@@ -871,7 +873,7 @@ const ProfileScreen = ({ navigation, route }) => {
               <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
 
-            <View style={[styles.divider, { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' }]} />
+            <View style={[styles.divider, { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9' }]} />
 
             {/* 5. HELP & SUPPORT */}
             <TouchableOpacity
@@ -890,7 +892,7 @@ const ProfileScreen = ({ navigation, route }) => {
               <Ionicons name="chevron-forward" size={18} color="#94A3B8" />
             </TouchableOpacity>
 
-            <View style={[styles.divider, { backgroundColor: isDarkMode ? '#1E293B' : '#F1F5F9' }]} />
+            <View style={[styles.divider, { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#F1F5F9' }]} />
 
             {/* 6. ABOUT MEDIUNIFY */}
             <TouchableOpacity
@@ -966,7 +968,7 @@ const ProfileScreen = ({ navigation, route }) => {
           onPress={() => setShowLanguageModal(false)}
         >
           <View
-            style={[styles.modalCard, { backgroundColor: isDarkMode ? '#111827' : '#FFFFFF' }]}
+            style={[styles.modalCard, { backgroundColor: isDarkMode ? '#111C35' : '#FFFFFF' }]}
             onStartShouldSetResponder={() => true}
           >
             <View style={styles.modalHeader}>
@@ -1064,7 +1066,7 @@ const ProfileScreen = ({ navigation, route }) => {
           }}
         >
           <View
-            style={[styles.modalCard, { backgroundColor: isDarkMode ? '#111827' : '#FFFFFF' }]}
+            style={[styles.modalCard, { backgroundColor: isDarkMode ? '#111C35' : '#FFFFFF' }]}
             onStartShouldSetResponder={() => true}
           >
             <View style={styles.modalHeader}>
@@ -1088,9 +1090,9 @@ const ProfileScreen = ({ navigation, route }) => {
                 style={[
                   styles.addressTextInput,
                   {
-                    backgroundColor: isDarkMode ? '#1F2937' : '#F8FAFC',
+                    backgroundColor: isDarkMode ? '#16223D' : '#F8FAFC',
                     color: isDarkMode ? '#F8FAFC' : '#0F172A',
-                    borderColor: isDarkMode ? '#374151' : '#E2E8F0',
+                    borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.12)' : '#E2E8F0',
                   },
                 ]}
                 value={addressInput}
@@ -1138,7 +1140,7 @@ const ProfileScreen = ({ navigation, route }) => {
           onPress={() => setShowAboutModal(false)}
         >
           <View
-            style={[styles.modalCard, { backgroundColor: isDarkMode ? '#111827' : '#FFFFFF' }]}
+            style={[styles.modalCard, { backgroundColor: isDarkMode ? '#111C35' : '#FFFFFF' }]}
             onStartShouldSetResponder={() => true}
           >
             <View style={styles.modalHeader}>
@@ -1193,7 +1195,7 @@ const ProfileScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',

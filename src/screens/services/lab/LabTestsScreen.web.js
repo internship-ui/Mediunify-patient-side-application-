@@ -44,6 +44,8 @@ import {
 import { useCart } from '../../../context/CartContext';
 import { isPackageItem } from '../../../utils/labPackageMatcher.js';
 import { useAuthGuard } from '../../../context/AuthGuardContext';
+import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 import LabTestsScreenMobile from './LabTestsScreen.js';
 import { isDesktopLayout, isDesktopSiteRequested } from '../../../utils/responsiveLayoutHelper';
 
@@ -230,6 +232,8 @@ const getShortCategoryLabel = (item) => {
 };
 
 const LabTestsScreenWeb = (props) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { navigation, route } = props;
   const insets = useSafeAreaInsets();
   const { width } = useWindowDimensions();
@@ -466,7 +470,7 @@ const LabTestsScreenWeb = (props) => {
 
     // Cross-window and in-tab custom event listeners
     let handleStorage;
-    if (Platform.OS === 'web' && typeof window !== 'undefined') {
+    if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
       handleStorage = (e) => {
         if (!e || e.key === '@mediunify_selected_city' || e.key === '@unnathi_user_location') {
           syncLocation();
@@ -482,8 +486,8 @@ const LabTestsScreenWeb = (props) => {
     return () => {
       unsubFocus?.();
       clearInterval(interval);
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
-        window.removeEventListener('storage', handleStorage);
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.removeEventListener === 'function') {
+        if (handleStorage) window.removeEventListener('storage', handleStorage);
         window.removeEventListener('mediunify_city_changed', syncLocation);
       }
     };
@@ -1247,51 +1251,90 @@ const LabTestsScreenWeb = (props) => {
     return (
       <View style={styles.webMainContentWrapper}>
         {/* 1. COLORFUL HERO HEADER BANNER (REDUCED TEXT, NO QUICK SEARCH) */}
-        <View style={styles.webHeroBanner}>
+        <View
+          style={[
+            styles.webHeroBanner,
+            isDarkMode && {
+              backgroundColor: '#0B132B',
+              borderColor: 'rgba(255, 255, 255, 0.08)',
+              borderWidth: 1,
+            },
+          ]}
+        >
           <View style={styles.heroTopRow}>
             <View style={styles.heroTitleGroup}>
               <TouchableOpacity
-                style={styles.heroBackButton}
+                style={[
+                  styles.heroBackButton,
+                  isDarkMode && {
+                    backgroundColor: '#111C35',
+                    borderColor: 'rgba(255, 255, 255, 0.12)',
+                  },
+                ]}
                 onPress={handleGoBack}
                 accessibilityRole="button"
                 accessibilityLabel="Go back"
                 activeOpacity={0.8}
               >
-                <Ionicons name="arrow-back" size={20} color="#00BB95" />
+                <Ionicons name="arrow-back" size={20} color={isDarkMode ? '#00E5B0' : '#00BB95'} />
               </TouchableOpacity>
               <View style={{ flex: 1 }}>
                 <View style={styles.heroBadgeRow}>
-                  <View style={styles.heroVerifiedBadge}>
-                    <Ionicons name="shield-checkmark" size={13} color="#FFFFFF" style={{ marginRight: 4 }} />
-                    <Text style={styles.heroVerifiedBadgeText}>VERIFIED LAB NETWORK</Text>
+                  <View
+                    style={[
+                      styles.heroVerifiedBadge,
+                      isDarkMode && {
+                        backgroundColor: 'rgba(0, 229, 176, 0.15)',
+                        borderColor: 'rgba(0, 229, 176, 0.3)',
+                      },
+                    ]}
+                  >
+                    <Ionicons name="shield-checkmark" size={13} color={isDarkMode ? '#00E5B0' : '#FFFFFF'} style={{ marginRight: 4 }} />
+                    <Text style={[styles.heroVerifiedBadgeText, isDarkMode && { color: '#00E5B0' }]}>VERIFIED LAB NETWORK</Text>
                   </View>
                 </View>
-                <Text style={styles.heroMainTitle}>Diagnostic Lab Tests</Text>
-                <Text style={styles.heroSubtitle}>
+                <Text style={[styles.heroMainTitle, isDarkMode && { color: '#FFFFFF' }]}>Diagnostic Lab Tests</Text>
+                <Text style={[styles.heroSubtitle, isDarkMode && { color: '#94A3B8' }]}>
                   Doorstep sample collection with certified 24-hr digital reports.
                 </Text>
               </View>
             </View>
 
             {/* City Location Indicator Card */}
-            <View style={styles.heroCityCard}>
-              <View style={styles.heroCityStatusDot} />
-              <Ionicons name="location-sharp" size={16} color="#00BB95" style={{ marginRight: 6 }} />
+            <View
+              style={[
+                styles.heroCityCard,
+                isDarkMode && {
+                  backgroundColor: '#111C35',
+                  borderColor: 'rgba(255, 255, 255, 0.12)',
+                },
+              ]}
+            >
+              <View style={[styles.heroCityStatusDot, isDarkMode && { backgroundColor: '#00E5B0' }]} />
+              <Ionicons name="location-sharp" size={16} color={isDarkMode ? '#00E5B0' : '#00BB95'} style={{ marginRight: 6 }} />
               <View>
-                <Text style={styles.heroCityLabel}>City</Text>
-                <Text style={styles.heroCityValue}>{displayCityLocation}</Text>
+                <Text style={[styles.heroCityLabel, isDarkMode && { color: '#94A3B8' }]}>City</Text>
+                <Text style={[styles.heroCityValue, isDarkMode && { color: '#00E5B0' }]}>{displayCityLocation}</Text>
               </View>
             </View>
           </View>
 
 
           {/* Floating Search Bar (Quick Search Removed) */}
-          <View style={styles.webSearchBarWrap}>
-            <Ionicons name="search" size={20} color="#00BB95" style={{ marginLeft: 4, marginRight: 12 }} />
+          <View
+            style={[
+              styles.webSearchBarWrap,
+              isDarkMode && {
+                backgroundColor: '#111C35',
+                borderColor: 'rgba(255, 255, 255, 0.12)',
+              },
+            ]}
+          >
+            <Ionicons name="search" size={20} color={isDarkMode ? '#00E5B0' : '#00BB95'} style={{ marginLeft: 4, marginRight: 12 }} />
             <TextInput
-              style={styles.webSearchInput}
+              style={[styles.webSearchInput, isDarkMode && { color: '#FFFFFF' }]}
               placeholder="Search tests (e.g. CBC, HbA1c, Thyroid, Lipid Profile) or packages..."
-              placeholderTextColor="#94A3B8"
+              placeholderTextColor={isDarkMode ? '#94A3B8' : '#94A3B8'}
               value={searchQuery}
               onChangeText={(text) => {
                 setSearchQuery(text);
@@ -1318,7 +1361,7 @@ const LabTestsScreenWeb = (props) => {
         {/* 2. CATEGORIES SELECTOR */}
         <View style={styles.webCategoriesSection}>
           <View style={styles.categoriesHeaderRow}>
-            <Text style={styles.categoriesSectionTitle}>Categories</Text>
+            <Text style={[styles.categoriesSectionTitle, isDarkMode && { color: '#FFFFFF' }]}>Categories</Text>
             {hasActiveFilter && (
               <TouchableOpacity
                 onPress={resetAllFilters}
@@ -1418,8 +1461,8 @@ const LabTestsScreenWeb = (props) => {
         <View style={styles.webResultsBar}>
           <View style={styles.resultsBarLeft}>
             <Ionicons name="checkmark-done-circle" size={18} color="#00BB95" style={{ marginRight: 6 }} />
-            <Text style={styles.webResultsCountText}>
-              Showing <Text style={{ fontWeight: '800', color: '#0F172A' }}>{unifiedLabItems.length}</Text> certified {unifiedLabItems.length === 1 ? 'test' : 'tests'}
+            <Text style={[styles.webResultsCountText, isDarkMode && { color: '#94A3B8' }]}>
+              Showing <Text style={[{ fontWeight: '800', color: '#0F172A' }, isDarkMode && { color: '#FFFFFF' }]}>{unifiedLabItems.length}</Text> certified {unifiedLabItems.length === 1 ? 'test' : 'tests'}
               {selectedCategory !== 'all' ? ` in ${activeCategoryItem?.name || selectedCategory}` : ''}
               {` in `}<Text style={{ fontWeight: '700', color: '#00BB95' }}>{currentCity}</Text>
             </Text>
@@ -1798,7 +1841,7 @@ const LabTestsScreenWeb = (props) => {
   };
 
   return (
-    <SafeAreaView style={styles.safeContainer}>
+    <SafeAreaView style={[styles.safeContainer, isDarkMode && { backgroundColor: '#080E1A', backgroundImage: 'none' }]}>
       {!isDesktop && (
         <View style={styles.mobileHeaderBar}>
           <TouchableOpacity
@@ -1835,7 +1878,7 @@ const LabTestsScreenWeb = (props) => {
       )}
       <ScrollView
         ref={mainScrollRef}
-        style={styles.scrollContainer}
+        style={[styles.scrollContainer, isDarkMode && { backgroundColor: '#080E1A' }]}
         contentContainerStyle={{
           paddingBottom: labCartCount > 0 ? (isDesktop ? 100 : Math.max(insets.bottom + 90, 100)) : 60,
         }}
@@ -2776,7 +2819,7 @@ const LabTestsScreenWeb = (props) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   mobileHeaderBar: {
     height: 56,
     flexDirection: 'row',

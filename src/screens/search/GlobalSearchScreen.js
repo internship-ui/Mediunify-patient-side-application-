@@ -19,6 +19,7 @@ import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import colors from '../../theme/colors';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import WebFooter from '../../components/web/WebFooter';
 import { useCart } from '../../context/CartContext';
 import { isDesktopLayout } from '../../utils/responsiveLayoutHelper';
@@ -263,7 +264,8 @@ const POPULAR_SEARCHES = [
 const GlobalSearchScreen = ({ navigation, route }) => {
   const { width } = useWindowDimensions();
   const isDesktopWeb = Platform.OS === 'web' && isDesktopLayout(width);
-  const { t, isIndic } = useTheme();
+  const { t, isIndic, isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
 
   const searchPlaceholder = width < 360
     ? t('search_placeholder_short', 'Search doctors, clinics...')
@@ -800,8 +802,8 @@ const GlobalSearchScreen = ({ navigation, route }) => {
   };
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, isDesktopWeb && styles.webContainer]}>
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.container, isDarkMode && { backgroundColor: '#080E1A' }, isDesktopWeb && styles.webContainer]}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? '#080E1A' : '#FFFFFF'} />
 
       {/* TOAST MESSAGE */}
       {toastMsg && (
@@ -814,14 +816,14 @@ const GlobalSearchScreen = ({ navigation, route }) => {
       {/* MOBILE FULLY FUNCTIONAL HEALTHCARE SEARCH BAR */}
       {!isDesktopWeb && (
         <View style={styles.searchBarWrapper}>
-          <View style={[styles.searchBarBox, styles.searchBarBoxActive]}>
+          <View style={[styles.searchBarBox, styles.searchBarBoxActive, isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' }]}>
             <TouchableOpacity
               onPress={() => navigation.goBack()}
               style={styles.searchBackIconBtn}
               activeOpacity={0.7}
               accessibilityLabel="Back"
             >
-              <Ionicons name="arrow-back" size={20} color="#0F172A" />
+              <Ionicons name="arrow-back" size={20} color={isDarkMode ? '#F8FAFC' : '#0F172A'} />
             </TouchableOpacity>
 
             <TextInput
@@ -1126,7 +1128,7 @@ const GlobalSearchScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#F8FAFC',

@@ -24,9 +24,11 @@ import { autoMigrateLocalAccountsToServer } from '../../services/dataSyncService
 
 import { useKeyboardVisibility } from '../../utils/keyboardUtils';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 
 const RegisterScreen = ({ navigation, route }) => {
-  const { t, isIndic } = useTheme();
+  const { t, isIndic, isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
   const isSmallDevice = width < 375 || height < 680;
@@ -268,7 +270,7 @@ const RegisterScreen = ({ navigation, route }) => {
       ]}
       edges={['top', 'left', 'right', 'bottom']}
     >
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? '#080E1A' : '#FFFFFF'} />
 
       {/* TOP UTILITY BAR */}
       <View style={styles.topUtilityBar}>
@@ -278,7 +280,7 @@ const RegisterScreen = ({ navigation, route }) => {
           activeOpacity={0.7}
           hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
         >
-          <Ionicons name="arrow-back" size={22} color="#0F172A" />
+          <Ionicons name="arrow-back" size={22} color={isDarkMode ? '#F8FAFC' : '#0F172A'} />
         </TouchableOpacity>
 
         {Platform.OS !== 'web' && (
@@ -755,7 +757,7 @@ const RegisterScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',

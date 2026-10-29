@@ -32,6 +32,7 @@ import {
   subscribeToSlotChanges,
 } from '../../../services/slotBookingService';
 import { useTheme } from '../../../context/ThemeContext';
+import { useThemedStyles } from '../../../utils/themeStyles';
 import { isDesktopLayout, isDesktopSiteRequested } from '../../../utils/responsiveLayoutHelper';
 
 const ASYNC_KEY_BOOKINGS = '@unnathi_ayurveda_bookings';
@@ -42,7 +43,8 @@ const AyurvedaWellnessScreen = ({ navigation, route }) => {
   const desktopSiteMode = isDesktopSiteRequested();
   const isDesktopWeb = Platform.OS === 'web' && (desktopSiteMode || width >= 992);
   const isTablet = !desktopSiteMode && (width >= 768 && width < 992);
-  const { t } = useTheme();
+  const { t, isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
 
   // Root Navigation View: 'DISCOVERY' | 'DETAILS' | 'APPOINTMENTS' | 'REQUESTS'
   const [activeView, setActiveView] = useState('DISCOVERY');
@@ -3186,7 +3188,7 @@ const AyurvedaWellnessScreen = ({ navigation, route }) => {
 
 export default AyurvedaWellnessScreen;
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeContainer: {
     flex: 1,
     backgroundColor: '#F8FAFC',

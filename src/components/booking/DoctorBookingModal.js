@@ -24,6 +24,7 @@ import { validateAndBookSlot, subscribeToSlotChanges } from '../../services/slot
 import { useAuthGuard } from '../../context/AuthGuardContext';
 import { isGuestUser, promptLoginRequired } from '../../utils/authHelper';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import { isDesktopLayout } from '../../utils/responsiveLayoutHelper';
 
 const DoctorBookingModal = ({
@@ -33,7 +34,8 @@ const DoctorBookingModal = ({
   consultationType = 'In-Person', // 'In-Person' | 'Video'
   navigation,
 }) => {
-  const { t, isIndic } = useTheme();
+  const { t, isIndic, isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { requireLogin } = useAuthGuard();
   const { width } = useWindowDimensions();
   const isDesktopWeb = Platform.OS === 'web' && isDesktopLayout(width);
@@ -911,7 +913,7 @@ const DoctorBookingModal = ({
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   modalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(15, 23, 42, 0.65)',

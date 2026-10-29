@@ -20,8 +20,10 @@ import {
   getActivePatient,
   getPatientSettings,
   savePatientSettings,
+  INITIAL_PATIENT_SETTINGS,
 } from '../../data/patientDashboardData';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import SettingsScreenMobile from './SettingsScreen.js';
 import { isDesktopLayout } from '../../utils/responsiveLayoutHelper';
 
@@ -36,9 +38,10 @@ const SettingsScreenWeb = ({ navigation, route }) => {
   const { width } = useWindowDimensions();
   const isDesktop = width >= 1024;
   const { language, changeLanguage, t, isIndic, isDarkMode, toggleTheme, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
 
   const [patient, setPatient] = useState(null);
-  const [settings, setSettings] = useState(null);
+  const [settings, setSettings] = useState(INITIAL_PATIENT_SETTINGS);
   const [toastMessage, setToastMessage] = useState('');
 
   // Modals
@@ -120,7 +123,7 @@ const SettingsScreenWeb = ({ navigation, route }) => {
 
   if (!settings) {
     return (
-      <SafeAreaView style={styles.safeArea}>
+      <SafeAreaView style={[styles.safeArea, isDarkMode && { backgroundColor: '#080E1A', backgroundImage: 'none' }]}>
         <View style={{ paddingVertical: 100, alignItems: 'center' }}>
           <Text style={{ fontSize: 14, color: '#64748B' }}>Loading settings...</Text>
         </View>
@@ -129,7 +132,7 @@ const SettingsScreenWeb = ({ navigation, route }) => {
   }
 
   return (
-    <SafeAreaView style={styles.safeArea}>
+    <SafeAreaView style={[styles.safeArea, isDarkMode && { backgroundColor: '#080E1A', backgroundImage: 'none' }]}>
       {/* Notification Toast */}
       {toastMessage ? (
         <View style={styles.toastContainer}>
@@ -434,7 +437,7 @@ const SettingsScreenResponsive = (props) => {
 
 export default SettingsScreenResponsive;
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F8FAFC',

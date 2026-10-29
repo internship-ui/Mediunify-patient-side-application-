@@ -22,6 +22,7 @@ import colors from '../../theme/colors';
 import { safeNavigateToMain } from '../../utils/navigationHelper';
 import { syncLogin, syncRegister, autoMigrateLocalAccountsToServer } from '../../services/dataSyncService';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import { detectPhoneGPSLocation } from '../../utils/locationHelper';
 
 const PRE_SEEDED_CREDENTIALS = {
@@ -74,6 +75,8 @@ const PRE_SEEDED_CREDENTIALS = {
 import { useKeyboardVisibility } from '../../utils/keyboardUtils';
 
 const LoginScreen = ({ navigation, route }) => {
+  const { isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { t = (k, fb) => fb || k, isIndic } = useTheme();
   const insets = useSafeAreaInsets();
   const { width, height } = useWindowDimensions();
@@ -378,7 +381,7 @@ const LoginScreen = ({ navigation, route }) => {
       ]}
       edges={['top', 'left', 'right', 'bottom']}
     >
-      <StatusBar barStyle="dark-content" backgroundColor="#FFFFFF" />
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? '#080E1A' : '#FFFFFF'} />
 
       {/* TOP UTILITY BAR: BACK BUTTON (ONLY IF CAN GO BACK) */}
       {navigation.canGoBack() ? (
@@ -390,7 +393,7 @@ const LoginScreen = ({ navigation, route }) => {
             hitSlop={{ top: 10, bottom: 10, left: 10, right: 10 }}
             accessibilityLabel="Back"
           >
-            <Ionicons name="arrow-back" size={22} color="#0F172A" />
+            <Ionicons name="arrow-back" size={22} color={isDarkMode ? '#F8FAFC' : '#0F172A'} />
           </TouchableOpacity>
           <View style={{ width: 36 }} />
         </View>
@@ -630,7 +633,7 @@ const LoginScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#FFFFFF',

@@ -13,6 +13,7 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import AllServicesScreenMobile from './AllServicesScreen.js';
 import WebBackButton from '../../components/web/WebBackButton';
 import { isDesktopLayout } from '../../utils/responsiveLayoutHelper';
@@ -22,7 +23,7 @@ import { isDesktopLayout } from '../../utils/responsiveLayoutHelper';
 // ─────────────────────────────────────────────────
 const PALETTE = {
   teal: '#00B894',
-  tealDark: '#007D69',
+  tealDark: '#009879',
   tealLight: '#ECFDF5',
   navyBlue: '#1E3A8A',
   slate: '#64748B',
@@ -67,9 +68,9 @@ const ALL_SERVICES = [
     subtitle: 'Certified tests with home sample pickup',
     iconFamily: 'Ionicons',
     icon: 'flask-outline',
-    iconColor: '#00A878',
-    iconBg: '#E6F8F2',
-    accentColor: '#00A878',
+    iconColor: '#00B894',
+    iconBg: '#ECFDF5',
+    accentColor: '#00B894',
     route: 'LabTests',
     badge: 'Free Pickup',
     keywords: 'lab tests blood test diagnostics health checkup urine sample collection',
@@ -93,9 +94,9 @@ const ALL_SERVICES = [
     subtitle: 'In-clinic doctor consultations',
     iconFamily: 'MaterialCommunityIcons',
     icon: 'hospital-building',
-    iconColor: '#007D69',
-    iconBg: '#E8F6F6',
-    accentColor: '#007D69',
+    iconColor: '#00B894',
+    iconBg: '#ECFDF5',
+    accentColor: '#00B894',
     route: 'DoctorList',
     badge: 'Top Rated',
     keywords: 'in-clinic visit doctor appointment specialist consultation clinic',
@@ -199,6 +200,7 @@ const ALL_SERVICES = [
 const AllServicesScreenWeb = ({ navigation, route }) => {
   const { width } = useWindowDimensions();
   const { t, language, isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
 
   const isDesktop = width >= 992;
 
@@ -325,17 +327,17 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
           {/* Results summary row */}
           <View style={styles.resultsRow}>
             <View style={styles.resultsLeft}>
-              <View style={styles.resultsBadge}>
-                <Ionicons name="grid" size={14} color={PALETTE.tealDark} />
-                <Text style={styles.resultsBadgeText}>
+              <View style={[styles.resultsBadge, isDarkMode && { backgroundColor: 'rgba(0, 184, 148, 0.15)', borderColor: 'rgba(0, 184, 148, 0.35)' }]}>
+                <Ionicons name="grid" size={14} color={isDarkMode ? '#00E5B0' : PALETTE.tealDark} />
+                <Text style={[styles.resultsBadgeText, isDarkMode && { color: '#00E5B0' }]}>
                   {filteredServices.length}{' '}
                   {t('services_count', filteredServices.length === 1 ? 'service' : 'services')}
                 </Text>
               </View>
               {searchQuery.trim().length > 0 && (
-                <Text style={styles.resultsQuery}>
+                <Text style={[styles.resultsQuery, isDarkMode && { color: '#94A3B8' }]}>
                   {t('matching_query', ' matching ')}
-                  <Text style={{ fontWeight: '800', color: PALETTE.navyBlue }}>
+                  <Text style={{ fontWeight: '800', color: isDarkMode ? '#FFFFFF' : PALETTE.navyBlue }}>
                     &ldquo;{searchQuery}&rdquo;
                   </Text>
                 </Text>
@@ -343,7 +345,7 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
             </View>
             {searchQuery.trim().length > 0 && (
               <TouchableOpacity onPress={() => setSearchQuery('')} activeOpacity={0.7}>
-                <Text style={styles.clearLink}>{t('clear_search', 'Clear search')}</Text>
+                <Text style={[styles.clearLink, isDarkMode && { color: '#00E5B0' }]}>{t('clear_search', 'Clear search')}</Text>
               </TouchableOpacity>
             )}
           </View>
@@ -351,15 +353,15 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
           {/* ─── EMPTY STATE ─── */}
           {filteredServices.length === 0 ? (
             <View style={styles.emptyState}>
-              <View style={styles.emptyIconWrap}>
-                <Ionicons name="search-outline" size={42} color="#94A3B8" />
+              <View style={[styles.emptyIconWrap, isDarkMode && { backgroundColor: '#17243E' }]}>
+                <Ionicons name="search-outline" size={42} color={isDarkMode ? '#64748B' : '#94A3B8'} />
               </View>
-              <Text style={styles.emptyTitle}>{t('no_services_found', 'No services found')}</Text>
-              <Text style={styles.emptySub}>
+              <Text style={[styles.emptyTitle, isDarkMode && { color: '#FFFFFF' }]}>{t('no_services_found', 'No services found')}</Text>
+              <Text style={[styles.emptySub, isDarkMode && { color: '#94A3B8' }]}>
                 {t('try_searching_again', 'Try searching for "Doctor", "Lab Test", "Surgery", "Nursing", "Pharmacy" or "Scan".')}
               </Text>
               <TouchableOpacity
-                style={styles.emptyResetBtn}
+                style={[styles.emptyResetBtn, isDarkMode && { backgroundColor: '#00B894' }]}
                 onPress={() => setSearchQuery('')}
                 activeOpacity={0.85}
               >
@@ -377,7 +379,11 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
                     styles.serviceCard,
                     isDesktop ? styles.serviceCardDesktop : styles.serviceCardTablet,
                     cardWidthStyle,
-                    isDarkMode && { backgroundColor: theme.card, borderColor: theme.border },
+                    isDarkMode && {
+                      backgroundColor: '#111C35',
+                      borderColor: 'rgba(255, 255, 255, 0.08)',
+                      boxShadow: '0 10px 26px rgba(0, 0, 0, 0.45)',
+                    },
                   ]}
                   // @ts-ignore
                   className="svc-card-web"
@@ -388,18 +394,18 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
                 >
                   {/* Card Header */}
                   <View style={styles.cardHeader}>
-                    <View style={[styles.iconBox, { backgroundColor: isDarkMode ? '#162032' : service.iconBg }]}>
+                    <View style={[styles.iconBox, { backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.06)' : service.iconBg }]}>
                       {service.iconFamily === 'MaterialCommunityIcons' ? (
                         <MaterialCommunityIcons
                           name={service.icon}
                           size={26}
-                          color={service.iconColor}
+                          color={isDarkMode && service.iconColor === '#1E3A8A' ? '#38BDF8' : service.iconColor}
                         />
                       ) : (
                         <Ionicons
                           name={service.icon}
                           size={26}
-                          color={service.iconColor}
+                          color={isDarkMode && service.iconColor === '#1E3A8A' ? '#38BDF8' : service.iconColor}
                         />
                       )}
                     </View>
@@ -407,12 +413,12 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
                       style={[
                         styles.serviceBadge,
                         {
-                          borderColor: isDarkMode ? '#334155' : service.accentColor + '33',
-                          backgroundColor: isDarkMode ? '#162032' : service.iconBg,
+                          borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.12)' : service.accentColor + '33',
+                          backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : service.iconBg,
                         },
                       ]}
                     >
-                      <Text style={[styles.serviceBadgeText, { color: service.accentColor }]}>
+                      <Text style={[styles.serviceBadgeText, { color: isDarkMode && service.accentColor === '#1E3A8A' ? '#38BDF8' : service.accentColor }]}>
                         {t(service.badge, service.badge)}
                       </Text>
                     </View>
@@ -420,8 +426,8 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
 
                   {/* Card Body */}
                   <View style={styles.cardContent}>
-                    <Text style={[styles.cardTitle, isDarkMode && { color: theme.text }]}>{t(service.title, service.title)}</Text>
-                    <Text style={[styles.cardSubtitle, isDarkMode && { color: theme.textSecondary }]} numberOfLines={2}>
+                    <Text style={[styles.cardTitle, isDarkMode && { color: '#FFFFFF' }]}>{t(service.title, service.title)}</Text>
+                    <Text style={[styles.cardSubtitle, isDarkMode && { color: '#94A3B8' }]} numberOfLines={2}>
                       {t(service.subtitle, service.subtitle)}
                     </Text>
                   </View>
@@ -432,18 +438,18 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
                       style={[
                         styles.bookBtn,
                         {
-                          backgroundColor: isDarkMode ? '#162032' : service.iconBg,
-                          borderColor: isDarkMode ? '#334155' : service.accentColor + '33',
+                          backgroundColor: isDarkMode ? 'rgba(255, 255, 255, 0.05)' : service.iconBg,
+                          borderColor: isDarkMode ? 'rgba(255, 255, 255, 0.12)' : service.accentColor + '33',
                         },
                       ]}
                     >
-                      <Text style={[styles.bookBtnText, { color: service.accentColor }]}>
+                      <Text style={[styles.bookBtnText, { color: isDarkMode && service.accentColor === '#1E3A8A' ? '#38BDF8' : service.accentColor }]}>
                         {t('book_now_btn', 'Book Now')}
                       </Text>
                       <Ionicons
                         name="arrow-forward"
                         size={13}
-                        color={service.accentColor}
+                        color={isDarkMode && service.accentColor === '#1E3A8A' ? '#38BDF8' : service.accentColor}
                         style={{ marginLeft: 5 }}
                       />
                     </View>
@@ -454,7 +460,7 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
           )}
 
           {/* Trust strip */}
-          <View style={styles.trustStrip}>
+          <View style={[styles.trustStrip, isDarkMode && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' }]}>
             {[
               { icon: 'shield-checkmark', label: '3,200+ Verified Doctors' },
               { icon: 'lock-closed', label: '256-Bit SSL Encrypted' },
@@ -462,8 +468,8 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
               { icon: 'medal', label: '4.9/5 Patient Rating' },
             ].map((item, i) => (
               <View key={i} style={styles.trustItem}>
-                <Ionicons name={item.icon} size={15} color={PALETTE.tealDark} />
-                <Text style={styles.trustItemText}>{item.label}</Text>
+                <Ionicons name={item.icon} size={15} color={isDarkMode ? '#00E5B0' : PALETTE.tealDark} />
+                <Text style={[styles.trustItemText, isDarkMode && { color: '#94A3B8' }]}>{item.label}</Text>
               </View>
             ))}
           </View>
@@ -475,7 +481,7 @@ const AllServicesScreenWeb = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   safeArea: {
     flex: 1,
     backgroundColor: '#F0F6FA',

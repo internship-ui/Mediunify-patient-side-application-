@@ -215,6 +215,26 @@ const linking = {
             path: 'history',
             alias: ['history', 'History'],
           },
+          Wallet: {
+            path: 'wallet',
+            alias: ['wallet', 'Wallet', 'my-wallet'],
+          },
+          Reports: {
+            path: 'reports',
+            alias: ['reports', 'Reports', 'lab-reports'],
+          },
+          HealthRecords: {
+            path: 'health-records',
+            alias: ['health-records', 'HealthRecords', 'medical-records'],
+          },
+          Prescriptions: {
+            path: 'prescriptions',
+            alias: ['prescriptions', 'Prescriptions'],
+          },
+          HealthMonitor: {
+            path: 'health-monitor',
+            alias: ['health-monitor', 'HealthMonitor'],
+          },
         },
       },
     },
@@ -232,10 +252,10 @@ const AppNavigator = () => {
     colors: {
       ...(baseTheme?.colors || {}),
       primary: '#00B894',
-      background: isDarkMode ? '#0B1120' : '#FAFCFD',
-      card: isDarkMode ? '#0F172A' : '#FFFFFF',
+      background: isDarkMode ? '#080E1A' : '#FAFCFD',
+      card: isDarkMode ? '#111C35' : '#FFFFFF',
       text: isDarkMode ? '#F8FAFC' : '#1E3A8A',
-      border: isDarkMode ? '#334155' : '#E2E8F0',
+      border: isDarkMode ? 'rgba(255, 255, 255, 0.08)' : '#E2E8F0',
       notification: '#FF7F50',
     },
     fonts: baseTheme?.fonts || {
@@ -264,22 +284,22 @@ const AppNavigator = () => {
       linking={linking}
       theme={navigationTheme}
       fallback={
-        <View style={{ flex: 1, backgroundColor: isDarkMode ? '#0B1120' : '#F8FAFC', justifyContent: 'center', alignItems: 'center' }}>
+        <View style={{ flex: 1, backgroundColor: isDarkMode ? '#080E1A' : '#F8FAFC', justifyContent: 'center', alignItems: 'center' }}>
           <ActivityIndicator size="large" color="#00B894" />
         </View>
       }
     >
       <StatusBar
         barStyle={isDarkMode ? 'light-content' : 'dark-content'}
-        backgroundColor={isDarkMode ? '#0F172A' : '#FFFFFF'}
+        backgroundColor={isDarkMode ? '#0B132B' : '#FFFFFF'}
       />
       <AuthGuardProvider>
-        <View style={{ flex: 1, backgroundColor: isDarkMode ? '#0B1120' : '#FAFCFD' }}>
+        <View style={{ flex: 1, backgroundColor: isDarkMode ? '#080E1A' : '#FAFCFD' }}>
           <Stack.Navigator
             initialRouteName={Platform.OS === 'web' ? 'MainApp' : 'Auth'}
             screenOptions={{
               headerShown: false,
-              contentStyle: { backgroundColor: isDarkMode ? '#0B1120' : '#FAFCFD' },
+              contentStyle: { backgroundColor: isDarkMode ? '#080E1A' : '#FAFCFD' },
             }}
           >
             <Stack.Screen

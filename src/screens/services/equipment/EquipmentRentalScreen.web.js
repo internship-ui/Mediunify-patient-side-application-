@@ -1098,7 +1098,7 @@ const EquipmentRentalScreen = ({ navigation, route, ...props }) => {
   );
 
   return (
-    <SafeAreaView edges={['top', 'left', 'right']} style={styles.safeContainer}>
+    <SafeAreaView edges={['top', 'left', 'right']} style={[styles.safeContainer, isDarkMode && { backgroundColor: '#080E1A', backgroundImage: 'none' }]}>
       {currentView === 'HOME' && renderHomeView()}
       {currentView === 'DETAILS' && renderDetailsView()}
       {currentView === 'REQUEST_FORM' && renderRequestFormView()}

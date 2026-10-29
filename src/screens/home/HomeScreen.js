@@ -33,6 +33,7 @@ import {
 
 import colors from '../../theme/colors';
 import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import { useCart } from '../../context/CartContext';
 import { saveTransaction } from '../../services/transactionService';
 import GuestLeadModal from '../../components/common/GuestLeadModal';
@@ -106,6 +107,9 @@ const SPECIALIZED_PROGRAMS = [
 ];
 
 const HomeScreen = ({ navigation, route }) => {
+  const { isDarkMode, theme, t, isIndic } = useTheme();
+  const isDark = isDarkMode;
+  const styles = useThemedStyles(baseStyles);
   const { width } = useWindowDimensions();
   const isTablet = width >= 600;
   const isLargeTablet = width >= 900;
@@ -132,9 +136,6 @@ const HomeScreen = ({ navigation, route }) => {
     }, 4000);
     return () => clearInterval(timer);
   }, []);
-
-  const { t, isIndic, isDarkMode, theme } = useTheme();
-  const isDark = isDarkMode;
 
   const searchPlaceholder = width < 360
     ? t('search_placeholder_short', 'Search doctors, clinics...')
@@ -780,18 +781,9 @@ const HomeScreen = ({ navigation, route }) => {
         isDark && { backgroundColor: theme.headerBg, borderBottomColor: theme.border, borderBottomWidth: 1 },
       ]}>
         {/* Left: Brand Logo Mark */}
-        <View style={[
-          styles.brandLogoWrap,
-          isDark && {
-            backgroundColor: 'rgba(255, 255, 255, 0.08)',
-            borderRadius: 12,
-            padding: 4,
-            borderWidth: 1,
-            borderColor: 'rgba(255, 255, 255, 0.14)',
-          }
-        ]}>
+        <View style={styles.brandLogoWrap}>
           <Image
-            source={require('../../../assets/logo-mark.png')}
+            source={isDark ? require('../../../assets/logo-mark-dark.png') : require('../../../assets/logo-mark.png')}
             style={styles.brandLogoMark}
             resizeMode="contain"
           />
@@ -810,12 +802,23 @@ const HomeScreen = ({ navigation, route }) => {
           <Ionicons name="chevron-down" size={13} color={isDark ? theme.textSecondary : "#64748B"} />
         </TouchableOpacity>
 
-        {/* Right: User Avatar with Dynamic Initial & Membership Ring */}
-        <TouchableOpacity
-          style={styles.avatarButton}
-          activeOpacity={0.85}
-          onPress={() => navigation.navigate('Profile')}
-        >
+        {/* Right: Notifications Bell & User Avatar */}
+        <View style={styles.headerRightRow}>
+          <TouchableOpacity
+            style={[styles.headerNotifBtn, isDark && { backgroundColor: theme.card, borderColor: theme.border }]}
+            activeOpacity={0.8}
+            onPress={() => navigation.navigate('Notifications')}
+            accessibilityLabel="Notifications"
+          >
+            <Ionicons name="notifications-outline" size={20} color={isDark ? theme.text : "#0F172A"} />
+            <View style={styles.headerNotifDot} />
+          </TouchableOpacity>
+
+          <TouchableOpacity
+            style={styles.avatarButton}
+            activeOpacity={0.85}
+            onPress={() => navigation.navigate('Profile')}
+          >
           <View
             style={[
               styles.avatarCircle,
@@ -901,6 +904,7 @@ const HomeScreen = ({ navigation, route }) => {
             )}
           </View>
         </TouchableOpacity>
+        </View>
       </View>
 
       {/* TOAST NOTIFICATION */}
@@ -1385,7 +1389,7 @@ const HomeScreen = ({ navigation, route }) => {
                 styles.billTile,
                 styles.billTileClinic,
                 isTablet && styles.billTileTablet,
-                isDark && { backgroundColor: '#132338', borderColor: '#1E40AF' },
+                isDark && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' },
               ]}
               activeOpacity={0.82}
               onPress={() => navigation.navigate('DoctorList')}
@@ -1402,7 +1406,7 @@ const HomeScreen = ({ navigation, route }) => {
                 styles.billTileTextClinic,
                 isTablet && styles.billTileTextTablet,
                 isIndic && { fontSize: isTablet ? 13 : 11, lineHeight: isTablet ? 17 : 15 },
-                isDark && { color: '#93C5FD' },
+                isDark && { color: '#38BDF8' },
               ]}>
                 {t('service_in_clinic', 'In-Clinic Visit')}
               </Text>
@@ -1414,7 +1418,7 @@ const HomeScreen = ({ navigation, route }) => {
                 styles.billTile,
                 styles.billTileNurse,
                 isTablet && styles.billTileTablet,
-                isDark && { backgroundColor: '#0D2720', borderColor: '#047857' },
+                isDark && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' },
               ]}
               activeOpacity={0.82}
               onPress={() => navigation.navigate('NurseBooking')}
@@ -1431,7 +1435,7 @@ const HomeScreen = ({ navigation, route }) => {
                 styles.billTileTextNurse,
                 isTablet && styles.billTileTextTablet,
                 isIndic && { fontSize: isTablet ? 13 : 11, lineHeight: isTablet ? 17 : 15 },
-                isDark && { color: '#6EE7B7' },
+                isDark && { color: '#00E5B0' },
               ]}>
                 {t('card_home_nurse', 'Home Nursing & Caregiver')}
               </Text>
@@ -1443,7 +1447,7 @@ const HomeScreen = ({ navigation, route }) => {
                 styles.billTile,
                 styles.billTileScan,
                 isTablet && styles.billTileTablet,
-                isDark && { backgroundColor: '#201538', borderColor: '#6D28D9' },
+                isDark && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' },
               ]}
               activeOpacity={0.82}
               onPress={() => navigation.navigate('RadiologyLabs', { city: selectedCity })}
@@ -1460,7 +1464,7 @@ const HomeScreen = ({ navigation, route }) => {
                 styles.billTileTextScan,
                 isTablet && styles.billTileTextTablet,
                 isIndic && { fontSize: isTablet ? 13 : 11, lineHeight: isTablet ? 17 : 15 },
-                isDark && { color: '#C4B5FD' },
+                isDark && { color: '#C084FC' },
               ]}>
                 {t('card_scans_xray', 'Scan & X-Ray')}
               </Text>
@@ -1472,7 +1476,7 @@ const HomeScreen = ({ navigation, route }) => {
                 styles.billTile,
                 styles.billTileMedicine,
                 isTablet && styles.billTileTablet,
-                isDark && { backgroundColor: '#2F180B', borderColor: '#C2410C' },
+                isDark && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' },
               ]}
               activeOpacity={0.82}
               onPress={() => navigation.navigate('Pharmacy')}
@@ -1489,7 +1493,7 @@ const HomeScreen = ({ navigation, route }) => {
                 styles.billTileTextMedicine,
                 isTablet && styles.billTileTextTablet,
                 isIndic && { fontSize: isTablet ? 13 : 11, lineHeight: isTablet ? 17 : 15 },
-                isDark && { color: '#FDBA74' },
+                isDark && { color: '#FB923C' },
               ]}>
                 {t('card_order_medicines', 'Order Medicine')}
               </Text>
@@ -1504,7 +1508,7 @@ const HomeScreen = ({ navigation, route }) => {
                     styles.billTile,
                     styles.billTileSurgery,
                     styles.billTileTablet,
-                    isDark && { backgroundColor: '#2F1217', borderColor: '#B91C1C' },
+                    isDark && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' },
                   ]}
                   activeOpacity={0.82}
                   onPress={() => navigation.navigate('HospitalCare')}
@@ -1521,7 +1525,7 @@ const HomeScreen = ({ navigation, route }) => {
                     styles.billTileTextSurgery,
                     styles.billTileTextTablet,
                     isIndic && { fontSize: 13, lineHeight: 17 },
-                    isDark && { color: '#FCA5A5' },
+                    isDark && { color: '#F87171' },
                   ]}>
                     {t('card_surgeries', 'Hospital & Surgery')}
                   </Text>
@@ -1533,7 +1537,7 @@ const HomeScreen = ({ navigation, route }) => {
                     styles.billTile,
                     styles.billTileEquipment,
                     styles.billTileTablet,
-                    isDark && { backgroundColor: '#0C2623', borderColor: '#0F766E' },
+                    isDark && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' },
                   ]}
                   activeOpacity={0.82}
                   onPress={() => navigation.navigate('EquipmentRental')}
@@ -1550,7 +1554,7 @@ const HomeScreen = ({ navigation, route }) => {
                     styles.billTileTextEquipment,
                     styles.billTileTextTablet,
                     isIndic && { fontSize: 13, lineHeight: 17 },
-                    isDark && { color: '#5EEAD4' },
+                    isDark && { color: '#2DD4BF' },
                   ]}>
                     {t('card_equipment_rental', 'Equipment Rental')}
                   </Text>
@@ -1562,7 +1566,7 @@ const HomeScreen = ({ navigation, route }) => {
                     styles.billTile,
                     styles.billTileAyurveda,
                     styles.billTileTablet,
-                    isDark && { backgroundColor: '#1E280B', borderColor: '#4D7C0F' },
+                    isDark && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' },
                   ]}
                   activeOpacity={0.82}
                   onPress={() => navigation.navigate('AyurvedaWellness')}
@@ -1579,7 +1583,7 @@ const HomeScreen = ({ navigation, route }) => {
                     styles.billTileTextAyurveda,
                     styles.billTileTextTablet,
                     isIndic && { fontSize: 13, lineHeight: 17 },
-                    isDark && { color: '#BEF264' },
+                    isDark && { color: '#A3E635' },
                   ]}>
                     {t('card_ayurveda', 'Ayurveda & Wellness')}
                   </Text>
@@ -1591,7 +1595,7 @@ const HomeScreen = ({ navigation, route }) => {
                     styles.billTile,
                     styles.billTileInsurance,
                     styles.billTileTablet,
-                    isDark && { backgroundColor: '#1E293B', borderColor: '#475569' },
+                    isDark && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' },
                   ]}
                   activeOpacity={0.82}
                   onPress={() => navigation.navigate('HealthInsurance')}
@@ -1608,7 +1612,7 @@ const HomeScreen = ({ navigation, route }) => {
                     styles.billTileTextInsurance,
                     styles.billTileTextTablet,
                     isIndic && { fontSize: 13, lineHeight: 17 },
-                    isDark && { color: '#CBD5E1' },
+                    isDark && { color: '#94A3B8' },
                   ]}>
                     {t('card_health_insurance', 'Health Insurance')}
                   </Text>
@@ -1654,14 +1658,21 @@ const HomeScreen = ({ navigation, route }) => {
                   style={[
                     styles.singleProgramCard,
                     isDark
-                      ? { backgroundColor: '#1E293B', borderColor: '#334155' }
+                      ? { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' }
                       : { backgroundColor: item.bgColor, borderColor: item.borderColor },
                   ]}
                   activeOpacity={0.9}
                   onPress={() => navigation.navigate(item.route)}
                 >
                   <View style={styles.programCardHeader}>
-                    <View style={[styles.programPillBadge, isDark ? { backgroundColor: '#0F172A', borderWidth: 1, borderColor: '#334155' } : { backgroundColor: item.pillBg }]}>
+                    <View
+                      style={[
+                        styles.programPillBadge,
+                        isDark
+                          ? { backgroundColor: 'rgba(56, 189, 248, 0.14)', borderWidth: 1, borderColor: 'rgba(56, 189, 248, 0.28)' }
+                          : { backgroundColor: item.pillBg },
+                      ]}
+                    >
                       <Text style={[styles.programPillText, isDark ? { color: '#38BDF8' } : { color: item.pillColor }]}>
                         {t(item.pillText, item.pillText)}
                       </Text>
@@ -1669,19 +1680,19 @@ const HomeScreen = ({ navigation, route }) => {
                     <Text style={[styles.programPrice, isDark && { color: '#38BDF8' }]}>{t(item.priceText, item.priceText)}</Text>
                   </View>
 
-                  <Text style={[styles.programCardTitle, isIndic && { lineHeight: 22 }, isDark && { color: theme.text }]} numberOfLines={1}>
+                  <Text style={[styles.programCardTitle, isIndic && { lineHeight: 22 }, isDark && { color: '#FFFFFF' }]} numberOfLines={1}>
                     {t(item.title, item.title)}
                   </Text>
-                  <Text style={[styles.programCardSubtitle, isIndic && { lineHeight: 18 }, isDark && { color: theme.textSecondary }]} numberOfLines={2}>
+                  <Text style={[styles.programCardSubtitle, isIndic && { lineHeight: 18 }, isDark && { color: '#94A3B8' }]} numberOfLines={2}>
                     {t(item.subtitle, item.subtitle)}
                   </Text>
 
                   <View style={[styles.programCardFooter, isDark && { borderTopColor: 'rgba(255,255,255,0.08)' }]}>
-                    <Text style={[styles.programActionText, isIndic && { lineHeight: 18 }, isDark && { color: '#34D399' }]}>
+                    <Text style={[styles.programActionText, isIndic && { lineHeight: 18 }, isDark && { color: '#00E5B0' }]}>
                       {t(item.badgeText, item.badgeText)} →
                     </Text>
-                    <View style={[styles.programCircleArrow, isDark && { backgroundColor: '#059669' }]}>
-                      <Ionicons name="arrow-forward" size={14} color="#FFFFFF" />
+                    <View style={[styles.programCircleArrow, isDark && { backgroundColor: '#00E5B0' }]}>
+                      <Ionicons name="arrow-forward" size={14} color={isDark ? '#080E1A' : '#FFFFFF'} />
                     </View>
                   </View>
                 </TouchableOpacity>
@@ -1730,11 +1741,11 @@ const HomeScreen = ({ navigation, route }) => {
         onRequestClose={() => setEmergencyModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, isDark && { backgroundColor: '#1E293B' }]}>
+          <View style={[styles.modalContent, isDark && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' }]}>
             <View style={styles.modalHeader}>
               <View>
-                <Text style={[styles.modalTitle, isDark && { color: theme.text }]}>{t('emergency_support', 'Emergency & 24x7 Support')}</Text>
-                <Text style={[styles.modalSubtitle, isDark && { color: theme.textSecondary }]}>{t('emergency_sub', 'Immediate medical transport & assistance')}</Text>
+                <Text style={[styles.modalTitle, isDark && { color: '#FFFFFF' }]}>{t('emergency_support', 'Emergency & 24x7 Support')}</Text>
+                <Text style={[styles.modalSubtitle, isDark && { color: '#94A3B8' }]}>{t('emergency_sub', 'Immediate medical transport & assistance')}</Text>
               </View>
               <TouchableOpacity onPress={() => setEmergencyModalVisible(false)}>
                 <Ionicons name="close" size={24} color={isDark ? '#94A3B8' : '#64748B'} />
@@ -1743,7 +1754,7 @@ const HomeScreen = ({ navigation, route }) => {
 
             {/* 1. 108 AMBULANCE SOS */}
             <TouchableOpacity
-              style={[styles.emergencyCard, isDark && { backgroundColor: '#0F172A', borderColor: '#334155' }]}
+              style={[styles.emergencyCard, isDark && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.08)' }]}
               onPress={() => {
                 setEmergencyModalVisible(false);
                 Linking.openURL('tel:108');
@@ -1754,10 +1765,10 @@ const HomeScreen = ({ navigation, route }) => {
                 <Ionicons name="medical" size={22} color="#FFFFFF" />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={[styles.emergencyCardTitle, isDark && { color: theme.text }]}>{t('call_108', 'Call 108 Ambulance SOS')}</Text>
-                <Text style={[styles.emergencyCardSub, isDark && { color: theme.textSecondary }]}>{t('govt_emergency', 'Government Emergency Medical Services (Free)')}</Text>
+                <Text style={[styles.emergencyCardTitle, isDark && { color: '#FFFFFF' }]}>{t('call_108', 'Call 108 Ambulance SOS')}</Text>
+                <Text style={[styles.emergencyCardSub, isDark && { color: '#94A3B8' }]}>{t('govt_emergency', 'Government Emergency Medical Services (Free)')}</Text>
               </View>
-              <View style={[styles.callPill, isDark ? { backgroundColor: '#431407' } : { backgroundColor: '#FFF2ED' }]}>
+              <View style={[styles.callPill, isDark ? { backgroundColor: 'rgba(255, 127, 80, 0.15)', borderWidth: 1, borderColor: 'rgba(255, 127, 80, 0.3)' } : { backgroundColor: '#FFF2ED' }]}>
                 <Ionicons name="call" size={13} color="#FF7F50" />
                 <Text style={[styles.callPillText, { color: '#FF7F50' }]}>108</Text>
               </View>
@@ -1765,7 +1776,7 @@ const HomeScreen = ({ navigation, route }) => {
 
             {/* 2. 24x7 DOCTOR HELPLINE */}
             <TouchableOpacity
-              style={[styles.emergencyCard, isDark && { backgroundColor: '#0F172A', borderColor: '#334155' }]}
+              style={[styles.emergencyCard, isDark && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.08)' }]}
               onPress={() => {
                 setEmergencyModalVisible(false);
                 Linking.openURL('tel:18001089999');
@@ -1776,12 +1787,12 @@ const HomeScreen = ({ navigation, route }) => {
                 <Ionicons name="headset" size={22} color="#FFFFFF" />
               </View>
               <View style={{ flex: 1, marginLeft: 12 }}>
-                <Text style={[styles.emergencyCardTitle, isDark && { color: theme.text }]}>{t('support_helpline', '24x7 Doctor Helpline')}</Text>
-                <Text style={[styles.emergencyCardSub, isDark && { color: theme.textSecondary }]}>{t('doctor_helpline_sub', 'Speak with an on-duty general physician')}</Text>
+                <Text style={[styles.emergencyCardTitle, isDark && { color: '#FFFFFF' }]}>{t('support_helpline', '24x7 Doctor Helpline')}</Text>
+                <Text style={[styles.emergencyCardSub, isDark && { color: '#94A3B8' }]}>{t('doctor_helpline_sub', 'Speak with an on-duty general physician')}</Text>
               </View>
-              <View style={[styles.callPill, isDark ? { backgroundColor: '#064E3B' } : { backgroundColor: '#E0F7F4' }]}>
-                <Ionicons name="call" size={13} color={isDark ? '#34D399' : '#007D69'} />
-                <Text style={[styles.callPillText, { color: isDark ? '#34D399' : '#007D69' }]}>{t('call_btn', 'Call')}</Text>
+              <View style={[styles.callPill, isDark ? { backgroundColor: 'rgba(0, 229, 176, 0.15)', borderWidth: 1, borderColor: 'rgba(0, 229, 176, 0.3)' } : { backgroundColor: '#E0F7F4' }]}>
+                <Ionicons name="call" size={13} color={isDark ? '#00E5B0' : '#007D69'} />
+                <Text style={[styles.callPillText, { color: isDark ? '#00E5B0' : '#007D69' }]}>{t('call_btn', 'Call')}</Text>
               </View>
             </TouchableOpacity>
           </View>
@@ -1803,18 +1814,18 @@ const HomeScreen = ({ navigation, route }) => {
           onPress={() => setLocationModalVisible(false)}
         >
           <TouchableOpacity
-            style={[styles.cityModalCard, isDark && { backgroundColor: '#1E293B', borderWidth: 1, borderColor: '#334155' }]}
+            style={[styles.cityModalCard, isDark && { backgroundColor: '#111C35', borderWidth: 1, borderColor: 'rgba(255, 255, 255, 0.08)' }]}
             activeOpacity={1}
             onPress={() => {}}
           >
             <View style={styles.cityModalHeader}>
-              <Text style={[styles.cityModalTitle, isDark && { color: theme.text }]}>Select Your City</Text>
+              <Text style={[styles.cityModalTitle, isDark && { color: '#FFFFFF' }]}>Select Your City</Text>
               <TouchableOpacity onPress={() => setLocationModalVisible(false)}>
                 <Ionicons name="close" size={22} color={isDark ? '#94A3B8' : '#64748B'} />
               </TouchableOpacity>
             </View>
 
-            <Text style={[styles.cityModalSub, isDark && { color: theme.textSecondary }]}>
+            <Text style={[styles.cityModalSub, isDark && { color: '#94A3B8' }]}>
               Verified clinics, labs & home delivery available across Karnataka
             </Text>
 
@@ -1826,9 +1837,9 @@ const HomeScreen = ({ navigation, route }) => {
                     key={city}
                     style={[
                       styles.cityItem,
-                      isDark && { backgroundColor: '#0F172A' },
+                      isDark && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.06)' },
                       isSelected && styles.cityItemActive,
-                      isSelected && isDark && { backgroundColor: '#134E4A', borderColor: '#2DD4BF' },
+                      isSelected && isDark && { backgroundColor: 'rgba(0, 229, 176, 0.12)', borderColor: '#00E5B0' },
                     ]}
                     onPress={async () => {
                       setSelectedCity(city);
@@ -1843,13 +1854,13 @@ const HomeScreen = ({ navigation, route }) => {
                     <Ionicons
                       name="business-outline"
                       size={18}
-                      color={isSelected ? (isDark ? '#2DD4BF' : '#007D69') : (isDark ? '#94A3B8' : '#64748B')}
+                      color={isSelected ? (isDark ? '#00E5B0' : '#007D69') : (isDark ? '#94A3B8' : '#64748B')}
                     />
                     <Text style={[
                       styles.cityItemText,
-                      isDark && { color: theme.text },
+                      isDark && { color: isSelected ? '#00E5B0' : '#FFFFFF' },
                       isSelected && styles.cityItemTextActive,
-                      isSelected && isDark && { color: '#2DD4BF' },
+                      isSelected && isDark && { color: '#00E5B0' },
                     ]}>
                       {city}
                     </Text>
@@ -1857,7 +1868,7 @@ const HomeScreen = ({ navigation, route }) => {
                       <Ionicons
                         name="checkmark-circle"
                         size={18}
-                        color={isDark ? '#2DD4BF' : '#007D69'}
+                        color={isDark ? '#00E5B0' : '#007D69'}
                         style={{ marginLeft: 'auto' }}
                       />
                     )}
@@ -1868,17 +1879,17 @@ const HomeScreen = ({ navigation, route }) => {
 
             {/* GPS QUICK DETECT */}
             <TouchableOpacity
-              style={[styles.cityGpsOption, isDark && { backgroundColor: '#064E3B', borderColor: '#059669' }]}
+              style={[styles.cityGpsOption, isDark && { backgroundColor: 'rgba(0, 229, 176, 0.12)', borderColor: 'rgba(0, 229, 176, 0.3)' }]}
               onPress={handleDetectGPSLocation}
               disabled={loadingLocation}
               activeOpacity={0.8}
             >
               {loadingLocation ? (
-                <ActivityIndicator size="small" color="#007D69" />
+                <ActivityIndicator size="small" color="#00E5B0" />
               ) : (
                 <>
-                  <Ionicons name="locate" size={16} color={isDark ? '#6EE7B7' : '#007D69'} />
-                  <Text style={[styles.cityGpsOptionText, isDark && { color: '#6EE7B7' }]}>Use Current GPS Location</Text>
+                  <Ionicons name="locate" size={16} color={isDark ? '#00E5B0' : '#007D69'} />
+                  <Text style={[styles.cityGpsOptionText, isDark && { color: '#00E5B0' }]}>Use Current GPS Location</Text>
                 </>
               )}
             </TouchableOpacity>
@@ -1896,9 +1907,9 @@ const HomeScreen = ({ navigation, route }) => {
         onRequestClose={() => setWalletModalVisible(false)}
       >
         <View style={styles.modalOverlay}>
-          <View style={[styles.modalContent, isDark && { backgroundColor: '#1E293B' }]}>
+          <View style={[styles.modalContent, isDark && { backgroundColor: '#111C35', borderColor: 'rgba(255, 255, 255, 0.08)' }]}>
             <View style={styles.modalHeader}>
-              <Text style={[styles.modalTitle, isDark && { color: theme.text }]}>MediUnify Care Wallet</Text>
+              <Text style={[styles.modalTitle, isDark && { color: '#FFFFFF' }]}>MediUnify Care Wallet</Text>
               <TouchableOpacity onPress={() => setWalletModalVisible(false)}>
                 <Ionicons name="close" size={24} color={isDark ? '#94A3B8' : '#64748B'} />
               </TouchableOpacity>
@@ -1910,24 +1921,24 @@ const HomeScreen = ({ navigation, route }) => {
               <Text style={styles.walletCardPts}>🎁 {carePoints} Health Care Points</Text>
             </View>
 
-            <Text style={[styles.walletModalSectionLabel, isDark && { color: theme.text }]}>Quick Top-Up Amount</Text>
+            <Text style={[styles.walletModalSectionLabel, isDark && { color: '#FFFFFF' }]}>Quick Top-Up Amount</Text>
             <View style={styles.topUpChipsRow}>
               {['200', '500', '1000', '2000'].map((amt) => (
                 <TouchableOpacity
                   key={amt}
                   style={[
                     styles.topUpChip,
-                    isDark && { backgroundColor: '#0F172A', borderColor: '#334155' },
+                    isDark && { backgroundColor: '#16223D', borderColor: 'rgba(255, 255, 255, 0.08)' },
                     quickTopUpAmount === amt && styles.topUpChipActive,
-                    quickTopUpAmount === amt && isDark && { backgroundColor: '#134E4A', borderColor: '#2DD4BF' },
+                    quickTopUpAmount === amt && isDark && { backgroundColor: 'rgba(0, 229, 176, 0.12)', borderColor: '#00E5B0' },
                   ]}
                   onPress={() => setQuickTopUpAmount(amt)}
                 >
                   <Text style={[
                     styles.topUpChipText,
-                    isDark && { color: theme.text },
+                    isDark && { color: quickTopUpAmount === amt ? '#00E5B0' : '#FFFFFF' },
                     quickTopUpAmount === amt && styles.topUpChipTextActive,
-                    quickTopUpAmount === amt && isDark && { color: '#2DD4BF' },
+                    quickTopUpAmount === amt && isDark && { color: '#00E5B0' },
                   ]}>
                     + ₹{amt}
                   </Text>
@@ -1976,7 +1987,7 @@ const HomeScreen = ({ navigation, route }) => {
   );
 };
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#FFFFFF',
@@ -2038,6 +2049,31 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#0F172A',
     maxWidth: 120,
+  },
+  headerRightRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  headerNotifBtn: {
+    width: 38,
+    height: 38,
+    borderRadius: 19,
+    backgroundColor: '#F1F5F9',
+    alignItems: 'center',
+    justifyContent: 'center',
+    position: 'relative',
+  },
+  headerNotifDot: {
+    position: 'absolute',
+    top: 7,
+    right: 8,
+    width: 7,
+    height: 7,
+    borderRadius: 3.5,
+    backgroundColor: '#00B894',
+    borderWidth: 1.5,
+    borderColor: '#FFFFFF',
   },
   avatarButton: {
     width: 44,

@@ -6,15 +6,20 @@ import {
   StyleSheet,
   Image,
   Platform,
+  StatusBar,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 
 import colors from '../../theme/colors';
+import { useTheme } from '../../context/ThemeContext';
+import { useThemedStyles } from '../../utils/themeStyles';
 import { safeNavigateToMain } from '../../utils/navigationHelper';
 import LoginScreenWeb from './LoginScreen.web';
 
 const SplashScreen = (props) => {
+  const { isDarkMode, theme } = useTheme();
+  const styles = useThemedStyles(baseStyles);
   const { navigation } = props;
 
   if (Platform.OS === 'web') {
@@ -56,7 +61,8 @@ const SplashScreen = (props) => {
 
 
   return (
-    <SafeAreaView style={styles.safeArea} edges={['top', 'bottom', 'left', 'right']}>
+    <SafeAreaView style={[styles.safeArea, isDarkMode && { backgroundColor: '#080E1A' }]} edges={['top', 'bottom', 'left', 'right']}>
+      <StatusBar barStyle={isDarkMode ? 'light-content' : 'dark-content'} backgroundColor={isDarkMode ? '#080E1A' : '#FFFFFF'} />
 
       <View style={styles.container}>
 
@@ -85,7 +91,7 @@ const SplashScreen = (props) => {
 };
 
 
-const styles = StyleSheet.create({
+const baseStyles = StyleSheet.create({
 
   safeArea: {
     flex: 1,

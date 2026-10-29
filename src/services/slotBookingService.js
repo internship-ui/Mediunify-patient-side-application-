@@ -311,7 +311,7 @@ export const initSlotRegistry = async () => {
       }
 
       // 3. Listen to window storage events on Web for cross-tab real-time sync
-      if (Platform.OS === 'web' && typeof window !== 'undefined') {
+      if (Platform.OS === 'web' && typeof window !== 'undefined' && typeof window.addEventListener === 'function') {
         window.addEventListener('storage', (e) => {
           if (e.key === BOOKED_SLOTS_STORAGE_KEY && e.newValue) {
             try {

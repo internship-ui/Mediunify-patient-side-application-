@@ -121,6 +121,105 @@ export const BANNER_THEMES = {
   },
 };
 
+export const DARK_BANNER_THEMES = {
+  teal: {
+    bg: '#111C35',
+    gradient: 'linear-gradient(135deg, rgba(0, 184, 148, 0.16) 0%, rgba(17, 28, 53, 0.95) 50%, #0D1627 100%)',
+    borderColor: 'rgba(0, 184, 148, 0.35)',
+    badgeBg: 'rgba(0, 184, 148, 0.16)',
+    badgeBorder: 'rgba(0, 184, 148, 0.4)',
+    badgeText: '#00E5B0',
+    iconCircleBg: 'rgba(0, 184, 148, 0.16)',
+    iconColor: '#00E5B0',
+    iconBorder: 'rgba(0, 184, 148, 0.4)',
+    headingColor: '#FFFFFF',
+    textColor: '#94A3B8',
+  },
+  navy: {
+    bg: '#111C35',
+    gradient: 'linear-gradient(135deg, rgba(59, 130, 246, 0.16) 0%, rgba(17, 28, 53, 0.95) 50%, #0D1627 100%)',
+    borderColor: 'rgba(59, 130, 246, 0.35)',
+    badgeBg: 'rgba(59, 130, 246, 0.16)',
+    badgeBorder: 'rgba(59, 130, 246, 0.4)',
+    badgeText: '#60A5FA',
+    iconCircleBg: 'rgba(59, 130, 246, 0.16)',
+    iconColor: '#60A5FA',
+    iconBorder: 'rgba(59, 130, 246, 0.4)',
+    headingColor: '#FFFFFF',
+    textColor: '#94A3B8',
+  },
+  aqua: {
+    bg: '#111C35',
+    gradient: 'linear-gradient(135deg, rgba(0, 194, 203, 0.16) 0%, rgba(17, 28, 53, 0.95) 50%, #0D1627 100%)',
+    borderColor: 'rgba(0, 194, 203, 0.35)',
+    badgeBg: 'rgba(0, 194, 203, 0.16)',
+    badgeBorder: 'rgba(0, 194, 203, 0.4)',
+    badgeText: '#38BDF8',
+    iconCircleBg: 'rgba(0, 194, 203, 0.16)',
+    iconColor: '#38BDF8',
+    iconBorder: 'rgba(0, 194, 203, 0.4)',
+    headingColor: '#FFFFFF',
+    textColor: '#94A3B8',
+  },
+  freshGreen: {
+    bg: '#111C35',
+    gradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(17, 28, 53, 0.95) 50%, #0D1627 100%)',
+    borderColor: 'rgba(16, 185, 129, 0.35)',
+    badgeBg: 'rgba(16, 185, 129, 0.16)',
+    badgeBorder: 'rgba(16, 185, 129, 0.4)',
+    badgeText: '#34D399',
+    iconCircleBg: 'rgba(16, 185, 129, 0.16)',
+    iconColor: '#34D399',
+    iconBorder: 'rgba(16, 185, 129, 0.4)',
+    headingColor: '#FFFFFF',
+    textColor: '#94A3B8',
+  },
+  green: {
+    bg: '#111C35',
+    gradient: 'linear-gradient(135deg, rgba(16, 185, 129, 0.16) 0%, rgba(17, 28, 53, 0.95) 50%, #0D1627 100%)',
+    borderColor: 'rgba(16, 185, 129, 0.35)',
+    badgeBg: 'rgba(16, 185, 129, 0.16)',
+    badgeBorder: 'rgba(16, 185, 129, 0.4)',
+    badgeText: '#34D399',
+    iconCircleBg: 'rgba(16, 185, 129, 0.16)',
+    iconColor: '#34D399',
+    iconBorder: 'rgba(16, 185, 129, 0.4)',
+    headingColor: '#FFFFFF',
+    textColor: '#94A3B8',
+  },
+  coral: {
+    bg: '#111C35',
+    gradient: 'linear-gradient(135deg, rgba(255, 127, 80, 0.16) 0%, rgba(17, 28, 53, 0.95) 50%, #0D1627 100%)',
+    borderColor: 'rgba(255, 127, 80, 0.35)',
+    badgeBg: 'rgba(255, 127, 80, 0.16)',
+    badgeBorder: 'rgba(255, 127, 80, 0.4)',
+    badgeText: '#FB923C',
+    iconCircleBg: 'rgba(255, 127, 80, 0.16)',
+    iconColor: '#FB923C',
+    iconBorder: 'rgba(255, 127, 80, 0.4)',
+    headingColor: '#FFFFFF',
+    textColor: '#94A3B8',
+  },
+  slate: {
+    bg: '#111C35',
+    gradient: 'linear-gradient(135deg, rgba(148, 163, 184, 0.12) 0%, rgba(17, 28, 53, 0.95) 50%, #0D1627 100%)',
+    borderColor: 'rgba(255, 255, 255, 0.12)',
+    badgeBg: 'rgba(255, 255, 255, 0.08)',
+    badgeBorder: 'rgba(255, 255, 255, 0.14)',
+    badgeText: '#CBD5E1',
+    iconCircleBg: 'rgba(255, 255, 255, 0.08)',
+    iconColor: '#CBD5E1',
+    iconBorder: 'rgba(255, 255, 255, 0.14)',
+    headingColor: '#FFFFFF',
+    textColor: '#94A3B8',
+  },
+};
+
+export const getBannerTheme = (themeKey = 'teal', isDark = false) => {
+  const dict = isDark ? DARK_BANNER_THEMES : BANNER_THEMES;
+  return dict[themeKey] || dict.teal;
+};
+
 const colors = {
   // 6 PRIMARY PALETTE TOKENS
   teal: '#00B894',          // TEAL - Primary Brand, "Unify", Key Actions
