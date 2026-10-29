@@ -1621,6 +1621,8 @@ function ImagingScreen({ navigation, route }) {
                     return (
                       <TouchableOpacity
                         key={cat.id}
+                        // @ts-ignore
+                        dataSet={{ scanCard: 'true', catId: cat.id }}
                         className="rad-category-card"
                         style={[
                           styles.categoryBannerCard,
@@ -1649,10 +1651,16 @@ function ImagingScreen({ navigation, route }) {
                           </Text>
                           {/* Circular Arrow & Book Now CTA */}
                           <View style={styles.organicCtaRow}>
-                            <View style={[styles.organicArrowCircle, { borderColor: design.btnBg }]}>
+                            <View
+                              // @ts-ignore
+                              dataSet={{ arrowCircle: 'true' }}
+                              style={[styles.organicArrowCircle, { borderColor: design.btnBg }]}>
                               <Ionicons name="arrow-forward" size={11} color={design.btnBg} />
                             </View>
-                            <Text style={[styles.organicCtaText, { color: design.btnBg }]}>
+                            <Text
+                              // @ts-ignore
+                              dataSet={{ ctaText: 'true' }}
+                              style={[styles.organicCtaText, { color: design.btnBg }]}>
                               Book Now
                             </Text>
                           </View>
@@ -1662,6 +1670,8 @@ function ImagingScreen({ navigation, route }) {
                         <View style={styles.catBannerRightCol}>
                           {RADIOLOGY_3D_ICONS[cat.id] ? (
                             <Image
+                              // @ts-ignore
+                              dataSet={{ cardImg: 'true' }}
                               source={RADIOLOGY_3D_ICONS[cat.id]}
                               style={styles.catBannerImage}
                               resizeMode="contain"

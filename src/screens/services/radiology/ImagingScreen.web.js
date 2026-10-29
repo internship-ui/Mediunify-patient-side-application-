@@ -366,26 +366,161 @@ function ImagingScreenWeb({ navigation, route }) {
         document.head.appendChild(style);
       }
       style.textContent = `
-        .rad-category-card {
-          transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease !important;
-          cursor: pointer;
+        /* =============================================
+           RADIOLOGY CATEGORY CARDS — ADVANCED 3D & HOVER ANIMATIONS
+        ============================================= */
+        @keyframes scanCardEnter {
+          0% {
+            opacity: 0;
+            transform: translateY(22px) scale(0.97);
+          }
+          100% {
+            opacity: 1;
+            transform: translateY(0) scale(1);
+          }
         }
-        .rad-category-card:hover {
-          transform: translateY(-4px) !important;
-          box-shadow: 0 14px 28px -6px rgba(15, 23, 42, 0.12), 0 4px 10px -2px rgba(15, 23, 42, 0.04) !important;
+
+        @keyframes floatScan0 {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-6px) rotate(1.2deg); }
         }
-        .rad-category-card:active {
-          transform: translateY(-1px) !important;
+        @keyframes floatScan1 {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-5.5px) rotate(-1.5deg); }
         }
-        .rad-category-card img {
+        @keyframes floatScan2 {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-6.5px) rotate(1deg); }
+        }
+        @keyframes floatScan3 {
+          0%, 100% { transform: translateY(0px) rotate(0deg); }
+          50% { transform: translateY(-5px) rotate(-1.2deg); }
+        }
+
+        /* Ambient 3D Machine Idle Floating */
+        [data-cat-id="mri"] [data-card-img="true"] { animation: floatScan0 3.8s ease-in-out infinite !important; }
+        [data-cat-id="ct"] [data-card-img="true"] { animation: floatScan1 4.2s ease-in-out infinite 0.5s !important; }
+        [data-cat-id="xray"] [data-card-img="true"] { animation: floatScan2 3.9s ease-in-out infinite 1.0s !important; }
+        [data-cat-id="usg"] [data-card-img="true"] { animation: floatScan3 4.4s ease-in-out infinite 1.5s !important; }
+        [data-cat-id="mammo"] [data-card-img="true"] { animation: floatScan0 4.0s ease-in-out infinite 2.0s !important; }
+        [data-cat-id="pet"] [data-card-img="true"] { animation: floatScan1 4.3s ease-in-out infinite 2.5s !important; }
+        [data-cat-id="dexa"] [data-card-img="true"] { animation: floatScan2 3.7s ease-in-out infinite 3.0s !important; }
+        [data-cat-id="doppler"] [data-card-img="true"] { animation: floatScan3 4.1s ease-in-out infinite 3.5s !important; }
+        [data-cat-id="ecg"] [data-card-img="true"] { animation: floatScan0 3.9s ease-in-out infinite 4.0s !important; }
+
+        /* Card Base, Entrance & Smooth Transitions */
+        [data-scan-card="true"], .rad-category-card {
+          position: relative !important;
+          transition:
+            transform 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+            box-shadow 0.36s cubic-bezier(0.16, 1, 0.3, 1),
+            border-color 0.3s ease !important;
+          cursor: pointer !important;
+          will-change: transform, box-shadow;
+          animation: scanCardEnter 0.6s cubic-bezier(0.16, 1, 0.3, 1) backwards;
+        }
+        [data-cat-id="mri"] { animation-delay: 0.04s; }
+        [data-cat-id="ct"] { animation-delay: 0.08s; }
+        [data-cat-id="xray"] { animation-delay: 0.12s; }
+        [data-cat-id="usg"] { animation-delay: 0.16s; }
+        [data-cat-id="mammo"] { animation-delay: 0.20s; }
+        [data-cat-id="pet"] { animation-delay: 0.24s; }
+        [data-cat-id="dexa"] { animation-delay: 0.28s; }
+        [data-cat-id="doppler"] { animation-delay: 0.32s; }
+        [data-cat-id="ecg"] { animation-delay: 0.36s; }
+
+        /* Card Hover Elevation */
+        [data-scan-card="true"]:hover, .rad-category-card:hover {
+          transform: translateY(-9px) scale(1.02) !important;
+        }
+
+        /* Specific Category Brand Glows on Hover */
+        [data-cat-id="mri"]:hover {
+          border-color: #0284C7 !important;
+          box-shadow: 0 22px 42px -8px rgba(2, 132, 199, 0.28), 0 8px 18px -4px rgba(2, 132, 199, 0.15) !important;
+        }
+        [data-cat-id="ct"]:hover {
+          border-color: #00BB95 !important;
+          box-shadow: 0 22px 42px -8px rgba(0, 187, 149, 0.28), 0 8px 18px -4px rgba(0, 187, 149, 0.15) !important;
+        }
+        [data-cat-id="xray"]:hover {
+          border-color: #1D4ED8 !important;
+          box-shadow: 0 22px 42px -8px rgba(29, 78, 216, 0.28), 0 8px 18px -4px rgba(29, 78, 216, 0.15) !important;
+        }
+        [data-cat-id="usg"]:hover {
+          border-color: #059669 !important;
+          box-shadow: 0 22px 42px -8px rgba(5, 150, 105, 0.28), 0 8px 18px -4px rgba(5, 150, 105, 0.15) !important;
+        }
+        [data-cat-id="mammo"]:hover {
+          border-color: #E11D48 !important;
+          box-shadow: 0 22px 42px -8px rgba(225, 29, 72, 0.28), 0 8px 18px -4px rgba(225, 29, 72, 0.15) !important;
+        }
+        [data-cat-id="pet"]:hover {
+          border-color: #0891B2 !important;
+          box-shadow: 0 22px 42px -8px rgba(8, 145, 178, 0.28), 0 8px 18px -4px rgba(8, 145, 178, 0.15) !important;
+        }
+        [data-cat-id="dexa"]:hover {
+          border-color: #7C3AED !important;
+          box-shadow: 0 22px 42px -8px rgba(124, 58, 237, 0.28), 0 8px 18px -4px rgba(124, 58, 237, 0.15) !important;
+        }
+        [data-cat-id="doppler"]:hover {
+          border-color: #0284C7 !important;
+          box-shadow: 0 22px 42px -8px rgba(2, 132, 199, 0.28), 0 8px 18px -4px rgba(2, 132, 199, 0.15) !important;
+        }
+        [data-cat-id="ecg"]:hover {
+          border-color: #D97706 !important;
+          box-shadow: 0 22px 42px -8px rgba(217, 119, 6, 0.28), 0 8px 18px -4px rgba(217, 119, 6, 0.15) !important;
+        }
+
+        /* Tactile Active Press */
+        [data-scan-card="true"]:active, .rad-category-card:active {
+          transform: translateY(-3px) scale(0.995) !important;
+          transition-duration: 0.1s !important;
+        }
+
+        /* 3D Illustration Interactive Transformation */
+        [data-card-img="true"], .rad-category-card img {
           background-color: transparent !important;
-          transition: transform 0.28s cubic-bezier(0.16, 1, 0.3, 1), filter 0.28s ease !important;
+          transition: transform 0.42s cubic-bezier(0.16, 1, 0.3, 1), filter 0.42s ease !important;
+          will-change: transform, filter;
           filter: drop-shadow(0 6px 14px rgba(0, 0, 0, 0.08)) !important;
         }
+        [data-scan-card="true"]:hover [data-card-img="true"],
         .rad-category-card:hover img {
-          transform: scale(1.08) translateY(-3px) !important;
-          filter: drop-shadow(0 10px 20px rgba(0, 0, 0, 0.12)) !important;
+          animation-play-state: paused !important;
+          transform: scale(1.15) translateY(-6px) rotate(2deg) !important;
+          filter: drop-shadow(0 14px 22px rgba(0, 0, 0, 0.18)) !important;
         }
+
+        /* CTA Arrow Circle & Text Animation */
+        [data-arrow-circle="true"] {
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), background-color 0.25s ease, border-color 0.25s ease !important;
+        }
+        [data-cta-text="true"] {
+          transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1), letter-spacing 0.25s ease !important;
+        }
+        [data-scan-card="true"]:hover [data-arrow-circle="true"] {
+          transform: translateX(6px) scale(1.12) !important;
+        }
+        [data-scan-card="true"]:hover [data-cta-text="true"] {
+          transform: translateX(6px) !important;
+          letter-spacing: 0.3px !important;
+        }
+        [data-cat-id="mri"]:hover [data-arrow-circle="true"] { background-color: #0284C7 !important; border-color: #0284C7 !important; }
+        [data-cat-id="ct"]:hover [data-arrow-circle="true"] { background-color: #00BB95 !important; border-color: #00BB95 !important; }
+        [data-cat-id="xray"]:hover [data-arrow-circle="true"] { background-color: #1D4ED8 !important; border-color: #1D4ED8 !important; }
+        [data-cat-id="usg"]:hover [data-arrow-circle="true"] { background-color: #059669 !important; border-color: #059669 !important; }
+        [data-cat-id="mammo"]:hover [data-arrow-circle="true"] { background-color: #E11D48 !important; border-color: #E11D48 !important; }
+        [data-cat-id="pet"]:hover [data-arrow-circle="true"] { background-color: #0891B2 !important; border-color: #0891B2 !important; }
+        [data-cat-id="dexa"]:hover [data-arrow-circle="true"] { background-color: #7C3AED !important; border-color: #7C3AED !important; }
+        [data-cat-id="doppler"]:hover [data-arrow-circle="true"] { background-color: #0284C7 !important; border-color: #0284C7 !important; }
+        [data-cat-id="ecg"]:hover [data-arrow-circle="true"] { background-color: #D97706 !important; border-color: #D97706 !important; }
+
+        [data-scan-card="true"]:hover [data-arrow-circle="true"] svg,
+        [data-scan-card="true"]:hover [data-arrow-circle="true"] * {
+          color: #FFFFFF !important;
+        }
+
         .rad-test-card {
           transition: transform 0.22s cubic-bezier(0.16, 1, 0.3, 1), box-shadow 0.22s ease, border-color 0.22s ease !important;
         }
@@ -412,8 +547,7 @@ function ImagingScreenWeb({ navigation, route }) {
         .rad-provider-card:hover {
           transform: translateY(-4px) !important;
           box-shadow: 0 16px 32px -6px rgba(15, 23, 42, 0.12), 0 6px 14px -2px rgba(15, 23, 42, 0.04) !important;
-        }
-      `;
+        }`
     }
   }, []);
 
@@ -1687,6 +1821,8 @@ function ImagingScreenWeb({ navigation, route }) {
                     return (
                       <TouchableOpacity
                         key={cat.id}
+                        // @ts-ignore
+                        dataSet={{ scanCard: 'true', catId: cat.id }}
                         className="rad-category-card"
                         style={[
                           styles.categoryBannerCard,
@@ -1715,10 +1851,16 @@ function ImagingScreenWeb({ navigation, route }) {
                           </Text>
                           {/* Circular Arrow & Book Now CTA */}
                           <View style={styles.organicCtaRow}>
-                            <View style={[styles.organicArrowCircle, { borderColor: design.btnBg }]}>
+                            <View
+                              // @ts-ignore
+                              dataSet={{ arrowCircle: 'true' }}
+                              style={[styles.organicArrowCircle, { borderColor: design.btnBg }]}>
                               <Ionicons name="arrow-forward" size={11} color={design.btnBg} />
                             </View>
-                            <Text style={[styles.organicCtaText, { color: design.btnBg }]}>
+                            <Text
+                              // @ts-ignore
+                              dataSet={{ ctaText: 'true' }}
+                              style={[styles.organicCtaText, { color: design.btnBg }]}>
                               Book Now
                             </Text>
                           </View>
@@ -1728,6 +1870,8 @@ function ImagingScreenWeb({ navigation, route }) {
                         <View style={styles.catBannerRightCol}>
                           {RADIOLOGY_3D_ICONS[cat.id] ? (
                             <Image
+                              // @ts-ignore
+                              dataSet={{ cardImg: 'true' }}
                               source={RADIOLOGY_3D_ICONS[cat.id]}
                               style={styles.catBannerImage}
                               resizeMode="contain"
