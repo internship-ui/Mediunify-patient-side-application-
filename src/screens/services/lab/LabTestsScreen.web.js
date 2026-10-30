@@ -3041,7 +3041,7 @@ const baseStyles = StyleSheet.create({
     backgroundColor: '#00BB95',
     ...(Platform.OS === 'web'
       ? {
-        background: 'linear-gradient(135deg, #00A885 0%, #00BB95 50%, #15D4AA 100%)',
+        backgroundImage: 'linear-gradient(135deg, #00A885 0%, #00BB95 50%, #15D4AA 100%)',
       }
       : {}),
     borderRadius: 20,

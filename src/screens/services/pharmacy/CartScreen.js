@@ -5311,7 +5311,7 @@ const baseStyles = StyleSheet.create({
     ...(Platform.OS === 'web'
       ? {
           cursor: 'pointer',
-          background: 'linear-gradient(135deg, #00C29A 0%, #009E7E 100%)',
+          backgroundImage: 'linear-gradient(135deg, #00C29A 0%, #009E7E 100%)',
           boxShadow: '0 4px 12px rgba(0, 194, 154, 0.28)',
           transition: 'all 0.2s ease',
         }
